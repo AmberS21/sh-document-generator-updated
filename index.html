@@ -913,28 +913,21 @@ function generate() {
   btn.classList.add('loading');
   btn.innerHTML = '⏳ Generating profile with Claude...';
 
-var prompt = `
+var prompt = 
 You are a Sheffield Haworth executive profile generation assistant.
 
-Return ONLY valid JSON.
+Return ONLY valid JSON. Do not include markdown. Do not include explanations. Do not include code blocks.
 
-Do not include markdown.
-Do not include explanations.
-Do not include code blocks.
-
-Use this exact structure:
-
+Use this exact structure and fill every field from the candidate information. Leave fields as "" if information is not available:
 {
   "CANDIDATE_NAME": "",
   "CURRENT_EMPLOYER": "",
   "SEARCH_TITLE": "",
   "CLIENT_COMPANY": "",
   "MONTH_YEAR": "",
-
   "SUMMARY_BULLET_1": "",
   "SUMMARY_BULLET_2": "",
   "SUMMARY_BULLET_3": "",
-
   "COMPANY_1_NAME": "",
   "COMPANY_1_LOCATION": "",
   "COMPANY_1_ROLE": "",
@@ -943,24 +936,48 @@ Use this exact structure:
   "COMPANY_1_BULLET_1": "",
   "COMPANY_1_BULLET_2": "",
   "COMPANY_1_BULLET_3": "",
-
+  "COMPANY_2_NAME": "",
+  "COMPANY_2_LOCATION": "",
+  "COMPANY_2_ROLE": "",
+  "COMPANY_2_FUNCTION": "",
+  "COMPANY_2_DATES": "",
+  "COMPANY_2_BULLET_1": "",
+  "COMPANY_2_BULLET_2": "",
+  "COMPANY_2_BULLET_3": "",
+  "COMPANY_3_NAME": "",
+  "COMPANY_3_LOCATION": "",
+  "COMPANY_3_ROLE": "",
+  "COMPANY_3_FUNCTION": "",
+  "COMPANY_3_DATES": "",
+  "COMPANY_3_BULLET_1": "",
+  "COMPANY_3_BULLET_2": "",
+  "COMPANY_3_BULLET_3": "",
   "EDU_1_YEARS": "",
   "EDU_1_INSTITUTION": "",
   "EDU_1_DEGREE": "",
-
+  "EDU_2_YEARS": "",
+  "EDU_2_INSTITUTION": "",
+  "EDU_2_DEGREE": "",
+  "QUAL_1": "",
+  "QUAL_2": "",
+  "QUAL_3": "",
+  "AFFILIATION_1": "",
+  "AFFILIATION_1_DATES": "",
+  "AFFILIATION_2": "",
+  "AFFILIATION_2_DATES": "",
   "NATIONALITY": "",
   "LANGUAGES": "",
   "INTERESTS": ""
 }
 
 Rules:
-- professional executive search tone
-- concise
-- no invented facts
-- return valid JSON only
+- Professional executive search tone
+- Concise bullet points
+- No invented facts - only use information provided
+- Return valid JSON only
+- Leave fields as "" if info not available
 
 Candidate information:
-
 ${inputText}
 `;
 
@@ -1080,7 +1097,8 @@ const doc = new window.docxtemplater(zip, {
   delimiters: {
     start: '{{',
     end: '}}'
-  }
+  },
+  nullGetter: function() { return ""; }
 });
 
 doc.render(item.content);
@@ -1114,8 +1132,7 @@ function loadSavedKeys() {
   if (!localStorage.getItem('sh_ezekiaBaseUrl')) {
     localStorage.setItem('sh_ezekiaBaseUrl', 'https://ezekia.com/api');
   }
-  var keys = ['claudeKey','ezekiaKey','ezekiaBaseUrl'];
-  var ids   = ['claude','ezekia','ezekiaUrl'];
+  var keys = ['c var ids   = ['claude','ezekia','ezekiaUrl'];
   keys.forEach(function(storageKey, i) {
     var saved = localStorage.getItem('sh_' + storageKey);
     if (saved) {
