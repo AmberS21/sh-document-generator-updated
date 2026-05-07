@@ -507,30 +507,7 @@ table.usage tr:last-child td{border-bottom:none;}
   <div class="card">
     <div class="card-title"><div class="step-dot" style="background:var(--mut);">&#128336;</div> My Generated Documents</div>
     <div class="note" style="margin-bottom:12px;">Private to you. Stored for 30 days.</div>
-    <div class="hist-row">
-      <div class="hist-ico" style="background:rgba(43,124,211,.12);">
-        <svg width="16" height="16" viewBox="0 0 24 24"><rect width="24" height="24" rx="3" fill="#2b7cd3"/><text x="4" y="17" font-family="Arial" font-size="11" font-weight="900" fill="white">W</text></svg>
-      </div>
-      <div style="flex:1;"><div class="hist-name">James Thornton &#8212; CV Profile (Services)</div><div class="hist-meta">Today 14:22 &middot; Word</div></div>
-      <span class="badge" style="background:#dcfce7;color:#166534;">Done</span>
-      <div style="display:flex;gap:4px;"><div class="ico-btn">&#11015;</div><div class="ico-btn">&#128260;</div></div>
-    </div>
-    <div class="hist-row">
-      <div class="hist-ico" style="background:rgba(210,71,38,.1);">
-        <svg width="16" height="16" viewBox="0 0 24 24"><rect width="24" height="24" rx="3" fill="#d24726"/><text x="4" y="17" font-family="Arial" font-size="11" font-weight="900" fill="white">P</text></svg>
-      </div>
-      <div style="flex:1;"><div class="hist-name">CFO Search &#8212; Assignment Report</div><div class="hist-meta">Yesterday 09:45 &middot; PowerPoint</div></div>
-      <span class="badge" style="background:#dcfce7;color:#166534;">Done</span>
-      <div style="display:flex;gap:4px;"><div class="ico-btn">&#11015;</div><div class="ico-btn">&#128260;</div></div>
-    </div>
-    <div class="hist-row">
-      <div class="hist-ico" style="background:rgba(43,124,211,.12);">
-        <svg width="16" height="16" viewBox="0 0 24 24"><rect width="24" height="24" rx="3" fill="#2b7cd3"/><text x="4" y="17" font-family="Arial" font-size="11" font-weight="900" fill="white">W</text></svg>
-      </div>
-      <div style="flex:1;"><div class="hist-name">Sarah Chen &#8212; CV + Scorecard (WAM US)</div><div class="hist-meta">Mon 11:10 &middot; Word</div></div>
-      <span class="badge" style="background:#fef3c7;color:#92400e;">Processing</span>
-      <div style="display:flex;gap:4px;"><div class="ico-btn">&#128065;</div></div>
-    </div>
+ <div id="historyList"></div>
   </div>
 </div>
 
@@ -742,6 +719,7 @@ function ssoLogin() {
 function doLogin() {
   var el = document.getElementById('loginEmail');
   var email = el ? el.value.trim().toLowerCase() : '';
+  localStorage.setItem('sh_loggedInEmail', email);
   if (!email) { notify('Please enter your email address'); return; }
   isAdmin = ADMINS.indexOf(email) !== -1;
   var parts = email.split('@')[0].replace(/[._]/g,' ').split(' ');
@@ -916,30 +894,89 @@ function fakeUpload() {
 function generate() {
   var tpl = document.getElementById('tplSel').value;
   if (!tpl) { notify('Please select a template first'); return; }
+
+  var inputText = '';
+  var txt = document.querySelector('#inp-text textarea');
+  if (txt) inputText = txt.value.trim();
+
+  if (!inputText) {
+    notify('Please paste candidate text first');
+    return;
+  }
+
   var btn = document.getElementById('genBtn');
   btn.classList.add('loading');
-  var steps = ['Analysing input…','Extracting key information…','Filling template placeholders…','Applying SH branding…','Finalising document…'];
-  var i = 0;
-  var iv = setInterval(function() {
-    if (i < steps.length) { btn.innerHTML = '⏳ ' + steps[i++]; }
-    else {
-      clearInterval(iv);
-      btn.classList.remove('loading');
-      btn.innerHTML = '✅ Document Ready — Check My History';
-      var n = document.getElementById('histCount');
-      n.textContent = parseInt(n.textContent) + 1;
-      notify('Done! Go to My History to download.');
-      setTimeout(function(){ btn.innerHTML = '⚡ Generate Document'; }, 3500);
-    }
-  }, 800);
-}
+  btn.innerHTML = '⏳ Generating with Claude...';
 
+  var item = {
+    name: 'Generated Profile',
+    date: new Date().toLocaleString(),
+    template: tpl,
+    content: inputText
+  };
+
+  var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
+  history.unshift(item);
+  localStorage.setItem('sh_history', JSON.stringify(history));
+
+  var n = document.getElementById('histCount');
+  if (n) n.textContent = history.length;
+
+  btn.classList.remove('loading');
+  btn.innerHTML = '✅ Document Ready — Check My History';
+  notify('Done! Go to My History to download.');
+  setTimeout(function(){ btn.innerHTML = '⚡ Generate Document'; }, 3500);
+}
 // ══ NOTIFY ══
 function notify(msg) {
   var n = document.getElementById('notif');
   n.textContent = msg; n.classList.add('show');
   setTimeout(function(){ n.classList.remove('show'); }, 3500);
 }
+ function renderHistory() {
+    var list = document.getElementById('historyList');
+  if (!list) return;
+
+  var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
+
+  if (history.length === 0) {
+    list.innerHTML = '<div class="note">No generated documents yet.</div>';
+    return;
+  }
+
+  list.innerHTML = history.map(function(item, index) {
+    return `
+      <div class="hist-row">
+        <div class="hist-ico" style="background:rgba(43,124,211,.12);">W</div>
+        <div style="flex:1;">
+          <div class="hist-name">${item.name}</div>
+          <div class="hist-meta">${item.date} · Word</div>
+        </div>
+        <span class="badge" style="background:#dcfce7;color:#166534;">Done</span>
+        <div class="ico-btn" onclick="downloadHistory(${index})">&#11015;</div>
+      </div>
+    `;
+  }).join('');
+
+  var n = document.getElementById('histCount');
+  if (n) n.textContent = history.length;
+}
+}
+
+function downloadHistory(index) {
+    var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
+  var item = history[index];
+  if (!item) return;
+
+  var blob = new Blob([item.content], { type: 'text/plain' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = item.name + '.txt';
+  a.click();
+}
+}
+
+// Load saved keys on startup 
 
 // ══════════════════════════════════════
 // API KEY MANAGEMENT
