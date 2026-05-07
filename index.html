@@ -904,28 +904,67 @@ function generate() {
     return;
   }
 
+  var claudeKey = localStorage.getItem('claude_api_key');
+  if (!claudeKey) {
+    notify('Please add and save Claude API key first');
+    return;
+  }
+
   var btn = document.getElementById('genBtn');
   btn.classList.add('loading');
-  btn.innerHTML = '⏳ Generating with Claude...';
+  btn.innerHTML = '⏳ Generating profile with Claude...';
 
-  var item = {
-    name: 'Generated Profile',
-    date: new Date().toLocaleString(),
-    template: tpl,
-    content: inputText
-  };
+  var prompt =
+    'Create a professional Sheffield Haworth candidate profile from the candidate information below. ' +
+    'Use a polished executive-search tone. Do not invent facts. If information is missing, leave it blank. ' +
+    'Structure the output with these sections: Candidate Name, Current Company, Career Summary, Motivations, Client Coverage, Strategy Experience, Fundraising Track Record, Areas of Strength, Areas to Explore, Business Experience, Education, Certifications, Technical Skills, Affiliations, Nationality, Languages, Interests. ' +
+    'Candidate information:\\n\\n' + inputText;
 
-  var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
-  history.unshift(item);
-  localStorage.setItem('sh_history', JSON.stringify(history));
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': claudeKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: prompt
+      }]
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var output = data.content && data.content[0] ? data.content[0].text : JSON.stringify(data);
 
-  var n = document.getElementById('histCount');
-  if (n) n.textContent = history.length;
+    var item = {
+      name: 'Generated Profile',
+      date: new Date().toLocaleString(),
+      template: tpl,
+      content: output
+    };
 
-  btn.classList.remove('loading');
-  btn.innerHTML = '✅ Document Ready — Check My History';
-  notify('Done! Go to My History to download.');
-  setTimeout(function(){ btn.innerHTML = '⚡ Generate Document'; }, 3500);
+    var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
+    history.unshift(item);
+    localStorage.setItem('sh_history', JSON.stringify(history));
+
+    renderHistory();
+
+    btn.classList.remove('loading');
+    btn.innerHTML = '✅ Document Ready — Check My History';
+    notify('Done! Go to My History to download.');
+    setTimeout(function(){ btn.innerHTML = '⚡ Generate Document'; }, 3500);
+  })
+  .catch(function(err) {
+    console.error(err);
+    btn.classList.remove('loading');
+    btn.innerHTML = '⚡ Generate Document';
+    notify('Generation failed. Check console.');
+  });
 }
 // ══ NOTIFY ══
 function notify(msg) {
