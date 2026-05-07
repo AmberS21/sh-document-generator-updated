@@ -907,7 +907,6 @@ function generate() {
   }
 
   var claudeKey = localStorage.getItem('sh_claudeKey');
-console.log('Claude Key:', claudeKey);
 
   var btn = document.getElementById('genBtn');
   btn.classList.add('loading');
@@ -1017,10 +1016,14 @@ async function downloadHistory(index) {
     const arrayBuffer = await response.arrayBuffer();
 
     const zip = await JSZip.loadAsync(arrayBuffer);
-    const doc = new window.docxtemplater(zip, {
-      paragraphLoop: true,
-      linebreaks: true
-    });
+const doc = new window.docxtemplater(zip, {
+  paragraphLoop: true,
+  linebreaks: true,
+  delimiters: {
+    start: '{{',
+    end: '}}'
+  }
+});
 
 doc.render({
   CANDIDATE_NAME: 'Generated Candidate',
