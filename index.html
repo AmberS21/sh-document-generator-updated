@@ -1132,7 +1132,8 @@ function loadSavedKeys() {
   if (!localStorage.getItem('sh_ezekiaBaseUrl')) {
     localStorage.setItem('sh_ezekiaBaseUrl', 'https://ezekia.com/api');
   }
-  var keys = ['c var ids   = ['claude','ezekia','ezekiaUrl'];
+  var keys = ['claudeKey','ezekiaKey','ezekiaBaseUrl'];
+  var ids   = ['claude','ezekia','ezekiaUrl'];
   keys.forEach(function(storageKey, i) {
     var saved = localStorage.getItem('sh_' + storageKey);
     if (saved) {
