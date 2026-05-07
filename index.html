@@ -281,6 +281,7 @@ table.usage tr:last-child td{border-bottom:none;}
 ::-webkit-scrollbar-thumb{background:var(--brd);border-radius:3px;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.47.4/build/docxtemplater.js"></script>
 </head>
 <body>
@@ -1015,7 +1016,7 @@ async function downloadHistory(index) {
     const response = await fetch(templatePath);
     const arrayBuffer = await response.arrayBuffer();
 
-    const zip = await JSZip.loadAsync(arrayBuffer);
+    const zip = new PizZip(arrayBuffer);
 const doc = new window.docxtemplater(zip, {
   paragraphLoop: true,
   linebreaks: true,
