@@ -913,11 +913,56 @@ function generate() {
   btn.classList.add('loading');
   btn.innerHTML = '⏳ Generating profile with Claude...';
 
-  var prompt =
-    'Create a professional Sheffield Haworth candidate profile from the candidate information below. ' +
-    'Use a polished executive-search tone. Do not invent facts. If information is missing, leave it blank. ' +
-    'Structure the output with these sections: Candidate Name, Current Company, Career Summary, Motivations, Client Coverage, Strategy Experience, Fundraising Track Record, Areas of Strength, Areas to Explore, Business Experience, Education, Certifications, Technical Skills, Affiliations, Nationality, Languages, Interests. ' +
-    'Candidate information:\\n\\n' + inputText;
+var prompt = `
+You are a Sheffield Haworth executive profile generation assistant.
+
+Return ONLY valid JSON.
+
+Do not include markdown.
+Do not include explanations.
+Do not include code blocks.
+
+Use this exact structure:
+
+{
+  "CANDIDATE_NAME": "",
+  "CURRENT_EMPLOYER": "",
+  "SEARCH_TITLE": "",
+  "CLIENT_COMPANY": "",
+  "MONTH_YEAR": "",
+
+  "SUMMARY_BULLET_1": "",
+  "SUMMARY_BULLET_2": "",
+  "SUMMARY_BULLET_3": "",
+
+  "COMPANY_1_NAME": "",
+  "COMPANY_1_LOCATION": "",
+  "COMPANY_1_ROLE": "",
+  "COMPANY_1_FUNCTION": "",
+  "COMPANY_1_DATES": "",
+  "COMPANY_1_BULLET_1": "",
+  "COMPANY_1_BULLET_2": "",
+  "COMPANY_1_BULLET_3": "",
+
+  "EDU_1_YEARS": "",
+  "EDU_1_INSTITUTION": "",
+  "EDU_1_DEGREE": "",
+
+  "NATIONALITY": "",
+  "LANGUAGES": "",
+  "INTERESTS": ""
+}
+
+Rules:
+- professional executive search tone
+- concise
+- no invented facts
+- return valid JSON only
+
+Candidate information:
+
+${inputText}
+`;
 
   fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -938,7 +983,19 @@ function generate() {
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
-    var output = data.content && data.content[0] ? data.content[0].text : JSON.stringify(data);
+    var rawOutput = data.content && data.content[0]
+  ? data.content[0].text
+  : '{}';
+
+var output;
+
+try {
+  output = JSON.parse(rawOutput);
+} catch(e) {
+  console.error(e);
+  notify('Claude returned invalid JSON');
+  return;
+}
 
     var item = {
       name: 'Generated Profile',
