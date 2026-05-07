@@ -12,7 +12,7 @@
   --navy:#0f1f45; --navy2:#1a2c5b; --navy3:#06101f;
   --blue:#1591D8; --light:#3BC9F3;
   --bg:#f0f3f9; --card:#ffffff; --brd:#dce6f0;
-  --txt:#0f1f45; --mut:#6b85a5; --chip:#eef2f9; --tbg:#e6eef8;
+  --txt:#0f1f45; --mut:#6b85a5; --chip:#eef2f9; --tbg:#e6eef8;h
   --r:12px; --rs:8px;
   --shadow:0 1px 8px rgba(15,31,69,.08);
   --shadow-md:0 4px 16px rgba(15,31,69,.12);
@@ -992,6 +992,7 @@ system: "Return ONLY raw JSON. No markdown. No explanations. No code blocks. No 
 var output;
 
 try {
+  rawOutput = rawOutput.replace(/```json\n?/gi,'').replace(/```\n?/g,'').trim();
   output = JSON.parse(rawOutput);
 } catch(e) {
   console.error(e);
@@ -1003,7 +1004,7 @@ try {
       name: 'Generated Profile',
       date: new Date().toLocaleString(),
       template: tpl,
-      content: JSON.parse(rawOutput)
+      content: output
     };
 
     var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
