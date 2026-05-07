@@ -862,6 +862,7 @@ function fakeUpload() {
 // ══ GENERATE ══
 async function generate() {
   var tpl = document.getElementById('tplSel').value;
+  var btn = document.getElementById('genBtn');
   if (!tpl) { notify('Please select a template first'); return; }
 
   var inputText = '';
@@ -930,7 +931,6 @@ async function generate() {
 
   var claudeKey = localStorage.getItem('sh_claudeKey');
 
-  var btn = document.getElementById('genBtn');
   btn.classList.add('loading');
   btn.innerHTML = '⏳ Generating profile with Claude...';
 
