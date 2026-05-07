@@ -961,7 +961,6 @@ function notify(msg) {
   var n = document.getElementById('histCount');
   if (n) n.textContent = history.length;
 }
-}
 
 function downloadHistory(index) {
     var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
@@ -973,7 +972,6 @@ function downloadHistory(index) {
   a.href = URL.createObjectURL(blob);
   a.download = item.name + '.txt';
   a.click();
-}
 }
 
 // Load saved keys on startup 
