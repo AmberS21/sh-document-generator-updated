@@ -1001,7 +1001,7 @@ try {
       name: 'Generated Profile',
       date: new Date().toLocaleString(),
       template: tpl,
-      content: output
+      content: JSON.parse(rawOutput)
     };
 
     var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
