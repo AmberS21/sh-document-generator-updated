@@ -1000,28 +1000,52 @@ function notify(msg) {
   if (n) n.textContent = history.length;
 }
 
-function downloadHistory(index) {
+async function downloadHistory(index) {
   var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
   var item = history[index];
   if (!item) return;
 
-  var wordContent = `
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <title>${item.name}</title>
-      </head>
-      <body style="font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4;">
-        <pre style="white-space: pre-wrap; font-family: Arial, sans-serif;">${item.content}</pre>
-      </body>
-    </html>
-  `;
+  try {
 
-  var blob = new Blob([wordContent], { type: 'application/msword' });
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = item.name + '.doc';
-  a.click();
+    var templatePath = 'SH_Global_Candidate_Profile_No Scorecard.docx';
+
+    if (item.template === 'cv-wam-s') {
+      templatePath = 'SH_Global_Candidate_Profile_With_Scorecard.docx';
+    }
+
+    const response = await fetch(templatePath);
+    const arrayBuffer = await response.arrayBuffer();
+
+    const zip = new JSZip(arrayBuffer);
+    const doc = new window.docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true
+    });
+
+    doc.render({
+      CANDIDATE_NAME: 'Generated Candidate',
+      CURRENT_EMPLOYER: 'Current Employer',
+      SUMMARY_BULLET_1: item.content.substring(0, 300),
+      SUMMARY_BULLET_2: '',
+      SUMMARY_BULLET_3: '',
+      MONTH_YEAR: new Date().toLocaleDateString()
+    });
+
+    const out = doc.getZip().generate({
+      type: 'blob',
+      mimeType:
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(out);
+    a.download = item.name + '.docx';
+    a.click();
+
+  } catch (error) {
+    console.error(error);
+    notify('DOCX generation failed');
+  }
 }
 renderHistory();
 // Load saved keys on startup 
