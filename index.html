@@ -1016,7 +1016,7 @@ async function downloadHistory(index) {
     const response = await fetch(templatePath);
     const arrayBuffer = await response.arrayBuffer();
 
-    const zip = new JSZip(arrayBuffer);
+    const zip = await JSZip.loadAsync(arrayBuffer);
     const doc = new window.docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true
