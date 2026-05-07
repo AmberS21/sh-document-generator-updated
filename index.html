@@ -374,30 +374,32 @@ table.usage tr:last-child td{border-bottom:none;}
     <div class="card">
       <div class="card-title"><div class="step-dot">1</div> Input Source</div>
       <div class="inp-tabs">
-        <div class="itab on" onclick="switchInp('text',this)">&#9999; Paste Text</div>
-        <div class="itab" onclick="switchInp('url',this)">&#128279; Web URL</div>
-        <div class="itab" onclick="switchInp('file',this)">&#128206; Upload File</div>
-        <div class="itab dim" title="Coming when Ezekia MCP is ready">&#128260; Ezekia CRM</div>
-      </div>
+  <div class="itab on" data-type="text" onclick="switchInp('text',this)">&#9999;&#65039; Paste Text</div>
+  <div class="itab" data-type="url" onclick="switchInp('url',this)">&#128279; Web URL</div>
+  <div class="itab" data-type="file" onclick="switchInp('file',this)">&#128206; Upload File</div>
+  <div class="itab dim" title="Coming soon" data-type="ezekia">&#128260; Ezekia CRM</div>
+</div>
       <div id="inp-text">
         <textarea rows="4" id="bioText" placeholder="Paste candidate bio, CV text, assignment details, newsletter copy&#8230;"></textarea>
         <div class="note">Plain text &middot; LinkedIn bio &middot; CV content &middot; Assignment details</div>
       </div>
       <div id="inp-url" class="hidden">
-        <input type="url" placeholder="https://example.com/profile"/>
-        <div class="note">&#9888; LinkedIn URLs are blocked. Export as PDF and upload instead.</div>
+  <input type="url" id="urlInput" placeholder="https://example.com/candidate-profile" style="width:100%;border:1.5px solid var(--brd);border-radius:8px;padding:10px 13px;font-size:13px;color:var(--txt);background:var(--card);outline:none;margin-bottom:8px;" />
+  <div class="note">&#9888;&#65039; LinkedIn URLs are blocked &#8212; export as PDF and upload instead. Any other public URL works.</div>
+</div>
       </div>
       <div id="inp-file" class="hidden">
-        <div class="upload-zone" onclick="fakeUpload()">
-          <div style="font-size:28px;margin-bottom:6px;">&#128194;</div>
-          <div style="font-weight:600;font-size:13px;margin-bottom:3px;">Drop files here or click to browse</div>
-          <div class="note">Accepts: .docx &middot; .pdf &middot; .xlsx &middot; .pptx</div>
-        </div>
-        <div id="upProg" class="hidden" style="margin-top:8px;">
-          <div class="prog-wrap"><div class="prog-bar" id="pbar"></div></div>
-          <div class="note" id="upLbl" style="margin-top:4px;"></div>
-        </div>
-      </div>
+  <div class="upload-zone" onclick="document.getElementById('fileInputEl').click()" style="cursor:pointer;border:2px dashed var(--brd);border-radius:10px;padding:24px;text-align:center;">
+    <div style="font-size:28px;margin-bottom:6px;">&#128194;</div>
+    <div style="font-weight:600;font-size:13px;margin-bottom:3px;">Drop files here or click to browse</div>
+    <div class="note" id="fileNameLabel">Accepts .docx &middot; .pdf &middot; .xlsx &middot; .txt</div>
+    <input type="file" id="fileInputEl" accept=".docx,.pdf,.xlsx,.xls,.txt,.doc" style="display:none" onchange="document.getElementById('fileNameLabel').textContent=this.files[0]?this.files[0].name:'Accepts .docx · .pdf · .xlsx · .txt'" />
+  </div>
+  <div id="upProg" class="hidden" style="margin-top:8px;">
+    <div class="prog-wrap"><div class="prog-bar" id="pbar"></div></div>
+    <div class="note" id="upLbl" style="margin-top:4px;"></div>
+  </div>
+</div>
     </div>
 
     <!-- STEP 2 -->
@@ -409,23 +411,12 @@ table.usage tr:last-child td{border-bottom:none;}
       </div>
       <div class="tpl-drop-wrap">
         <select class="tpl-sel" id="tplSel" onchange="pickTpl(this.value)">
-          <option value="">&#8212; Choose a template &#8212;</option>
-          <optgroup label="&#9472;&#9472; CV Profiles">
-            <option value="cv-svc">CV Profile &#8212; Services (Global)</option>
-            <option value="cv-general">CV Profile &#8212; General (April 2026)</option>
-            <option value="cv-apac">CV Profile APAC &#8212; With Client Context</option>
-            <option value="cv-wam-n">CV + Assessment &#8212; WAM US (No Scorecard)</option>
-            <option value="cv-wam-s">CV + Assessment + Scorecard &#8212; WAM US</option>
-          </optgroup>
-          <optgroup label="&#9472;&#9472; Reports &amp; Presentations">
-            <option value="assign">Assignment Report (PPTX)</option>
-            <option value="bd">BD Insight Report (PDF)</option>
-            <option value="mmap">Market Map (Excel)</option>
-          </optgroup>
-          <optgroup label="&#9472;&#9472; Communications">
-            <option value="news">Weekly Newsletter (Word)</option>
-          </optgroup>
-        </select>
+<option value="">&#8212; Choose a template &#8212;</option>
+<optgroup label="&#9472;&#9472; CV Profiles">
+<option value="cv_wam_n">Global Candidate Profile &#8212; No Scorecard</option>
+<option value="cv_wam_s">Global Candidate Profile &#8212; With Scorecard</option>
+</optgroup>
+</select>
       </div>
       <div class="tpl-preview" id="tplPrev">
         <div class="prev-head">
@@ -760,50 +751,23 @@ function switchInp(type, el) {
 
 // ══ TEMPLATE DATA ══
 var TPL = {
-  'cv-svc': {
-    name:'CV Profile — Services', sub:'Global · Standard SH format',
-    ico:'doc', bg:'rgba(43,124,211,.12)', fmt:'d', reg:'Global',
-    flds:['Candidate Name','Career Summary','Current Company','Job Title','Business Experience','Education','Nationality','Languages','Interests']
+  cv_wam_n: {
+    name: 'Global Candidate Profile',
+    sub:  'No Scorecard',
+    ico:  'doc',
+    bg:   'rgba(43,124,211,.12)',
+    fmt:  'd',
+    reg:  'Global',
+    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Business Experience','Education','Qualifications','Affiliations','Personal Details']
   },
-  'cv-general': {
-    name:'CV Profile — General', sub:'Global · April 2026 template',
-    ico:'doc', bg:'rgba(43,124,211,.12)', fmt:'d', reg:'Global',
-    flds:['Candidate Name','Current Employer','Client Company Name','Search Title','Summary','Business Experience','Education','Professional Qualifications','Personal Details']
-  },
-  'cv-apac': {
-    name:'CV Profile APAC', sub:'With client + search context',
-    ico:'doc', bg:'rgba(43,124,211,.12)', fmt:'d', reg:'APAC',
-    flds:['Candidate Name','Current Employer','Client Company','Search Title','Summary','Business Experience','Personal Details']
-  },
-  'cv-wam-n': {
-    name:'CV + Assessment (WAM US)', sub:'No Scorecard',
-    ico:'doc', bg:'rgba(43,124,211,.12)', fmt:'d', reg:'WAM US',
-    flds:['Career Summary','Motivations','Client Coverage','Strategy Experience','Fundraising Track Record','Areas of Strength','Areas to Explore','Business Experience']
-  },
-  'cv-wam-s': {
-    name:'CV + Assessment + Scorecard', sub:'WAM US · Full assessment',
-    ico:'doc', bg:'rgba(43,124,211,.12)', fmt:'d', reg:'WAM US',
-    flds:['Career Summary','Motivations','Client Coverage','Fundraising Track Record','Scorecard Ratings','Assessment Notes','Business Experience']
-  },
-  'assign': {
-    name:'Assignment Report', sub:'Executive search brief',
-    ico:'ppt', bg:'rgba(210,71,38,.1)', fmt:'p', reg:'Global',
-    flds:['Search Title','Client Company','Role Overview','Key Responsibilities','Candidate Requirements','Timeline','Compensation']
-  },
-  'bd': {
-    name:'BD Insight Report', sub:'Business development',
-    ico:'pdf', bg:'rgba(220,38,38,.1)', fmt:'f', reg:'BD',
-    flds:['Company Name','Sector','Key Contacts','Opportunity Summary','Recommended Approach','Next Steps']
-  },
-  'mmap': {
-    name:'Market Map', sub:'Org & talent mapping',
-    ico:'xls', bg:'rgba(22,163,74,.1)', fmt:'x', reg:'Global',
-    flds:['Company','Name','Title','Location','LinkedIn','Notes']
-  },
-  'news': {
-    name:'Weekly Newsletter', sub:'SH market mailer',
-    ico:'doc', bg:'rgba(43,124,211,.12)', fmt:'d', reg:'Global',
-    flds:['Issue Date','Lead Story','Market Commentary','Notable Moves','Events','Closing Note']
+  cv_wam_s: {
+    name: 'Global Candidate Profile',
+    sub:  'With Scorecard',
+    ico:  'doc',
+    bg:   'rgba(43,124,211,.12)',
+    fmt:  'd',
+    reg:  'Global',
+    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Business Experience','Education','Qualifications','Affiliations','Personal Details','Scorecard']
   }
 };
 
@@ -894,18 +858,66 @@ function fakeUpload() {
 }
 
 // ══ GENERATE ══
-function generate() {
+async function generate() {
   var tpl = document.getElementById('tplSel').value;
   if (!tpl) { notify('Please select a template first'); return; }
 
   var inputText = '';
-  var txt = document.querySelector('#inp-text textarea');
-  if (txt) inputText = txt.value.trim();
+  var activeTab = document.querySelector('.itab.on');
+  var activeType = activeTab ? activeTab.getAttribute('data-type') : 'text';
 
-  if (!inputText) {
-    notify('Please paste candidate text first');
-    return;
+  if (activeType === 'url') {
+    var urlVal = (document.getElementById('urlInput') || {value:''}).value.trim();
+    if (!urlVal) { notify('Please enter a URL'); return; }
+    btn.classList.add('loading'); btn.innerHTML = 'Fetching URL…';
+    try {
+      var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(urlVal);
+      var urlResp = await fetch(proxyUrl);
+      var urlData = await urlResp.json();
+      var parser = new DOMParser();
+      var doc2 = parser.parseFromString(urlData.contents, 'text/html');
+      // Remove scripts/styles
+      doc2.querySelectorAll('script,style,nav,header,footer').forEach(el => el.remove());
+      inputText = (doc2.body ? doc2.body.innerText : doc2.documentElement.innerText || '').replace(/\s+/g,' ').trim().substring(0, 15000);
+    } catch(urlErr) {
+      btn.classList.remove('loading'); btn.innerHTML = 'Generate Document';
+      notify('Could not fetch URL: ' + urlErr.message); return;
+    }
+  } else if (activeType === 'file') {
+    var fileInput = document.getElementById('fileInputEl');
+    if (!fileInput || !fileInput.files || !fileInput.files[0]) { notify('Please select a file'); return; }
+    var file = fileInput.files[0];
+    var ext = file.name.split('.').pop().toLowerCase();
+    btn.classList.add('loading'); btn.innerHTML = 'Reading file…';
+    try {
+      if (ext === 'txt') {
+        inputText = await file.text();
+      } else if (ext === 'docx') {
+        var arrBuf = await file.arrayBuffer();
+        var zipF = new PizZip(arrBuf);
+        var bodyXml = zipF.files['word/document.xml'] ? zipF.files['word/document.xml'].asText() : '';
+        inputText = bodyXml.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().substring(0,15000);
+      } else if (ext === 'pdf') {
+        inputText = '[PDF parsing requires server-side processing. Please copy-paste the CV text instead.]';
+      } else if (ext === 'xlsx' || ext === 'xls') {
+        inputText = '[Excel source files: Please copy-paste relevant candidate data as text.]';
+      } else {
+        inputText = await file.text();
+      }
+    } catch(fileErr) {
+      btn.classList.remove('loading'); btn.innerHTML = 'Generate Document';
+      notify('Could not read file: ' + fileErr.message); return;
+    }
+  } else {
+    var txt = document.querySelector('#inp-text textarea');
+    if (txt) inputText = txt.value.trim();
   }
+
+  if (!inputText || inputText.length < 10) {
+    btn.classList.remove('loading'); btn.innerHTML = 'Generate Document';
+    notify('Please provide candidate information first'); return;
+  }
+
 
   var claudeKey = localStorage.getItem('sh_claudeKey');
 
@@ -914,11 +926,18 @@ function generate() {
   btn.innerHTML = '⏳ Generating profile with Claude...';
 
 var prompt = `
-You are a Sheffield Haworth executive profile generation assistant.
+You are a Sheffield Haworth executive search document assistant.
 
-Return ONLY valid JSON. Do not include markdown. Do not include explanations. Do not include code blocks.
+Your task is to EXTRACT information from the candidate CV/profile provided below and populate the JSON fields.
 
-Use this exact structure and fill every field from the candidate information. Leave fields as "" if information is not available:
+CRITICAL RULES:
+- Extract ONLY what is explicitly stated in the CV. Do NOT invent, infer, rephrase, embellish or add anything.
+- If a field is not mentioned or cannot be found in the CV, leave it as "" (empty string).
+- For bullet point fields (SUMMARY_BULLET_1, COMPANY_X_BULLET_X etc): if there is no description in the CV for that role, leave ALL bullets for that role as "". Do NOT write generic descriptions.
+- Copy job titles, company names, dates and education EXACTLY as written in the CV.
+- Return ONLY valid JSON. No markdown. No explanations. No code blocks.
+
+Use this exact JSON structure:
 {
   "CANDIDATE_NAME": "",
   "CURRENT_EMPLOYER": "",
@@ -970,14 +989,7 @@ Use this exact structure and fill every field from the candidate information. Le
   "INTERESTS": ""
 }
 
-Rules:
-- Professional executive search tone
-- Concise bullet points
-- No invented facts - only use information provided
-- Return valid JSON only
-- Leave fields as "" if info not available
-
-Candidate information:
+Candidate CV / profile text:
 ${inputText}
 `;
 
@@ -991,7 +1003,7 @@ ${inputText}
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
+      max_tokens: 4000,
 messages: [{
   role: 'user',
   content: prompt
@@ -1015,7 +1027,7 @@ try {
 }
 
     var item = {
-      name: 'Generated Profile',
+          name: (output && output.CANDIDATE_NAME) ? output.CANDIDATE_NAME : 'Unknown Candidate',
       date: new Date().toLocaleString(),
       template: tpl,
       content: output
@@ -1081,11 +1093,9 @@ async function downloadHistory(index) {
 
   try {
 
-    var templatePath = 'SH_Global_Candidate_Profile_No Scorecard.docx';
+        var templatePath = 'SH_Global_Candidate_Profile_No Scorecard.docx';
+    if (item.template === 'cv_wam_s') templatePath = 'SH_Global_Candidate_Profile_With_Scorecard.docx';
 
-    if (item.template === 'cv-wam-s') {
-      templatePath = 'SH_Global_Candidate_Profile_With_Scorecard.docx';
-    }
 
     const response = await fetch(templatePath);
     const arrayBuffer = await response.arrayBuffer();
@@ -1111,7 +1121,7 @@ doc.render(item.content);
 
     const a = document.createElement('a');
     a.href = URL.createObjectURL(out);
-    a.download = item.name + '.docx';
+        a.download = 'SH Global - ' + ((item.content && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : 'Candidate') + (item.template === 'cv_wam_s' ? ' - With Scorecard' : ' - Without Scorecard') + '.docx';
     a.click();
 
   } catch (error) {
