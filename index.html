@@ -1022,14 +1022,65 @@ async function downloadHistory(index) {
       linebreaks: true
     });
 
-    doc.render({
-      CANDIDATE_NAME: 'Generated Candidate',
-      CURRENT_EMPLOYER: 'Current Employer',
-      SUMMARY_BULLET_1: item.content.substring(0, 300),
-      SUMMARY_BULLET_2: '',
-      SUMMARY_BULLET_3: '',
-      MONTH_YEAR: new Date().toLocaleDateString()
-    });
+doc.render({
+  CANDIDATE_NAME: 'Generated Candidate',
+  CURRENT_EMPLOYER: 'Current Employer',
+  SEARCH_TITLE: '',
+  CLIENT_COMPANY: '',
+  MONTH_YEAR: new Date().toLocaleDateString(),
+
+  SUMMARY_BULLET_1: item.content.substring(0, 500),
+  SUMMARY_BULLET_2: '',
+  SUMMARY_BULLET_3: '',
+
+  COMPANY_1_NAME: '',
+  COMPANY_1_LOCATION: '',
+  COMPANY_1_ROLE: '',
+  COMPANY_1_FUNCTION: '',
+  COMPANY_1_DATES: '',
+  COMPANY_1_BULLET_1: '',
+  COMPANY_1_BULLET_2: '',
+  COMPANY_1_BULLET_3: '',
+
+  COMPANY_2_NAME: '',
+  COMPANY_2_LOCATION: '',
+  COMPANY_2_ROLE: '',
+  COMPANY_2_FUNCTION: '',
+  COMPANY_2_DATES: '',
+  COMPANY_2_BULLET_1: '',
+  COMPANY_2_BULLET_2: '',
+  COMPANY_2_BULLET_3: '',
+
+  COMPANY_3_NAME: '',
+  COMPANY_3_LOCATION: '',
+  COMPANY_3_ROLE: '',
+  COMPANY_3_FUNCTION: '',
+  COMPANY_3_DATES: '',
+  COMPANY_3_BULLET_1: '',
+  COMPANY_3_BULLET_2: '',
+  COMPANY_3_BULLET_3: '',
+
+  EDU_1_YEARS: '',
+  EDU_1_INSTITUTION: '',
+  EDU_1_DEGREE: '',
+
+  EDU_2_YEARS: '',
+  EDU_2_INSTITUTION: '',
+  EDU_2_DEGREE: '',
+
+  QUAL_1: '',
+  QUAL_2: '',
+  QUAL_3: '',
+
+  AFFILIATION_1: '',
+  AFFILIATION_1_DATES: '',
+  AFFILIATION_2: '',
+  AFFILIATION_2_DATES: '',
+
+  NATIONALITY: '',
+  LANGUAGES: '',
+  INTERESTS: ''
+});
 
     const out = doc.getZip().generate({
       type: 'blob',
