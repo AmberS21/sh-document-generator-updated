@@ -283,6 +283,8 @@ table.usage tr:last-child td{border-bottom:none;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.47.4/build/docxtemplater.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -898,9 +900,16 @@ async function generate() {
         var bodyXml = zipF.files['word/document.xml'] ? zipF.files['word/document.xml'].asText() : '';
         inputText = bodyXml.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().substring(0,15000);
       } else if (ext === 'pdf') {
-        inputText = '[PDF parsing requires server-side processing. Please copy-paste the CV text instead.]';
+        inputText = await (async function(){
+          var ab = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res(e.target.result);};rd.onerror=rej;rd.readAsArrayBuffer(file);});
+          pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          var pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
+          var txt='';
+          for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();txt+=tc.items.map(function(s){return s.str;}).join(' ')+'\n';}
+          return txt.trim();
+        })();
       } else if (ext === 'xlsx' || ext === 'xls') {
-        inputText = '[Excel source files: Please copy-paste relevant candidate data as text.]';
+        inputText = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){var wb=XLSX.read(e.target.result,{type:'binary'});var out='';wb.SheetNames.forEach(function(sn){out+=XLSX.utils.sheet_to_csv(wb.Sheets[sn])+'\n';});res(out.trim());};rd.onerror=rej;rd.readAsBinaryString(file);});
       } else {
         inputText = await file.text();
       }
