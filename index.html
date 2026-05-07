@@ -975,15 +975,17 @@ ${inputText}
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 2000,
-      messages: [{
-        role: 'user',
-        content: prompt
-      }]
+messages: [{
+  role: 'user',
+  content: prompt
+}],
+system: "Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text."
     })
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     var rawOutput = data.content && data.content[0]
+      onsole.log(rawOutput);
   ? data.content[0].text
   : '{}';
 
