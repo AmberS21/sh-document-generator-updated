@@ -904,7 +904,7 @@ function generate() {
     return;
   }
 
-  var claudeKey = localStorage.getItem('claude_api_key');
+  var claudeKey = localStorage.getItem('sh_claude_key');
   if (!claudeKey) {
     notify('Please add and save Claude API key first');
     return;
