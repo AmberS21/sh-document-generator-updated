@@ -942,13 +942,10 @@ var _totalFiles = filesToProcess.length; showProgress(0, _totalFiles, "Preparing
       }
       if (inputText && inputText.length >= 10) {
         btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + '…';
-showProgress(fi+1, _totalFiles);         if ((window._outputMode||'combined')==='separate'){await processOneCV(inputText,tpl,btn);}else{combinedTexts.push(inputText);}
+                  showProgress(fi+1, _totalFiles); await processOneCV(inputText,tpl,btn);
       } else {
         notify('Could not extract text from: ' + file.name);
       }
-    }
-    if((window._outputMode||'combined')==='combined'&&combinedTexts.length>0){
-      await processOneCV(combinedTexts.join('\n\n--- NEW CANDIDATE ---\n\n'),tpl,btn);
     }
     btn.classList.remove('loading'); btn.innerHTML = '⚡ Generate Document';
     hideProgress(_totalFiles > 1 ? 'All done! ' + _totalFiles + ' profiles ready — check My History' : 'Done! Your profile is ready — check My History'); return;  } else {
