@@ -126,13 +126,17 @@ button,input,select,textarea{font-family:inherit;}
 .card{background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);margin-bottom:12px;}
 .card-title{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:7px;margin-bottom:14px;}
 .step-dot{width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--light));color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.two-col{display:grid;grid-template-columns:44% 56%;gap:16px;align-items:start;}
-.full-col{grid-column:1/-1;}
-@media(max-width:720px){.two-col{grid-template-columns:1fr;}}
+.two-col{display:block;}
+#sec-gen{display:grid;grid-template-columns:44% 56%;gap:16px;align-items:start;}
+#sec-gen .two-col{grid-column:1;grid-row:1;}
+#sec-gen .gen-right-col{grid-column:2;grid-row:1;}
+#sec-gen .gen-btn{grid-column:1/-1;margin-top:4px;}
+#sec-gen .gen-cap{grid-column:1/-1;}
 .gen-right-col{display:flex;flex-direction:column;gap:16px;}
-#sec-gen .two-col>.card:first-child{align-self:stretch;}
+#sec-gen .two-col>.card{height:100%;}
 #sec-gen #inp-text textarea{min-height:380px;resize:vertical;}
 #sec-gen #inp-file .upload-zone{min-height:360px;display:flex;flex-direction:column;justify-content:center;}
+@media(max-width:720px){#sec-gen{grid-template-columns:1fr;}#sec-gen .two-col,#sec-gen .gen-right-col{grid-column:1;}}
 .divider{height:1px;background:var(--brd);margin:12px 0;}
 .note{font-size:11px;color:var(--mut);margin-top:5px;line-height:1.6;}
 .row-between{display:flex;align-items:center;justify-content:space-between;}
