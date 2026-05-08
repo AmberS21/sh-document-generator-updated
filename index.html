@@ -443,6 +443,10 @@ table.usage tr:last-child td{border-bottom:none;}
 <option value="cv_wam_n">Global Candidate Profile &#8212; No Scorecard</option>
 <option value="cv_wam_s">Global Candidate Profile &#8212; With Scorecard</option>
 </optgroup>
+<optgroup label="&#9472;&#9472; APAC Profiles">
+<option value="cv_apac_en">APAC Candidate Profile &#8212; English</option>
+<option value="cv_apac_zh">APAC Candidate Profile &#8212; Chinese</option>
+</optgroup>
 </select>
       </div>
       <div class="tpl-preview" id="tplPrev">
@@ -793,6 +797,25 @@ var TPL = {
     reg:  'Global',
     flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Business Experience','Education','Qualifications','Affiliations','Personal Details','Scorecard']
   }
+},
+  cv_apac_en: {
+    name: 'APAC Candidate Profile',
+    sub:  'English',
+    ico:  'doc',
+    bg:   'rgba(43,124,211,.12)',
+    fmt:  'd',
+    reg:  'APAC',
+    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Business Experience (up to 5 companies)','Education','Qualifications','Nationality','Languages','Interests']
+  },
+  cv_apac_zh: {
+    name: 'APAC Candidate Profile',
+    sub:  'Chinese',
+    ico:  'doc',
+    bg:   'rgba(43,124,211,.12)',
+    fmt:  'd',
+    reg:  'APAC',
+    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Business Experience (up to 5 companies)','Education','Qualifications','Nationality','Languages','Interests']
+  }
 };
 
 var FMT_TAG = {
@@ -1006,73 +1029,95 @@ async function processOneCV(inputText, tpl, btn, returnOnly) {
   btn.classList.add('loading');
   btn.innerHTML = '⏳ Generating profile with Claude...';
 
-var prompt = `
-You are a Sheffield Haworth executive search document assistant.
+var isApac = (tpl === 'cv_apac_en' || tpl === 'cv_apac_zh');
+var isChineseApac = (tpl === 'cv_apac_zh');
 
-Your task is to EXTRACT information from the candidate CV/profile provided below and populate the JSON fields.
-
-CRITICAL RULES:
-- Extract ONLY what is explicitly stated in the CV. Do NOT invent, infer, rephrase, embellish or add anything.
-- If a field is not mentioned or cannot be found in the CV, leave it as "" (empty string).
-- For bullet point fields (SUMMARY_BULLET_1, COMPANY_X_BULLET_X etc): if there is no description in the CV for that role, leave ALL bullets for that role as "". Do NOT write generic descriptions.
-- Copy job titles, company names, dates and education EXACTLY as written in the CV.
-- Return ONLY valid JSON. No markdown. No explanations. No code blocks.
-
-Use this exact JSON structure:
-{
+var apacJsonTemplate = JSON.stringify({
   "CANDIDATE_NAME": "",
   "CURRENT_EMPLOYER": "",
-  "SEARCH_TITLE": "",
   "CLIENT_COMPANY": "",
+  "SEARCH_TITLE": "",
   "MONTH_YEAR": "",
-  "SUMMARY_BULLET_1": "",
-  "SUMMARY_BULLET_2": "",
-  "SUMMARY_BULLET_3": "",
+  "SUMMARY": "",
+  "SUMMARY_BULLETS": "",
   "COMPANY_1_NAME": "",
   "COMPANY_1_LOCATION": "",
+  "COMPANY_1_DATES": "",
   "COMPANY_1_ROLE": "",
   "COMPANY_1_FUNCTION": "",
-  "COMPANY_1_DATES": "",
-  "COMPANY_1_BULLET_1": "",
-  "COMPANY_1_BULLET_2": "",
-  "COMPANY_1_BULLET_3": "",
+  "COMPANY_1_ROLE_DATES": "",
+  "COMPANY_1_BULLETS": "",
+  "COMPANY_1_BULLETS_2": "",
   "COMPANY_2_NAME": "",
   "COMPANY_2_LOCATION": "",
+  "COMPANY_2_DATES": "",
   "COMPANY_2_ROLE": "",
   "COMPANY_2_FUNCTION": "",
-  "COMPANY_2_DATES": "",
-  "COMPANY_2_BULLET_1": "",
-  "COMPANY_2_BULLET_2": "",
-  "COMPANY_2_BULLET_3": "",
+  "COMPANY_2_ROLE_DATES": "",
+  "COMPANY_2_BULLETS": "",
+  "COMPANY_2_BULLETS_2": "",
   "COMPANY_3_NAME": "",
   "COMPANY_3_LOCATION": "",
+  "COMPANY_3_DATES": "",
   "COMPANY_3_ROLE": "",
   "COMPANY_3_FUNCTION": "",
-  "COMPANY_3_DATES": "",
-  "COMPANY_3_BULLET_1": "",
-  "COMPANY_3_BULLET_2": "",
-  "COMPANY_3_BULLET_3": "",
+  "COMPANY_3_ROLE_DATES": "",
+  "COMPANY_3_BULLETS": "",
+  "COMPANY_3_BULLETS_2": "",
+  "COMPANY_4_NAME": "",
+  "COMPANY_4_LOCATION": "",
+  "COMPANY_4_DATES": "",
+  "COMPANY_4_ROLE": "",
+  "COMPANY_4_FUNCTION": "",
+  "COMPANY_4_ROLE_DATES": "",
+  "COMPANY_4_BULLETS": "",
+  "COMPANY_4_BULLETS_2": "",
+  "COMPANY_5_NAME": "",
+  "COMPANY_5_LOCATION": "",
+  "COMPANY_5_DATES": "",
+  "COMPANY_5_ROLE": "",
+  "COMPANY_5_FUNCTION": "",
+  "COMPANY_5_ROLE_DATES": "",
+  "COMPANY_5_BULLETS": "",
+  "COMPANY_5_BULLETS_2": "",
   "EDU_1_YEARS": "",
   "EDU_1_INSTITUTION": "",
   "EDU_1_DEGREE": "",
-  "EDU_2_YEARS": "",
-  "EDU_2_INSTITUTION": "",
-  "EDU_2_DEGREE": "",
   "QUAL_1": "",
   "QUAL_2": "",
-  "QUAL_3": "",
-  "AFFILIATION_1": "",
-  "AFFILIATION_1_DATES": "",
-  "AFFILIATION_2": "",
-  "AFFILIATION_2_DATES": "",
   "NATIONALITY": "",
   "LANGUAGES": "",
   "INTERESTS": ""
-}
+}, null, 2);
 
-Candidate CV / profile text:
-${inputText}
-`;
+var prompt = isApac
+  ? 'You are a Sheffield Haworth executive search document assistant.\n\n' +
+    (isChineseApac ? 'IMPORTANT: This is a Chinese language profile. Extract ALL content and output ALL text field values IN SIMPLIFIED CHINESE. Translate any English content to Chinese.\n\n' : '') +
+    'Your task is to EXTRACT information from the candidate CV/profile below and populate the JSON fields for the APAC Candidate Profile template.\n\n' +
+    'CRITICAL RULES:\n' +
+    '- Extract ONLY what is explicitly stated in the CV. Do NOT invent, infer, or add anything.\n' +
+    '- If a field cannot be found, leave it as empty string.\n' +
+    '- COMPANY fields: Fill ALL companies in the CV (up to 5). For each company, capture ALL roles held there.\n' +
+    '- COMPANY_X_NAME: Company name only. COMPANY_X_LOCATION: Location/city.\n' +
+    '- COMPANY_X_DATES: Overall tenure at that company (earliest start to latest end).\n' +
+    '- COMPANY_X_ROLE: Most recent or primary job title. COMPANY_X_FUNCTION: Department/function.\n' +
+    '- COMPANY_X_ROLE_DATES: Dates for the specific role in COMPANY_X_ROLE.\n' +
+    '- COMPANY_X_BULLETS: Detailed description of responsibilities and achievements at this company. Include ALL roles. Be thorough.\n' +
+    '- COMPANY_X_BULLETS_2: Additional role descriptions if needed, otherwise leave empty.\n' +
+    '- SUMMARY: Concise 2-3 sentence executive summary.\n' +
+    '- Copy job titles, company names, dates EXACTLY as written in CV.\n' +
+    (isChineseApac ? '- All text values in the JSON MUST be in Simplified Chinese.\n' : '') +
+    '- Return ONLY valid JSON. No markdown. No code blocks.\n\n' +
+    'Use this exact JSON structure:\n' + apacJsonTemplate + '\n\nCandidate CV / profile text:\n' + inputText
+  : 'You are a Sheffield Haworth executive search document assistant.\n\n' +
+    'Your task is to EXTRACT information from the candidate CV/profile provided below and populate the JSON fields.\n\n' +
+    'CRITICAL RULES:\n' +
+    '- Extract ONLY what is explicitly stated in the CV. Do NOT invent, infer, rephrase, embellish or add anything.\n' +
+    '- If a field is not mentioned or cannot be found in the CV, leave it as "" (empty string).\n' +
+    '- For bullet point fields (SUMMARY_BULLET_1, COMPANY_X_BULLET_X etc): if there is no description in the CV for that role, leave ALL bullets for that role as "". Do NOT write generic descriptions.\n' +
+    '- Copy job titles, company names, dates and education EXACTLY as written in the CV.\n' +
+    '- Return ONLY valid JSON. No markdown. No explanations. No code blocks.\n\n' +
+    'Use this exact JSON structure:\n{\n  "CANDIDATE_NAME": "",\n  "CURRENT_EMPLOYER": "",\n  "SEARCH_TITLE": "",\n  "CLIENT_COMPANY": "",\n  "MONTH_YEAR": "",\n  "SUMMARY_BULLET_1": "",\n  "SUMMARY_BULLET_2": "",\n  "SUMMARY_BULLET_3": "",\n  "COMPANY_1_NAME": "",\n  "COMPANY_1_LOCATION": "",\n  "COMPANY_1_ROLE": "",\n  "COMPANY_1_FUNCTION": "",\n  "COMPANY_1_DATES": "",\n  "COMPANY_1_BULLET_1": "",\n  "COMPANY_1_BULLET_2": "",\n  "COMPANY_1_BULLET_3": "",\n  "COMPANY_2_NAME": "",\n  "COMPANY_2_LOCATION": "",\n  "COMPANY_2_ROLE": "",\n  "COMPANY_2_FUNCTION": "",\n  "COMPANY_2_DATES": "",\n  "COMPANY_2_BULLET_1": "",\n  "COMPANY_2_BULLET_2": "",\n  "COMPANY_2_BULLET_3": "",\n  "COMPANY_3_NAME": "",\n  "COMPANY_3_LOCATION": "",\n  "COMPANY_3_ROLE": "",\n  "COMPANY_3_FUNCTION": "",\n  "COMPANY_3_DATES": "",\n  "COMPANY_3_BULLET_1": "",\n  "COMPANY_3_BULLET_2": "",\n  "COMPANY_3_BULLET_3": "",\n  "EDU_1_YEARS": "",\n  "EDU_1_INSTITUTION": "",\n  "EDU_1_DEGREE": "",\n  "EDU_2_YEARS": "",\n  "EDU_2_INSTITUTION": "",\n  "EDU_2_DEGREE": "",\n  "QUAL_1": "",\n  "QUAL_2": "",\n  "QUAL_3": "",\n  "AFFILIATION_1": "",\n  "AFFILIATION_1_DATES": "",\n  "AFFILIATION_2": "",\n  "AFFILIATION_2_DATES": "",\n  "NATIONALITY": "",\n  "LANGUAGES": "",\n  "INTERESTS": ""\n}\n\nCandidate CV / profile text:\n' + inputText;
 
   return fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -1084,7 +1129,7 @@ ${inputText}
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
+      max_tokens: 6000,
 messages: [{
   role: 'user',
   content: prompt
@@ -1202,12 +1247,13 @@ async function downloadHistory(index) {
   var item = history[index];
   if (!item) return;
   var fmt = item.fmt || 'd';
-  var _scorecardLabel = item.template === 'cv_wam_s' ? 'with Scorecard' : 'No Scorecard';
+  var _scorecardLabel = item.template === 'cv_wam_s' ? 'with Scorecard' : item.template === 'cv_apac_en' ? 'English' : item.template === 'cv_apac_zh' ? 'Chinese' : 'No Scorecard';
+  var _profilePrefix = (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? 'APAC Profile' : 'Global';
   var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
-  var baseName = 'Global - ' + _scorecardLabel + ' - ' + _candidateLabel;
+  var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
       if (item.type === 'combined' && Array.isArray(item.content)) {
-        var _tplUrlC = item.template === 'cv_wam_s' ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+        var _tplUrlC = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? 'SH_APAC_Candidate_Profile.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
         var _respC = await fetch(_tplUrlC);
         var _abC = await _respC.arrayBuffer();
         var _zipC = new JSZip();
@@ -1225,7 +1271,7 @@ async function downloadHistory(index) {
         return;
       }
     if (fmt === 'd') {
-      var tplUrl = item.template === 'cv_wam_s' ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+      var tplUrl = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? 'SH_APAC_Candidate_Profile.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
       var resp = await fetch(tplUrl);
       var ab = await resp.arrayBuffer();
       var zip = new PizZip(ab);
