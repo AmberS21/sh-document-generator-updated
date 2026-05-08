@@ -909,7 +909,7 @@ async function generate() {
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) { notify('Please select a file'); return; }
     var filesToProcess = Array.from(fileInput.files);
       var combinedTexts = [];
-var _totalFiles = filesToProcess.length; showProgress(0, _totalFiles, 'Preparing ' + _totalFiles + ' file' + (_totalFiles===1?'':\'s') + '...');
+var _totalFiles = filesToProcess.length; showProgress(0, _totalFiles, "Preparing " + _totalFiles + " file" + (_totalFiles === 1 ? "" : "s") + "...");
           for (var fi = 0; fi < filesToProcess.length; fi++) {
       var file = filesToProcess[fi];
       var ext = file.name.split('.').pop().toLowerCase();
