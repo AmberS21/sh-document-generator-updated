@@ -907,50 +907,74 @@ async function generate() {
   } else if (activeType === 'file') {
     var fileInput = document.getElementById('fileInputEl');
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) { notify('Please select a file'); return; }
-    var filesToProcess = Array.from(fileInput.files);
-      var combinedTexts = [];
-var _totalFiles = filesToProcess.length; showProgress(0, _totalFiles, "Preparing " + _totalFiles + " file" + (_totalFiles === 1 ? "" : "s") + "...");
-          for (var fi = 0; fi < filesToProcess.length; fi++) {
-      var file = filesToProcess[fi];
-      var ext = file.name.split('.').pop().toLowerCase();
-      btn.innerHTML = 'Reading ' + file.name + '…';
-      try {
-        if (ext === 'txt') {
-          inputText = await file.text();
-        } else if (ext === 'docx') {
-          var arrBuf = await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
-          var zipF = new PizZip(arrBuf);
-          var bodyXml = zipF.files['word/document.xml'] ? zipF.files['word/document.xml'].asText() : '';
-          inputText = bodyXml.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().substring(0,15000);
-        } else if (ext === 'pdf') {
-          inputText = await (async function(){
-            var ab = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res(e.target.result);};rd.onerror=rej;rd.readAsArrayBuffer(file);});
-            pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-            var pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
-            var txt='';
-            for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();txt+=tc.items.map(function(s){return s.str;}).join(' ')+'\n';}
-            return txt.trim();
-          })();
-        } else if (ext === 'xlsx' || ext === 'xls') {
-          inputText = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){var wb=XLSX.read(e.target.result,{type:'binary'});var out='';wb.SheetNames.forEach(function(sn){out+=XLSX.utils.sheet_to_csv(wb.Sheets[sn])+'\n';});res(out.trim());};rd.onerror=rej;rd.readAsBinaryString(file);});
-        } else {
-          inputText = await file.text();
+        var filesToProcess = Array.from(fileInput.files);
+        var _totalFiles = filesToProcess.length;
+        var _isCombined = (window._outputMode || 'separate') === 'combined' && _totalFiles > 1;
+        var _combinedOutputs = [];
+        showProgress(0, _totalFiles, "Preparing " + _totalFiles + " file" + (_totalFiles === 1 ? "" : "s") + "...");
+        btn.classList.add('loading');
+        for (var fi = 0; fi < filesToProcess.length; fi++) {
+          var file = filesToProcess[fi];
+          var ext = file.name.split('.').pop().toLowerCase();
+          btn.innerHTML = 'Reading ' + file.name + '…';
+          try {
+            if (ext === 'txt') {
+              inputText = await file.text();
+            } else if (ext === 'docx') {
+              var arrBuf = await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
+              var zipF = new PizZip(arrBuf);
+              var bodyXml = zipF.files['word/document.xml'] ? zipF.files['word/document.xml'].asText() : '';
+              inputText = bodyXml.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().substring(0,50000);
+            } else if (ext === 'pdf') {
+              inputText = await (async function(){
+                var ab = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res(e.target.result);};rd.onerror=rej;rd.readAsArrayBuffer(file);});
+                pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+                var pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
+                var txt='';
+                for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();txt+=tc.items.map(function(s){return s.str;}).join(' ')+' ';}
+                return txt.trim();
+              })();
+            } else if (ext === 'xlsx' || ext === 'xls') {
+              inputText = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){var wb2=XLSX.read(e.target.result,{type:'array'});var txt2='';wb2.SheetNames.forEach(function(sn){var ws2=wb2.Sheets[sn];txt2+=XLSX.utils.sheet_to_csv(ws2)+' ';});res(txt2.trim());};rd.onerror=rej;rd.readAsArrayBuffer(file);});
+            } else {
+              inputText = await file.text();
+            }
+          } catch(fileErr) {
+            btn.classList.remove('loading'); btn.innerHTML = '⚡ Generate Document';
+            notify('Could not read file: ' + fileErr.message); return;
+          }
+          if (inputText && inputText.length >= 10) {
+            btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + '…';
+            showProgress(fi+1, _totalFiles);
+            if (_isCombined) {
+              var _cvOutput = await processOneCV(inputText, tpl, btn, true);
+              if (_cvOutput) _combinedOutputs.push(_cvOutput);
+            } else {
+              await processOneCV(inputText,tpl,btn);
+            }
+          } else {
+            notify('Could not extract text from: ' + file.name);
+          }
         }
-      } catch(fileErr) {
+        if (_isCombined && _combinedOutputs.length > 0) {
+          var _fmt = (document.querySelector('.fmt-chip.on-d,.fmt-chip.on-p,.fmt-chip.on-x,.fmt-chip.on-f')||{className:''}).className.match(/on-([dpxf])/);
+          var _combItem = {
+            name: 'Multiple Profiles (' + _combinedOutputs.length + ' candidates)',
+            date: new Date().toLocaleString(),
+            template: tpl,
+            fmt: _fmt ? _fmt[1] : 'd',
+            content: _combinedOutputs,
+            type: 'combined'
+          };
+          var _ch = JSON.parse(localStorage.getItem('sh_history') || '[]');
+          _ch.unshift(_combItem);
+          localStorage.setItem('sh_history', JSON.stringify(_ch));
+          renderHistory();
+        }
         btn.classList.remove('loading'); btn.innerHTML = '⚡ Generate Document';
-        notify('Could not read file: ' + fileErr.message); return;
-      }
-      if (inputText && inputText.length >= 10) {
-        btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + '…';
-                  showProgress(fi+1, _totalFiles); await processOneCV(inputText,tpl,btn);
-      } else {
-        notify('Could not extract text from: ' + file.name);
-      }
-    }
-    btn.classList.remove('loading'); btn.innerHTML = '⚡ Generate Document';
-    hideProgress(_totalFiles > 1 ? 'All done! ' + _totalFiles + ' profiles ready — check My History' : 'Done! Your profile is ready — check My History'); return;  } else {
-    var txt = document.querySelector('#inp-text textarea');
-    if (txt) inputText = txt.value.trim();
+        hideProgress(_totalFiles > 1 ? 'All done! ' + _totalFiles + ' profiles ready — check My History' : 'Done! Your profile is ready — check My History');
+        var txt = document.querySelector('#inp-text textarea');
+        if (txt) inputText = txt.value.trim();
   }
 
   if (!inputText || inputText.length < 10) {
@@ -963,7 +987,7 @@ showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, 
   hideProgress('Done! Your profile is ready — check My History');
 }
 
-async function processOneCV(inputText, tpl, btn) {
+async function processOneCV(inputText, tpl, btn, returnOnly) {
   var selChip = document.querySelector('.fmt-chip.on-d,.fmt-chip.on-p,.fmt-chip.on-x,.fmt-chip.on-f');
   var fmt = selChip ? (selChip.className.match(/on-([dpxf])/) ? selChip.className.match(/on-([dpxf])/)[1] : 'd') : 'd';
   var claudeKey = localStorage.getItem('sh_claudeKey');
@@ -1072,23 +1096,24 @@ try {
   return;
 }
 
-    var item = {
+        if (returnOnly) { return output; }
+        var item = {
           name: (output && output.CANDIDATE_NAME) ? output.CANDIDATE_NAME : 'Unknown Candidate',
           date: new Date().toLocaleString(),
           template: tpl,
           fmt: fmt,
           content: output
         };
-    var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
-    history.unshift(item);
-    localStorage.setItem('sh_history', JSON.stringify(history));
+        var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
+        history.unshift(item);
+        localStorage.setItem('sh_history', JSON.stringify(history));
 
-    renderHistory();
+        renderHistory();
 
-    btn.classList.remove('loading');
-    btn.innerHTML = '✅ Document Ready — Check My History';
-    notify('Done! Go to My History to download.');
-    setTimeout(function(){ btn.innerHTML = '⚡ Generate Document'; }, 3500);
+        btn.classList.remove('loading');
+        btn.innerHTML = '✓ Document Ready — Check My History';
+        notify('Done! Go to My History to download.');
+        setTimeout(function(){ btn.innerHTML = '⚡ Generate Document'; }, 3500);
   })
   .catch(function(err) {
     console.error(err);
@@ -1145,16 +1170,16 @@ function hideProgress(msg) {
 
   list.innerHTML = history.map(function(item, index) {
     return `
-      <div class="hist-row">
-        <div class="hist-ico" style="background:rgba(43,124,211,.12);">W</div>
-        <div style="flex:1;">
-          <div class="hist-name">${item.name}</div>
-          <div class="hist-meta">${item.date} · Word</div>
-        </div>
-        <span class="badge" style="background:#dcfce7;color:#166534;">Done</span>
-        <div class="ico-btn" onclick="downloadHistory(${index})">&#11015;</div>
+    <div class="hist-row">
+      <div class="hist-ico" style="background:${item.type==='combined'?'rgba(245,158,11,.15)':'rgba(43,124,211,.12)'};">${item.type==='combined'?'M':'W'}</div>
+      <div style="flex:1;">
+        <div class="hist-name">${item.name}</div>
+        <div class="hist-meta">${item.date} &middot; ${item.type==='combined'?('Combined ('+item.content.length+' profiles)'):'Word'}</div>
       </div>
-    `;
+      <span class="badge" style="background:#dcfce7;color:#166534;">Done</span>
+      <div class="ico-btn" onclick="downloadHistory(${index})">&#11015;</div>
+    </div>
+    `
   }).join('');
 
   var n = document.getElementById('histCount');
@@ -1166,8 +1191,28 @@ async function downloadHistory(index) {
   var item = history[index];
   if (!item) return;
   var fmt = item.fmt || 'd';
-  var baseName = 'SH Global - ' + (item.content && item.content.CANDIDATE_NAME ? item.content.CANDIDATE_NAME : item.name || 'Candidate') + ' - ' + (item.template === 'cv_wam_s' ? 'With Scorecard' : 'Without Scorecard');
+  var _scorecardLabel = item.template === 'cv_wam_s' ? 'with Scorecard' : 'No Scorecard';
+  var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
+  var baseName = 'Global - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
+      if (item.type === 'combined' && Array.isArray(item.content)) {
+        var _tplUrlC = item.template === 'cv_wam_s' ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+        var _respC = await fetch(_tplUrlC);
+        var _abC = await _respC.arrayBuffer();
+        var _zipC = new JSZip();
+        for (var _ci = 0; _ci < item.content.length; _ci++) {
+          var _cvC = item.content[_ci];
+          var _nameC = (_cvC && _cvC.CANDIDATE_NAME) ? _cvC.CANDIDATE_NAME : ('Profile_' + (_ci+1));
+          var _zipI = new PizZip(_abC.slice(0));
+          var _docC = new window.docxtemplater(_zipI, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
+          _docC.render(_cvC);
+          var _outC = _docC.getZip().generate({type:'arraybuffer',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+          _zipC.file('Global - ' + _scorecardLabel + ' - ' + _nameC + '.docx', _outC);
+        }
+        var _zipBlob = await _zipC.generateAsync({type:'blob'});
+        var _aZ = document.createElement('a'); _aZ.href = URL.createObjectURL(_zipBlob); _aZ.download = baseName + '.zip'; document.body.appendChild(_aZ); _aZ.click(); document.body.removeChild(_aZ);
+        return;
+      }
     if (fmt === 'd') {
       var tplUrl = item.template === 'cv_wam_s' ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
       var resp = await fetch(tplUrl);
