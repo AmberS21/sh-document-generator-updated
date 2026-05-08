@@ -279,6 +279,12 @@ table.usage tr:last-child td{border-bottom:none;}
 
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-thumb{background:var(--brd);border-radius:3px;}
+
+/* ── SEGMENTED BUTTON ── */
+.seg-wrap{display:flex;border:1.5px solid var(--brd);border-radius:8px;overflow:hidden;flex-shrink:0;}
+.seg-btn{background:transparent;border:none;padding:6px 16px;font-size:13px;font-weight:500;color:var(--mut);cursor:pointer;transition:background .15s,color .15s;}
+.seg-btn.on{background:var(--blue);color:#fff;}
+.seg-btn:not(.on):hover{background:var(--tbg);color:var(--txt);}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
@@ -433,7 +439,7 @@ table.usage tr:last-child td{border-bottom:none;}
       <div class="note" style="margin-top:9px;">SH branding, fonts &amp; colours always preserved. Only placeholder content is filled.</div>
     </div>
 
-  </div>
+
 
   <!-- STEP 3 — full width -->
   <div class="card">
@@ -466,11 +472,16 @@ table.usage tr:last-child td{border-bottom:none;}
           PDF
         </div>    </div>
     <div class="divider"></div>
-    <div class="row-between" style="margin-bottom:10px;">
-      <div><div style="font-size:13px;font-weight:500;">Batch Processing</div><div class="note">One document per candidate &#8212; saves as ZIP</div></div>
-      <div class="tog" id="batchTog" onclick="togEl(this,'batchRow')"><div class="tok"></div></div>
+    <div class="row-between" style="align-items:center">
+      <div>
+        <div style="font-weight:600;font-size:14px;color:var(--txt)">File Output</div>
+        <div class="note" style="margin-top:2px">For multiple CVs — one combined deck or separate files</div>
+      </div>
+      <div class="seg-wrap" id="outputModeBtns">
+        <button class="seg-btn on" onclick="setOutputMode(this,'combined')">Combined</button>
+        <button class="seg-btn" onclick="setOutputMode(this,'separate')">Separate</button>
+      </div>
     </div>
-    <div id="batchRow" class="hidden"><textarea rows="2" placeholder="Paste multiple candidate names (one per line) or upload multiple files above"></textarea></div>
     <div class="divider"></div>
     <div class="row-between">
       <div><div style="font-size:13px;font-weight:500;">Save to My History</div><div class="note">Private to you only</div></div>
@@ -480,6 +491,7 @@ table.usage tr:last-child td{border-bottom:none;}
 
   <button class="gen-btn" id="genBtn" onclick="generate()">&#9889; Generate Document</button>
   <div class="gen-cap">Powered by Claude AI &middot; Sheffield Haworth branding preserved</div>
+</div>
 </div>
 
 <!-- ════════════════════════════════
@@ -830,6 +842,13 @@ function togEl(el, rowId) {
   if (rowId) document.getElementById(rowId).classList.toggle('hidden', !el.classList.contains('on'));
 }
 
+function setOutputMode(btn, mode) {
+  document.querySelectorAll('#outputModeBtns .seg-btn').forEach(function(b) { b.classList.remove('on'); });
+  btn.classList.add('on');
+  window._outputMode = mode;
+}
+window._outputMode = 'combined';
+
 // ══ DARK MODE ══
 function toggleDark() {
   var on = document.documentElement.getAttribute('data-dark') === '1';
@@ -876,6 +895,7 @@ async function generate() {
     var fileInput = document.getElementById('fileInputEl');
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) { notify('Please select a file'); return; }
     var filesToProcess = Array.from(fileInput.files);
+      var combinedTexts = [];
     for (var fi = 0; fi < filesToProcess.length; fi++) {
       var file = filesToProcess[fi];
       var ext = file.name.split('.').pop().toLowerCase();
@@ -908,10 +928,13 @@ async function generate() {
       }
       if (inputText && inputText.length >= 10) {
         btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + '…';
-        await processOneCV(inputText, tpl, btn);
+        if ((window._outputMode||'combined')==='separate'){await processOneCV(inputText,tpl,btn);}else{combinedTexts.push(inputText);}
       } else {
         notify('Could not extract text from: ' + file.name);
       }
+    }
+    if((window._outputMode||'combined')==='combined'&&combinedTexts.length>0){
+      await processOneCV(combinedTexts.join('\n\n--- NEW CANDIDATE ---\n\n'),tpl,btn);
     }
     btn.classList.remove('loading'); btn.innerHTML = '⚡ Generate Document';
     return;  } else {
