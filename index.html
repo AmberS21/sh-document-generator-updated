@@ -395,7 +395,7 @@ table.usage tr:last-child td{border-bottom:none;}
     <div style="font-size:28px;margin-bottom:6px;">&#128194;</div>
     <div style="font-weight:600;font-size:13px;margin-bottom:3px;">Drop files here or click to browse</div>
     <div class="note" id="fileNameLabel">Accepts .docx &middot; .pdf &middot; .xlsx &middot; .txt</div>
-    <input type="file" id="fileInputEl" accept=".docx,.pdf,.xlsx,.xls,.txt,.doc" style="display:none" onchange="document.getElementById('fileNameLabel').textContent=this.files[0]?this.files[0].name:'Accepts .docx · .pdf · .xlsx · .txt'" />
+    <input type="file" id="fileInputEl" accept=".docx,.pdf,.xlsx,.xls,.txt,.doc" multiple style="display:none" onchange="document.getElementById('fileNameLabel').textContent=this.files[0]?this.files[0].name:'Accepts .docx · .pdf · .xlsx · .txt'" />
   </div>
   <div id="upProg" class="hidden" style="margin-top:8px;">
     <div class="prog-wrap"><div class="prog-bar" id="pbar"></div></div>
@@ -450,34 +450,7 @@ table.usage tr:last-child td{border-bottom:none;}
           Word (.docx)
         </div>
 
-        <!-- PowerPoint -->
-        <div class="fmt-chip" onclick="setFmt(this,'p')">
-          <svg class="app-icon" viewBox="0 0 24 24" fill="none">
-            <rect width="24" height="24" rx="3" fill="#d24726"/>
-            <text x="4" y="17" font-family="Arial" font-size="11" font-weight="900" fill="white">P</text>
-          </svg>
-          PowerPoint (.pptx)
-        </div>
-
-        <!-- Excel -->
-        <div class="fmt-chip" onclick="setFmt(this,'x')">
-          <svg class="app-icon" viewBox="0 0 24 24" fill="none">
-            <rect width="24" height="24" rx="3" fill="#1e7145"/>
-            <text x="4" y="17" font-family="Arial" font-size="11" font-weight="900" fill="white">X</text>
-          </svg>
-          Excel (.xlsx)
-        </div>
-
-        <!-- PDF -->
-        <div class="fmt-chip" onclick="setFmt(this,'f')">
-          <svg class="app-icon" viewBox="0 0 24 24" fill="none">
-            <rect width="24" height="24" rx="3" fill="#e02020"/>
-            <text x="3" y="16" font-family="Arial" font-size="8" font-weight="900" fill="white">PDF</text>
-          </svg>
-          PDF
-        </div>
-
-      </div>
+        <span style="font-size:11px;color:#6b7280;font-style:italic;">Word (.docx) only — templates are Word-based</span>      </div>
     </div>
     <div class="divider"></div>
     <div class="row-between" style="margin-bottom:10px;">
@@ -888,37 +861,47 @@ async function generate() {
     }
   } else if (activeType === 'file') {
     var fileInput = document.getElementById('fileInputEl');
-    if (!fileInput || !fileInput.files || !fileInput.files[0]) { notify('Please select a file'); return; }
-    var file = fileInput.files[0];
-    var ext = file.name.split('.').pop().toLowerCase();
-    btn.classList.add('loading'); btn.innerHTML = 'Reading file…';
-    try {
-      if (ext === 'txt') {
-        inputText = await file.text();
-      } else if (ext === 'docx') {
-        var arrBuf = await file.arrayBuffer();
-        var zipF = new PizZip(arrBuf);
-        var bodyXml = zipF.files['word/document.xml'] ? zipF.files['word/document.xml'].asText() : '';
-        inputText = bodyXml.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().substring(0,15000);
-      } else if (ext === 'pdf') {
-        inputText = await (async function(){
-          var ab = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res(e.target.result);};rd.onerror=rej;rd.readAsArrayBuffer(file);});
-          pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-          var pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
-          var txt='';
-          for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();txt+=tc.items.map(function(s){return s.str;}).join(' ')+'\n';}
-          return txt.trim();
-        })();
-      } else if (ext === 'xlsx' || ext === 'xls') {
-        inputText = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){var wb=XLSX.read(e.target.result,{type:'binary'});var out='';wb.SheetNames.forEach(function(sn){out+=XLSX.utils.sheet_to_csv(wb.Sheets[sn])+'\n';});res(out.trim());};rd.onerror=rej;rd.readAsBinaryString(file);});
-      } else {
-        inputText = await file.text();
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) { notify('Please select a file'); return; }
+    var filesToProcess = Array.from(fileInput.files);
+    for (var fi = 0; fi < filesToProcess.length; fi++) {
+      var file = filesToProcess[fi];
+      var ext = file.name.split('.').pop().toLowerCase();
+      btn.innerHTML = 'Reading ' + file.name + '…';
+      try {
+        if (ext === 'txt') {
+          inputText = await file.text();
+        } else if (ext === 'docx') {
+          var arrBuf = await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
+          var zipF = new PizZip(arrBuf);
+          var bodyXml = zipF.files['word/document.xml'] ? zipF.files['word/document.xml'].asText() : '';
+          inputText = bodyXml.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().substring(0,15000);
+        } else if (ext === 'pdf') {
+          inputText = await (async function(){
+            var ab = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res(e.target.result);};rd.onerror=rej;rd.readAsArrayBuffer(file);});
+            pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            var pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
+            var txt='';
+            for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();txt+=tc.items.map(function(s){return s.str;}).join(' ')+'\n';}
+            return txt.trim();
+          })();
+        } else if (ext === 'xlsx' || ext === 'xls') {
+          inputText = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){var wb=XLSX.read(e.target.result,{type:'binary'});var out='';wb.SheetNames.forEach(function(sn){out+=XLSX.utils.sheet_to_csv(wb.Sheets[sn])+'\n';});res(out.trim());};rd.onerror=rej;rd.readAsBinaryString(file);});
+        } else {
+          inputText = await file.text();
+        }
+      } catch(fileErr) {
+        btn.classList.remove('loading'); btn.innerHTML = '⚡ Generate Document';
+        notify('Could not read file: ' + fileErr.message); return;
       }
-    } catch(fileErr) {
-      btn.classList.remove('loading'); btn.innerHTML = 'Generate Document';
-      notify('Could not read file: ' + fileErr.message); return;
+      if (inputText && inputText.length >= 10) {
+        btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + '…';
+        await processOneCV(inputText, tpl, btn);
+      } else {
+        notify('Could not extract text from: ' + file.name);
+      }
     }
-  } else {
+    btn.classList.remove('loading'); btn.innerHTML = '⚡ Generate Document';
+    return;  } else {
     var txt = document.querySelector('#inp-text textarea');
     if (txt) inputText = txt.value.trim();
   }
@@ -929,6 +912,10 @@ async function generate() {
   }
 
 
+  await processOneCV(inputText, tpl, btn);
+}
+
+async function processOneCV(inputText, tpl, btn) {
   var claudeKey = localStorage.getItem('sh_claudeKey');
 
   btn.classList.add('loading');
