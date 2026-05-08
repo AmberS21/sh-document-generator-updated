@@ -126,9 +126,13 @@ button,input,select,textarea{font-family:inherit;}
 .card{background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);margin-bottom:12px;}
 .card-title{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:7px;margin-bottom:14px;}
 .step-dot{width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--light));color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}
+.two-col{display:grid;grid-template-columns:44% 56%;gap:16px;align-items:start;}
 .full-col{grid-column:1/-1;}
 @media(max-width:720px){.two-col{grid-template-columns:1fr;}}
+.gen-right-col{display:flex;flex-direction:column;gap:16px;}
+#sec-gen .two-col>.card:first-child{align-self:stretch;}
+#sec-gen #inp-text textarea{min-height:380px;resize:vertical;}
+#sec-gen #inp-file .upload-zone{min-height:360px;display:flex;flex-direction:column;justify-content:center;}
 .divider{height:1px;background:var(--brd);margin:12px 0;}
 .note{font-size:11px;color:var(--mut);margin-top:5px;line-height:1.6;}
 .row-between{display:flex;align-items:center;justify-content:space-between;}
@@ -420,6 +424,7 @@ table.usage tr:last-child td{border-bottom:none;}
 </div>
     </div>
 
+    <div class="gen-right-col">
     <!-- STEP 2 -->
     <div class="card">
       <div class="card-title"><div class="step-dot">2</div> Select Template</div>
@@ -495,6 +500,8 @@ table.usage tr:last-child td{border-bottom:none;}
     <div class="row-between">
       <div><div style="font-size:13px;font-weight:500;">Save to My History</div><div class="note">Private to you only</div></div>
       <div class="tog on" onclick="togEl(this,null)"><div class="tok"></div></div>
+    </div>
+  </div>
     </div>
   </div>
 
