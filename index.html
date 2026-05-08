@@ -285,7 +285,8 @@ table.usage tr:last-child td{border-bottom:none;}
 <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.47.4/build/docxtemplater.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-</head>
+
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script></head>
 <body>
 
 <!-- ════════════════════════════════
@@ -443,15 +444,27 @@ table.usage tr:last-child td{border-bottom:none;}
 
         <!-- Word -->
         <div class="fmt-chip on-d" onclick="setFmt(this,'d')">
-          <svg class="app-icon" viewBox="0 0 24 24" fill="none">
-            <rect width="24" height="24" rx="3" fill="#2b7cd3"/>
-            <text x="4" y="17" font-family="Arial" font-size="11" font-weight="900" fill="white">W</text>
-          </svg>
+          <svg class="app-icon" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="3" fill="#2b7cd3"/><text x="4" y="17" font-family="Arial" font-size="11" font-weight="900" fill="white">W</text></svg>
           Word (.docx)
         </div>
 
-        <span style="font-size:11px;color:#6b7280;font-style:italic;">Word (.docx) only — templates are Word-based</span>      </div>
-    </div>
+        <!-- PowerPoint -->
+        <div class="fmt-chip" onclick="setFmt(this,'p')">
+          <svg class="app-icon" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="3" fill="#d24726"/><text x="4" y="17" font-family="Arial" font-size="11" font-weight="900" fill="white">P</text></svg>
+          PowerPoint (.pptx)
+        </div>
+
+        <!-- Excel -->
+        <div class="fmt-chip" onclick="setFmt(this,'x')">
+          <svg class="app-icon" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="3" fill="#1e7145"/><text x="4" y="17" font-family="Arial" font-size="11" font-weight="900" fill="white">X</text></svg>
+          Excel (.xlsx)
+        </div>
+
+        <!-- PDF -->
+        <div class="fmt-chip" onclick="setFmt(this,'f')">
+          <svg class="app-icon" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="3" fill="#e02020"/><text x="3" y="16" font-family="Arial" font-size="8" font-weight="900" fill="white">PDF</text></svg>
+          PDF
+        </div>    </div>
     <div class="divider"></div>
     <div class="row-between" style="margin-bottom:10px;">
       <div><div style="font-size:13px;font-weight:500;">Batch Processing</div><div class="note">One document per candidate &#8212; saves as ZIP</div></div>
@@ -916,6 +929,8 @@ async function generate() {
 }
 
 async function processOneCV(inputText, tpl, btn) {
+  var selChip = document.querySelector('.fmt-chip.on-d,.fmt-chip.on-p,.fmt-chip.on-x,.fmt-chip.on-f');
+  var fmt = selChip ? (selChip.className.match(/on-([dpxf])/) ? selChip.className.match(/on-([dpxf])/)[1] : 'd') : 'd';
   var claudeKey = localStorage.getItem('sh_claudeKey');
 
   btn.classList.add('loading');
@@ -1024,11 +1039,11 @@ try {
 
     var item = {
           name: (output && output.CANDIDATE_NAME) ? output.CANDIDATE_NAME : 'Unknown Candidate',
-      date: new Date().toLocaleString(),
-      template: tpl,
-      content: output
-    };
-
+          date: new Date().toLocaleString(),
+          template: tpl,
+          fmt: fmt,
+          content: output
+        };
     var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
     history.unshift(item);
     localStorage.setItem('sh_history', JSON.stringify(history));
@@ -1083,49 +1098,86 @@ function notify(msg) {
 }
 
 async function downloadHistory(index) {
-  var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
+  var history = JSON.parse(localStorage.getItem('sh_history')||'[]');
   var item = history[index];
   if (!item) return;
-
+  var fmt = item.fmt || 'd';
+  var baseName = 'SH Global - ' + (item.content && item.content.CANDIDATE_NAME ? item.content.CANDIDATE_NAME : item.name || 'Candidate') + ' - ' + (item.template === 'cv_wam_s' ? 'With Scorecard' : 'Without Scorecard');
   try {
+    if (fmt === 'd') {
+      var tplUrl = item.template === 'cv_wam_s' ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+      var resp = await fetch(tplUrl);
+      var ab = await resp.arrayBuffer();
+      var zip = new PizZip(ab);
+      const doc = new window.docxtemplater(zip, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
+      doc.render(item.content);
+      const out = doc.getZip().generate({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+      var a = document.createElement('a'); a.href = URL.createObjectURL(out); a.download = baseName + '.docx'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
-        var templatePath = 'SH_Global_Candidate_Profile_No Scorecard.docx';
-    if (item.template === 'cv_wam_s') templatePath = 'SH_Global_Candidate_Profile_With_Scorecard.docx';
+    } else if (fmt === 'f') {
+      var tplUrl2 = item.template === 'cv_wam_s' ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+      var resp2 = await fetch(tplUrl2);
+      var ab2 = await resp2.arrayBuffer();
+      var zip2 = new PizZip(ab2);
+      const doc2 = new window.docxtemplater(zip2, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
+      doc2.render(item.content);
+      const out2 = doc2.getZip().generate({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+      var pdfUrl = URL.createObjectURL(out2);
+      notify('PDF: Document will open — use Print → Save as PDF');
+      window.open(pdfUrl, '_blank');
 
+    } else if (fmt === 'p') {
+      var cv = item.content;
+      var pptx = new PptxGenJS();
+      pptx.layout = 'LAYOUT_WIDE';
+      var SH_NAVY = '0f1f45', SH_BLUE = '1591D8', SH_WHITE = 'FFFFFF';
+      var sl1 = pptx.addSlide();
+      sl1.background = {color: SH_NAVY};
+      sl1.addText('SHEFFIELD HAWORTH', {x:0.5,y:0.4,w:12,h:0.5,fontSize:14,bold:true,color:SH_BLUE,fontFace:'Calibri'});
+      sl1.addText('Global Candidate Profile', {x:0.5,y:1.1,w:12,h:0.6,fontSize:28,bold:true,color:SH_WHITE,fontFace:'Calibri'});
+      sl1.addText(cv.CANDIDATE_NAME||'', {x:0.5,y:1.9,w:12,h:0.5,fontSize:22,bold:false,color:SH_BLUE,fontFace:'Calibri'});
+      sl1.addText((cv.COMPANY_1_ROLE||'')+' | '+(cv.CURRENT_EMPLOYER||''), {x:0.5,y:2.5,w:12,h:0.4,fontSize:14,color:'AAAAAA',fontFace:'Calibri'});
+      if (cv.SEARCH_TITLE) sl1.addText('Search: '+cv.SEARCH_TITLE, {x:0.5,y:5.8,w:12,h:0.35,fontSize:11,color:'888888',fontFace:'Calibri'});
+      var sl2 = pptx.addSlide();
+      sl2.background = {color: SH_WHITE};
+      sl2.addText(cv.CANDIDATE_NAME||'Profile', {x:0.4,y:0.2,w:12,h:0.45,fontSize:18,bold:true,color:SH_NAVY,fontFace:'Calibri'});
+      sl2.addShape(pptx.ShapeType.rect, {x:0.4,y:0.7,w:12,h:0.03,fill:{color:SH_BLUE},line:{color:SH_BLUE}});
+      sl2.addText('Professional Summary', {x:0.4,y:0.85,w:12,h:0.35,fontSize:13,bold:true,color:SH_NAVY});
+      var summB = [cv.SUMMARY_BULLET_1,cv.SUMMARY_BULLET_2,cv.SUMMARY_BULLET_3].filter(Boolean);
+      if (summB.length) sl2.addText(summB.map(function(b){return {text:b,options:{bullet:true,fontSize:11,color:'333333'}};}), {x:0.5,y:1.25,w:12,h:1.0});
+      sl2.addText('Career History', {x:0.4,y:2.4,w:12,h:0.35,fontSize:13,bold:true,color:SH_NAVY});
+      var yp = 2.85;
+      [{n:cv.COMPANY_1_NAME,r:cv.COMPANY_1_ROLE,d:cv.COMPANY_1_DATES,b:[cv.COMPANY_1_BULLET_1,cv.COMPANY_1_BULLET_2,cv.COMPANY_1_BULLET_3]},{n:cv.COMPANY_2_NAME,r:cv.COMPANY_2_ROLE,d:cv.COMPANY_2_DATES,b:[cv.COMPANY_2_BULLET_1,cv.COMPANY_2_BULLET_2,cv.COMPANY_2_BULLET_3]},{n:cv.COMPANY_3_NAME,r:cv.COMPANY_3_ROLE,d:cv.COMPANY_3_DATES,b:[cv.COMPANY_3_BULLET_1,cv.COMPANY_3_BULLET_2,cv.COMPANY_3_BULLET_3]}].forEach(function(co){
+        if (!co.n||yp>6.5) return;
+        sl2.addText((co.r||'')+' | '+(co.n||'')+' | '+(co.d||''), {x:0.4,y:yp,w:12,h:0.3,fontSize:11,bold:true,color:SH_NAVY}); yp+=0.3;
+        co.b.filter(Boolean).forEach(function(b){ if(yp>6.8)return; sl2.addText('• '+b,{x:0.6,y:yp,w:11.5,h:0.28,fontSize:10,color:'444444'}); yp+=0.28; });
+      });
+      var sl3 = pptx.addSlide();
+      sl3.background = {color: SH_WHITE};
+      sl3.addText('Education & Qualifications', {x:0.4,y:0.2,w:12,h:0.45,fontSize:18,bold:true,color:SH_NAVY});
+      sl3.addShape(pptx.ShapeType.rect, {x:0.4,y:0.7,w:12,h:0.03,fill:{color:SH_BLUE},line:{color:SH_BLUE}});
+      var ey = 0.85;
+      [[cv.EDU_1_INSTITUTION,cv.EDU_1_DEGREE,cv.EDU_1_YEARS],[cv.EDU_2_INSTITUTION,cv.EDU_2_DEGREE,cv.EDU_2_YEARS]].forEach(function(e){ if(!e[0])return; sl3.addText((e[1]||'')+', '+(e[0]||'')+' ('+(e[2]||'')+')',{x:0.4,y:ey,w:12,h:0.3,fontSize:11,color:'333333'}); ey+=0.35; });
+      ey+=0.2; sl3.addText('Qualifications',{x:0.4,y:ey,w:12,h:0.35,fontSize:13,bold:true,color:SH_NAVY}); ey+=0.4;
+      [cv.QUAL_1,cv.QUAL_2,cv.QUAL_3].filter(Boolean).forEach(function(q){ sl3.addText('• '+q,{x:0.5,y:ey,w:12,h:0.28,fontSize:11,color:'333333'}); ey+=0.3; });
+      ey+=0.2; sl3.addText('Affiliations',{x:0.4,y:ey,w:12,h:0.35,fontSize:13,bold:true,color:SH_NAVY}); ey+=0.4;
+      [cv.AFFILIATION_1,cv.AFFILIATION_2].filter(Boolean).forEach(function(af){ sl3.addText('• '+af,{x:0.5,y:ey,w:12,h:0.28,fontSize:11,color:'333333'}); ey+=0.3; });
+      await pptx.writeFile({fileName: baseName + '.pptx'});
 
-    const response = await fetch(templatePath);
-    const arrayBuffer = await response.arrayBuffer();
-
-    const zip = new PizZip(arrayBuffer);
-const doc = new window.docxtemplater(zip, {
-  paragraphLoop: true,
-  linebreaks: true,
-  delimiters: {
-    start: '{{',
-    end: '}}'
-  },
-  nullGetter: function() { return ""; }
-});
-
-doc.render(item.content);
-
-    const out = doc.getZip().generate({
-      type: 'blob',
-      mimeType:
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    });
-
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(out);
-        a.download = 'SH Global - ' + ((item.content && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : 'Candidate') + (item.template === 'cv_wam_s' ? ' - With Scorecard' : ' - Without Scorecard') + '.docx';
-    a.click();
-
+    } else if (fmt === 'x') {
+      var cv2 = item.content;
+      var wb = XLSX.utils.book_new();
+      var rows = [['Field','Value'],['Candidate Name',cv2.CANDIDATE_NAME||''],['Current Employer',cv2.CURRENT_EMPLOYER||''],['Current Role',cv2.COMPANY_1_ROLE||''],['Summary 1',cv2.SUMMARY_BULLET_1||''],['Summary 2',cv2.SUMMARY_BULLET_2||''],['Summary 3',cv2.SUMMARY_BULLET_3||''],['Company 1',cv2.COMPANY_1_NAME||''],['Role 1',cv2.COMPANY_1_ROLE||''],['Dates 1',cv2.COMPANY_1_DATES||''],['Bullet 1-1',cv2.COMPANY_1_BULLET_1||''],['Bullet 1-2',cv2.COMPANY_1_BULLET_2||''],['Bullet 1-3',cv2.COMPANY_1_BULLET_3||''],['Company 2',cv2.COMPANY_2_NAME||''],['Role 2',cv2.COMPANY_2_ROLE||''],['Dates 2',cv2.COMPANY_2_DATES||''],['Bullet 2-1',cv2.COMPANY_2_BULLET_1||''],['Bullet 2-2',cv2.COMPANY_2_BULLET_2||''],['Bullet 2-3',cv2.COMPANY_2_BULLET_3||''],['Company 3',cv2.COMPANY_3_NAME||''],['Role 3',cv2.COMPANY_3_ROLE||''],['Dates 3',cv2.COMPANY_3_DATES||''],['Education 1',cv2.EDU_1_INSTITUTION||''],['Degree 1',cv2.EDU_1_DEGREE||''],['Years 1',cv2.EDU_1_YEARS||''],['Education 2',cv2.EDU_2_INSTITUTION||''],['Degree 2',cv2.EDU_2_DEGREE||''],['Years 2',cv2.EDU_2_YEARS||''],['Qual 1',cv2.QUAL_1||''],['Qual 2',cv2.QUAL_2||''],['Affiliation 1',cv2.AFFILIATION_1||''],['Affiliation 2',cv2.AFFILIATION_2||''],['Nationality',cv2.NATIONALITY||''],['Languages',cv2.LANGUAGES||'']];
+      var ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{wch:30},{wch:60}];
+      XLSX.utils.book_append_sheet(wb, ws, 'Candidate Profile');
+      XLSX.writeFile(wb, baseName + '.xlsx');
+    }
   } catch (error) {
     console.error(error);
-    notify('DOCX generation failed');
+    notify('Download failed: ' + error.message);
   }
-}
-renderHistory();
+}renderHistory();
 // Load saved keys on startup 
 
 // ══════════════════════════════════════
