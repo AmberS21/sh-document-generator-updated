@@ -106,6 +106,7 @@ button,input,select,textarea{font-family:inherit;}
   background:var(--card);border-bottom:2px solid var(--brd);
   display:flex;padding:0 20px;overflow-x:auto;
   box-shadow:0 1px 4px rgba(15,31,69,.05);
+  position:sticky;top:60px;z-index:150;
 }
 .tab {
   padding:12px 16px;font-size:13px;font-weight:500;color:var(--mut);
@@ -279,6 +280,14 @@ table.usage tr:last-child td{border-bottom:none;}
 
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-thumb{background:var(--brd);border-radius:3px;}
+
+/* ── PROGRESS BAR ── */
+#genProgress{display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--card);border-top:2px solid var(--brd);padding:12px 20px;box-shadow:0 -4px 16px rgba(15,31,69,.12);}
+#genProgress.show{display:block;}
+.gp-label{font-size:13px;font-weight:600;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.gp-bar-wrap{height:6px;background:var(--brd);border-radius:3px;overflow:hidden;}
+.gp-bar{height:100%;background:var(--blue);border-radius:3px;transition:width .4s ease;width:0%;}
+.gp-label .gp-done{color:#22c55e;}
 
 /* ── SEGMENTED BUTTON ── */
 .seg-wrap{display:flex;border:1.5px solid var(--brd);border-radius:8px;overflow:hidden;flex-shrink:0;}
@@ -700,6 +709,10 @@ table.usage tr:last-child td{border-bottom:none;}
 </div>
 
 <div class="notif" id="notif"></div>
+<div id="genProgress">
+  <div class="gp-label" id="gpLabel">Preparing...</div>
+  <div class="gp-bar-wrap"><div class="gp-bar" id="gpBar"></div></div>
+</div>
 
 <script>
 // ══ ADMIN GATE ══
@@ -896,7 +909,8 @@ async function generate() {
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) { notify('Please select a file'); return; }
     var filesToProcess = Array.from(fileInput.files);
       var combinedTexts = [];
-    for (var fi = 0; fi < filesToProcess.length; fi++) {
+var _totalFiles = filesToProcess.length; showProgress(0, _totalFiles, 'Preparing ' + _totalFiles + ' file' + (_totalFiles===1?'':\'s') + '...');
+          for (var fi = 0; fi < filesToProcess.length; fi++) {
       var file = filesToProcess[fi];
       var ext = file.name.split('.').pop().toLowerCase();
       btn.innerHTML = 'Reading ' + file.name + '…';
@@ -928,7 +942,7 @@ async function generate() {
       }
       if (inputText && inputText.length >= 10) {
         btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + '…';
-        if ((window._outputMode||'combined')==='separate'){await processOneCV(inputText,tpl,btn);}else{combinedTexts.push(inputText);}
+showProgress(fi+1, _totalFiles);         if ((window._outputMode||'combined')==='separate'){await processOneCV(inputText,tpl,btn);}else{combinedTexts.push(inputText);}
       } else {
         notify('Could not extract text from: ' + file.name);
       }
@@ -937,7 +951,7 @@ async function generate() {
       await processOneCV(combinedTexts.join('\n\n--- NEW CANDIDATE ---\n\n'),tpl,btn);
     }
     btn.classList.remove('loading'); btn.innerHTML = '⚡ Generate Document';
-    return;  } else {
+    hideProgress(_totalFiles > 1 ? 'All done! ' + _totalFiles + ' profiles ready — check My History' : 'Done! Your profile is ready — check My History'); return;  } else {
     var txt = document.querySelector('#inp-text textarea');
     if (txt) inputText = txt.value.trim();
   }
@@ -948,7 +962,8 @@ async function generate() {
   }
 
 
-  await processOneCV(inputText, tpl, btn);
+showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn);
+  hideProgress('Done! Your profile is ready — check My History');
 }
 
 async function processOneCV(inputText, tpl, btn) {
@@ -1027,7 +1042,7 @@ Candidate CV / profile text:
 ${inputText}
 `;
 
-  fetch('https://api.anthropic.com/v1/messages', {
+  return fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -1090,6 +1105,35 @@ function notify(msg) {
   var n = document.getElementById('notif');
   n.textContent = msg; n.classList.add('show');
   setTimeout(function(){ n.classList.remove('show'); }, 3500);
+}
+
+function showProgress(current, total, msg) {
+  var el = document.getElementById('genProgress');
+  var lbl = document.getElementById('gpLabel');
+  var bar = document.getElementById('gpBar');
+  if (!el) return;
+  el.classList.add('show');
+  var pct = total > 0 ? Math.round((current / total) * 100) : 0;
+  if (msg) {
+    lbl.innerHTML = msg;
+  } else {
+    lbl.textContent = 'Processing ' + current + ' of ' + total + '...';
+  }
+  if (bar) bar.style.width = pct + '%';
+}
+function hideProgress(msg) {
+  var el = document.getElementById('genProgress');
+  var lbl = document.getElementById('gpLabel');
+  var bar = document.getElementById('gpBar');
+  if (!el) return;
+  if (msg) {
+    bar.style.width = '100%';
+    lbl.innerHTML = '<span class="gp-done">&#10003;</span> ' + msg;
+    setTimeout(function(){ el.classList.remove('show'); bar.style.width = '0%'; }, 4000);
+  } else {
+    el.classList.remove('show');
+    bar.style.width = '0%';
+  }
 }
  function renderHistory() {
     var list = document.getElementById('historyList');
