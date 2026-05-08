@@ -1164,6 +1164,40 @@ function hideProgress(msg) {
   if (n) n.textContent = history.length;
 }
 
+function apacFillTemplate(xmlStr, cv) {
+  // Replace APAC template placeholders with CV data
+  var s = xmlStr;
+  function rep(find, val) { s = s.split(find).join(val || ''); }
+  rep('Candidate Name', cv.CANDIDATE_NAME || '');
+  rep('Current Employer', cv.CURRENT_EMPLOYER || '');
+  rep('Client Company Name', cv.CLIENT_COMPANY || '');
+  rep('Search Title', cv.SEARCH_TITLE || '');
+  rep('[Date]', cv.MONTH_YEAR || '');
+  rep('Type notes here', cv.SUMMARY || '');
+  rep('[SH Bullets]', cv.SUMMARY_BULLETS || '');
+  for (var c = 1; c <= 5; c++) {
+    var cn = cv['COMPANY_'+c+'_NAME'] || ''; var cl = cv['COMPANY_'+c+'_LOCATION'] || '';
+    rep('Company Name, Location', cn + (cl ? ', ' + cl : ''));
+    var cd = cv['COMPANY_'+c+'_DATES'] || '';
+    var firstMY = 'Month, Year – Month, Year';
+    s = s.replace(firstMY, cd);
+    rep('Corporate Job Title, Function', (cv['COMPANY_'+c+'_ROLE'] || '') + (cv['COMPANY_'+c+'_FUNCTION'] ? ', ' + cv['COMPANY_'+c+'_FUNCTION'] : ''));
+    s = s.replace(firstMY, cv['COMPANY_'+c+'_ROLE_DATES'] || '');
+    rep('Insert text', cv['COMPANY_'+c+'_BULLETS'] || '');
+    rep('SH Bullets', cv['COMPANY_'+c+'_BULLETS_2'] || '');
+  }
+  rep('Year – Year:', cv.EDU_1_YEARS || '');
+  rep('Place of study', cv.EDU_1_INSTITUTION || '');
+  rep('Details', cv.EDU_1_DEGREE || '');
+  rep('Year:', cv.QUAL_1 || '');
+  rep('Qualification', cv.QUAL_2 || '');
+  rep('Type Nationality', cv.NATIONALITY || '');
+  rep('Language, Level', cv.LANGUAGES || '');
+  var s2 = s.lastIndexOf('>Interests<');
+  if (s2 > -1) { s = s.substring(0, s2+1) + cv.INTERESTS + s.substring(s2 + '>Interests<'.length - 1); }
+  return s;
+}
+
 async function downloadHistory(index) {
   var history = JSON.parse(localStorage.getItem('sh_history')||'[]');
   var item = history[index];
@@ -1175,17 +1209,26 @@ async function downloadHistory(index) {
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
       if (item.type === 'combined' && Array.isArray(item.content)) {
-        var         var _tplUrlC = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? 'SH_APAC_Candidate_Profile.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+        var         var _tplUrlC = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? '%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates%202025%20-%20Copy.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
         var _respC = await fetch(_tplUrlC);
         var _abC = await _respC.arrayBuffer();
         var _zipC = new JSZip();
         for (var _ci = 0; _ci < item.content.length; _ci++) {
           var _cvC = item.content[_ci];
           var _nameC = (_cvC && _cvC.CANDIDATE_NAME) ? _cvC.CANDIDATE_NAME : ('Profile_' + (_ci+1));
-          var _zipI = new PizZip(_abC.slice(0));
-          var _docC = new window.docxtemplater(_zipI, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
-          _docC.render(_cvC);
-          var _outC = _docC.getZip().generate({type:'arraybuffer',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+          var _isApacC = (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh');
+          var _outC;
+          if (_isApacC) {
+            var _azipC = await JSZip.loadAsync(_abC.slice(0));
+            var _axmlC = await _azipC.files['word/document.xml'].async('string');
+            _azipC.file('word/document.xml', apacFillTemplate(_axmlC, _cvC));
+            _outC = await _azipC.generateAsync({type:'arraybuffer',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+          } else {
+            var _zipI = new PizZip(_abC.slice(0));
+            var _docC = new window.docxtemplater(_zipI, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
+            _docC.render(_cvC);
+            _outC = _docC.getZip().generate({type:'arraybuffer',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+          }
           _zipC.file('Global - ' + _scorecardLabel + ' - ' + _nameC + '.docx', _outC);
         }
         var _zipBlob = await _zipC.generateAsync({type:'blob'});
@@ -1193,13 +1236,23 @@ async function downloadHistory(index) {
         return;
       }
     if (fmt === 'd') {
-      var tplUrl = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? 'SH_APAC_Candidate_Profile.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+      var tplUrl = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? '%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates%202025%20-%20Copy.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
       var resp = await fetch(tplUrl);
       var ab = await resp.arrayBuffer();
-      var zip = new PizZip(ab);
-      const doc = new window.docxtemplater(zip, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
-      doc.render(item.content);
-      const out = doc.getZip().generate({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+      var _isApacTpl = (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh');
+      var out;
+      if (_isApacTpl) {
+        var _apacZip = await JSZip.loadAsync(ab);
+        var _apacXml = await _apacZip.files['word/document.xml'].async('string');
+        var _apacFilled = apacFillTemplate(_apacXml, item.content);
+        _apacZip.file('word/document.xml', _apacFilled);
+        out = await _apacZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+      } else {
+        var zip = new PizZip(ab);
+        const doc = new window.docxtemplater(zip, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
+        doc.render(item.content);
+        out = doc.getZip().generate({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+      }
       var a = document.createElement('a'); a.href = URL.createObjectURL(out); a.download = baseName + '.docx'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
     } else if (fmt === 'f') {
