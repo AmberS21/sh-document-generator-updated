@@ -1235,10 +1235,11 @@ function apacFillTemplate(xmlStr, cv) {
     s = s.replace('Corporate Job Title, Function', xmlEsc((cv['COMPANY_'+c+'_ROLE'] || '') + (cv['COMPANY_'+c+'_FUNCTION'] ? ', ' + cv['COMPANY_'+c+'_FUNCTION'] : '')));
     s = s.replace(firstMY, cv['COMPANY_'+c+'_ROLE_DATES'] || '');
     var _bulletsRaw = (cv['COMPANY_'+c+'_BULLETS'] || ''); var _bullets = (_bulletsRaw.indexOf('|') > -1 ? _bulletsRaw.split('|') : _bulletsRaw.split('\n')).map(function(b){return b.trim();}).filter(Boolean);
-    if(_bullets.length === 0) { s = s.replace('Insert text', ''); }
-    else {
-      var _bulletParaStart = s.lastIndexOf('<w:p ', s.indexOf('Insert text'));
-      var _bulletParaEnd = s.indexOf('</w:p>', s.indexOf('Insert text')) + 6;
+    var _insertPos = s.indexOf('Insert text');
+    if(_bullets.length === 0) { if(_insertPos > -1) s = s.replace('Insert text', ''); }
+    else if (_insertPos > -1) {
+      var _bulletParaStart = s.lastIndexOf('<w:p ', _insertPos);
+      var _bulletParaEnd = s.indexOf('</w:p>', _insertPos) + 6;
       var _bulletTemplate = s.substring(_bulletParaStart, _bulletParaEnd);
       var _bulletParas = _bullets.map(function(b){ return _bulletTemplate.replace('Insert text', xmlEsc(b)); }).join('');
       s = s.substring(0, _bulletParaStart) + _bulletParas + s.substring(_bulletParaEnd);
