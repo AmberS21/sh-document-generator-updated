@@ -1033,7 +1033,7 @@ async function processOneCV(inputText, tpl, btn, returnOnly) {
 
 var isApac = (tpl === 'cv_apac_en' || tpl === 'cv_apac_zh');
 var isChineseApac = (tpl === 'cv_apac_zh');
-var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","COMPANY_1_NAME":"","COMPANY_1_LOCATION":"","COMPANY_1_DATES":"","COMPANY_1_ROLE":"","COMPANY_1_FUNCTION":"","COMPANY_1_ROLE_DATES":"","COMPANY_1_BULLETS":"","COMPANY_1_BULLETS_2":"","COMPANY_2_NAME":"","COMPANY_2_LOCATION":"","COMPANY_2_DATES":"","COMPANY_2_ROLE":"","COMPANY_2_FUNCTION":"","COMPANY_2_ROLE_DATES":"","COMPANY_2_BULLETS":"","COMPANY_2_BULLETS_2":"","COMPANY_3_NAME":"","COMPANY_3_LOCATION":"","COMPANY_3_DATES":"","COMPANY_3_ROLE":"","COMPANY_3_FUNCTION":"","COMPANY_3_ROLE_DATES":"","COMPANY_3_BULLETS":"","COMPANY_3_BULLETS_2":"","COMPANY_4_NAME":"","COMPANY_4_LOCATION":"","COMPANY_4_DATES":"","COMPANY_4_ROLE":"","COMPANY_4_FUNCTION":"","COMPANY_4_ROLE_DATES":"","COMPANY_4_BULLETS":"","COMPANY_4_BULLETS_2":"","COMPANY_5_NAME":"","COMPANY_5_LOCATION":"","COMPANY_5_DATES":"","COMPANY_5_ROLE":"","COMPANY_5_FUNCTION":"","COMPANY_5_ROLE_DATES":"","COMPANY_5_BULLETS":"","COMPANY_5_BULLETS_2":"","COMPANY_6_NAME":"","COMPANY_6_LOCATION":"","COMPANY_6_DATES":"","COMPANY_6_ROLE":"","COMPANY_6_FUNCTION":"","COMPANY_6_ROLE_DATES":"","COMPANY_6_BULLETS":"","COMPANY_6_BULLETS_2":"","COMPANY_7_NAME":"","COMPANY_7_LOCATION":"","COMPANY_7_DATES":"","COMPANY_7_ROLE":"","COMPANY_7_FUNCTION":"","COMPANY_7_ROLE_DATES":"","COMPANY_7_BULLETS":"","COMPANY_7_BULLETS_2":"","COMPANY_8_NAME":"","COMPANY_8_LOCATION":"","COMPANY_8_DATES":"","COMPANY_8_ROLE":"","COMPANY_8_FUNCTION":"","COMPANY_8_ROLE_DATES":"","COMPANY_8_BULLETS":"","COMPANY_8_BULLETS_2":"","COMPANY_9_NAME":"","COMPANY_9_LOCATION":"","COMPANY_9_DATES":"","COMPANY_9_ROLE":"","COMPANY_9_FUNCTION":"","COMPANY_9_ROLE_DATES":"","COMPANY_9_BULLETS":"","COMPANY_9_BULLETS_2":"","COMPANY_10_NAME":"","COMPANY_10_LOCATION":"","COMPANY_10_DATES":"","COMPANY_10_ROLE":"","COMPANY_10_FUNCTION":"","COMPANY_10_ROLE_DATES":"","COMPANY_10_BULLETS":"","COMPANY_10_BULLETS_2":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","EDU_3_YEARS":"","EDU_3_INSTITUTION":"","EDU_3_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
+var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","COMPANY_1_NAME":"","COMPANY_1_LOCATION":"","COMPANY_1_DATES":"","COMPANY_1_ROLE":"","COMPANY_1_FUNCTION":"","COMPANY_1_ROLE_DATES":"","COMPANY_1_BULLETS":"","COMPANY_1_BULLETS_2":"","COMPANY_2_NAME":"","COMPANY_2_LOCATION":"","COMPANY_2_DATES":"","COMPANY_2_ROLE":"","COMPANY_2_FUNCTION":"","COMPANY_2_ROLE_DATES":"","COMPANY_2_BULLETS":"","COMPANY_2_BULLETS_2":"","COMPANY_3_NAME":"","COMPANY_3_LOCATION":"","COMPANY_3_DATES":"","COMPANY_3_ROLE":"","COMPANY_3_FUNCTION":"","COMPANY_3_ROLE_DATES":"","COMPANY_3_BULLETS":"","COMPANY_3_BULLETS_2":"","COMPANY_4_NAME":"","COMPANY_4_LOCATION":"","COMPANY_4_DATES":"","COMPANY_4_ROLE":"","COMPANY_4_FUNCTION":"","COMPANY_4_ROLE_DATES":"","COMPANY_4_BULLETS":"","COMPANY_4_BULLETS_2":"","COMPANY_5_NAME":"","COMPANY_5_LOCATION":"","COMPANY_5_DATES":"","COMPANY_5_ROLE":"","COMPANY_5_FUNCTION":"","COMPANY_5_ROLE_DATES":"","COMPANY_5_BULLETS":"","COMPANY_5_BULLETS_2":"","COMPANY_6_NAME":"","COMPANY_6_LOCATION":"","COMPANY_6_DATES":"","COMPANY_6_ROLE":"","COMPANY_6_FUNCTION":"","COMPANY_6_ROLE_DATES":"","COMPANY_6_BULLETS":"","COMPANY_6_BULLETS_2":"","COMPANY_7_NAME":"","COMPANY_7_LOCATION":"","COMPANY_7_DATES":"","COMPANY_7_ROLE":"","COMPANY_7_FUNCTION":"","COMPANY_7_ROLE_DATES":"","COMPANY_7_BULLETS":"","COMPANY_7_BULLETS_2":"","COMPANY_8_NAME":"","COMPANY_8_LOCATION":"","COMPANY_8_DATES":"","COMPANY_8_ROLE":"","COMPANY_8_FUNCTION":"","COMPANY_8_ROLE_DATES":"","COMPANY_8_BULLETS":"","COMPANY_8_BULLETS_2":"","COMPANY_9_NAME":"","COMPANY_9_LOCATION":"","COMPANY_9_DATES":"","COMPANY_9_ROLE":"","COMPANY_9_FUNCTION":"","COMPANY_9_ROLE_DATES":"","COMPANY_9_BULLETS":"","COMPANY_9_BULLETS_2":"","COMPANY_10_NAME":"","COMPANY_10_LOCATION":"","COMPANY_10_DATES":"","COMPANY_10_ROLE":"","COMPANY_10_FUNCTION":"","COMPANY_10_ROLE_DATES":"","COMPANY_10_BULLETS":"","COMPANY_10_BULLETS_2":"","COMPANY_11_NAME":"","COMPANY_11_LOCATION":"","COMPANY_11_DATES":"","COMPANY_11_ROLE":"","COMPANY_11_FUNCTION":"","COMPANY_11_ROLE_DATES":"","COMPANY_11_BULLETS":"","COMPANY_11_BULLETS_2":"","COMPANY_12_NAME":"","COMPANY_12_LOCATION":"","COMPANY_12_DATES":"","COMPANY_12_ROLE":"","COMPANY_12_FUNCTION":"","COMPANY_12_ROLE_DATES":"","COMPANY_12_BULLETS":"","COMPANY_12_BULLETS_2":"","COMPANY_13_NAME":"","COMPANY_13_LOCATION":"","COMPANY_13_DATES":"","COMPANY_13_ROLE":"","COMPANY_13_FUNCTION":"","COMPANY_13_ROLE_DATES":"","COMPANY_13_BULLETS":"","COMPANY_13_BULLETS_2":"","COMPANY_14_NAME":"","COMPANY_14_LOCATION":"","COMPANY_14_DATES":"","COMPANY_14_ROLE":"","COMPANY_14_FUNCTION":"","COMPANY_14_ROLE_DATES":"","COMPANY_14_BULLETS":"","COMPANY_14_BULLETS_2":"","COMPANY_15_NAME":"","COMPANY_15_LOCATION":"","COMPANY_15_DATES":"","COMPANY_15_ROLE":"","COMPANY_15_FUNCTION":"","COMPANY_15_ROLE_DATES":"","COMPANY_15_BULLETS":"","COMPANY_15_BULLETS_2":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","EDU_3_YEARS":"","EDU_3_INSTITUTION":"","EDU_3_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var globalJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","SEARCH_TITLE":"","CLIENT_COMPANY":"","MONTH_YEAR":"","SUMMARY_BULLET_1":"","SUMMARY_BULLET_2":"","SUMMARY_BULLET_3":"","COMPANY_1_NAME":"","COMPANY_1_LOCATION":"","COMPANY_1_ROLE":"","COMPANY_1_FUNCTION":"","COMPANY_1_DATES":"","COMPANY_1_BULLET_1":"","COMPANY_1_BULLET_2":"","COMPANY_1_BULLET_3":"","COMPANY_2_NAME":"","COMPANY_2_LOCATION":"","COMPANY_2_ROLE":"","COMPANY_2_FUNCTION":"","COMPANY_2_DATES":"","COMPANY_2_BULLET_1":"","COMPANY_2_BULLET_2":"","COMPANY_2_BULLET_3":"","COMPANY_3_NAME":"","COMPANY_3_LOCATION":"","COMPANY_3_ROLE":"","COMPANY_3_FUNCTION":"","COMPANY_3_DATES":"","COMPANY_3_BULLET_1":"","COMPANY_3_BULLET_2":"","COMPANY_3_BULLET_3":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","AFFILIATION_2":"","AFFILIATION_2_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var prompt = isApac
   ? (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
@@ -1044,23 +1044,23 @@ CRITICAL RULES — READ CAREFULLY:
 2. CURRENT_EMPLOYER: Extract current/most recent employer name exactly.
 3. CLIENT_COMPANY: Leave EMPTY — do not fill this field.
 4. SEARCH_TITLE: Leave EMPTY — do not fill this field.
-5. MONTH_YEAR: Extract the date from the CV (use format "Month YYYY" e.g. "May 2026"). If not found, use today\'s month and year.
+5. MONTH_YEAR: Use today\'s month and year in format "Month YYYY". Today is May 2026. Always use the current month/year when generating this document.
 6. SUMMARY: Copy the candidate summary/profile/objective section VERBATIM — do NOT rewrite, paraphrase, or change any wording. Copy exactly as it appears in the source. If summary is bullet points, join them with \\n.
 7. SUMMARY_BULLETS: Leave EMPTY unless there are distinct summary bullet points separate from the main summary paragraph.
-8. BUSINESS EXPERIENCE — CRITICAL: Extract ALL work history entries without exception. The template shows 5 slots but you MUST capture every single role. Use COMPANY_1 through COMPANY_10 fields. For each role:
-   - COMPANY_N_NAME: Company/organisation name
-   - COMPANY_N_LOCATION: City and Country (e.g. "Gurgaon, India")
-   - COMPANY_N_DATES: Employment period for the company (e.g. "June 2021 – Present")
-   - COMPANY_N_ROLE: Job title/position
-   - COMPANY_N_FUNCTION: Function or department (if listed, else leave empty)
-   - COMPANY_N_ROLE_DATES: Date range for that specific role (e.g. "June 2021 – Present")
-   - COMPANY_N_BULLETS: ALL bullet points for that role, each separated by \\n. Copy VERBATIM — do not rewrite.
-   - COMPANY_N_BULLETS_2: Leave EMPTY.
+8. BUSINESS EXPERIENCE — CRITICAL: Extract ALL work history entries WITHOUT EXCEPTION. Use COMPANY_1 through COMPANY_15. Each COMPANY_N = ONE ROLE. If candidate had multiple roles at the same company, create a SEPARATE entry for EACH ROLE:
+   - COMPANY_N_NAME: Company name (repeat for each role at same company)
+   - COMPANY_N_LOCATION: City, Country (leave empty if not listed)
+   - COMPANY_N_DATES: Overall company tenure dates (e.g. "Mar 1996 – Present") for FIRST role at that company ONLY. Leave EMPTY for subsequent roles at same company.
+   - COMPANY_N_ROLE: Exact job title
+   - COMPANY_N_FUNCTION: Department/function if listed, else empty
+   - COMPANY_N_ROLE_DATES: Dates for THIS SPECIFIC ROLE (e.g. "Dec 2025 – Present")
+   - COMPANY_N_BULLETS: ALL bullet points for this role joined with | (pipe character). Copy text VERBATIM.
+   - COMPANY_N_BULLETS_2: Always leave EMPTY.
 9. EDUCATION: Extract ALL education entries.
    - EDU_N_YEARS: Year range (e.g. "2011-2013")
    - EDU_N_INSTITUTION: Full institution name and location
    - EDU_N_DEGREE: Degree/qualification name
-10. QUAL_1, QUAL_2, QUAL_3: Professional qualifications/certifications if listed, else leave empty.
+10. QUAL_1, QUAL_2, QUAL_3: Professional qualifications/certifications. Put the FIRST qualification in QUAL_1, SECOND in QUAL_2, THIRD in QUAL_3. If none found, leave empty.
 11. NATIONALITY: Exact nationality as stated.
 12. LANGUAGES: All languages with proficiency levels exactly as stated.
 13. INTERESTS: Exact interests as stated.
@@ -1068,7 +1068,7 @@ CRITICAL RULES — READ CAREFULLY:
 FORMATTING RULES:
 - Copy ALL text VERBATIM. Do NOT summarise, rephrase, or add content.
 - Do NOT skip any work history entry.
-- If fewer than 10 companies, leave unused COMPANY fields as empty string.
+- If fewer than 15 companies, leave unused COMPANY fields as empty string.
 - Return ONLY valid JSON. No markdown. No code blocks. No explanation.
 
 Use this exact JSON structure:\n` + apacJsonStr + '\n\nCANDIDATE SOURCE — extract ALL information from this text:\n\n' + inputText
@@ -1226,7 +1226,7 @@ function apacFillTemplate(xmlStr, cv) {
   rep('[Date]', cv.MONTH_YEAR || '');
   rep('Type notes here', cv.SUMMARY || '');
   rep('[SH Bullets]', (cv.SUMMARY_BULLETS || '').split('|').map(function(b){return b.trim();}).filter(Boolean).join(' • '));
-  for (var c = 1; c <= 10; c++) {
+  for (var c = 1; c <= 15; c++) {
     var cn = cv['COMPANY_'+c+'_NAME'] || ''; var cl = cv['COMPANY_'+c+'_LOCATION'] || '';
     s = s.replace('Company Name, Location', xmlEsc(cn + (cl ? ', ' + cl : '')));
     var cd = cv['COMPANY_'+c+'_DATES'] || '';
@@ -1244,11 +1244,30 @@ function apacFillTemplate(xmlStr, cv) {
       var _bulletParas = _bullets.map(function(b){ return _bulletTemplate.replace('Insert text', xmlEsc(b)); }).join('');
       s = s.substring(0, _bulletParaStart) + _bulletParas + s.substring(_bulletParaEnd);
     }
-    s = s.replace('SH Bullets', xmlEsc(cv['COMPANY_'+c+'_BULLETS_2'] || ''));
+    s = var _shBullVal = (cv['COMPANY_'+c+'_BULLETS_2'] || '').trim();
+    if (_shBullVal) {
+      s = s.replace('SH Bullets', xmlEsc(_shBullVal));
+    } else {
+      var _shPos = s.indexOf('SH Bullets');
+      if (_shPos > -1) {
+        var _shParaStart = s.lastIndexOf('<w:p ', _shPos);
+        var _shParaEnd = s.indexOf('</w:p>', _shPos) + 6;
+        if (_shParaStart > -1 && _shParaEnd > 5) s = s.substring(0, _shParaStart) + s.substring(_shParaEnd);
+      }
+    }
   }
   rep('Year – Year:', cv.EDU_1_YEARS || '');
   rep('Place of study', cv.EDU_1_INSTITUTION || '');
-  rep('Details', cv.EDU_1_DEGREE || '');
+  // Replace 'Details' only in education row - avoid hitting 'Personal Details' heading
+  (function() {
+    var _eduDeg = cv.EDU_1_DEGREE || '';
+    var _degPos = s.indexOf('Details');
+    // Skip occurrences preceded by 'Personal '
+    while (_degPos > -1 && s.substring(_degPos - 9, _degPos) === 'Personal ') {
+      _degPos = s.indexOf('Details', _degPos + 1);
+    }
+    if (_degPos > -1) s = s.substring(0, _degPos) + xmlEsc(_eduDeg) + s.substring(_degPos + 'Details'.length);
+  })();
   // Additional education entries
   [2, 3].forEach(function(n) {
     var inst = cv['EDU_' + n + '_INSTITUTION'];
@@ -1265,8 +1284,15 @@ function apacFillTemplate(xmlStr, cv) {
       s = s.substring(0, _eduEnd) + _eduRow + s.substring(_eduEnd);
     }
   });
-  rep('Year:', cv.QUAL_1 || '');
-  rep('Qualification', cv.QUAL_2 || '');
+  // Combine all qualifications into one cell under "Qualification"
+  (function() {
+    var quals = [cv.QUAL_1, cv.QUAL_2, cv.QUAL_3].filter(function(q){ return q && q.trim(); });
+    var qualStr = quals.join(' | ');
+    // 'Year:' cell: leave empty or use as label
+    rep('Year:', '');
+    // Put all quals in the 'Qualification' cell
+    rep('Qualification', qualStr);
+  })();
   rep('Type Nationality', cv.NATIONALITY || '');
   rep('Language, Level', cv.LANGUAGES || '');
   var s2 = s.lastIndexOf('>Interests<');
