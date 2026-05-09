@@ -1087,7 +1087,7 @@ CRITICAL RULES:
 8. Copy all bullet points VERBATIM.
 9. Extract all education, languages, nationality, interests exactly as stated.
 
-Return ONLY valid JSON using this structure:\n` + globalJsonStr;
+Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE — extract ALL information from this text:\n\n' + inputText;
 
   return fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -1114,7 +1114,7 @@ system: "Return ONLY raw JSON. No markdown. No explanations. No code blocks. No 
 var output;
 
 try {
-  rawOutput = rawOutput.replace(/```json\n?/gi,'').replace(/```\n?/g,'').trim();
+        rawOutput = rawOutput.replace(/```json\n?/gi, '').replace(/```\n?/g, '').replace(/^[^{[]*/, '').replace(/[^}\]]*$/, '').trim();
   output = JSON.parse(rawOutput);
 } catch(e) {
   console.error(e);
