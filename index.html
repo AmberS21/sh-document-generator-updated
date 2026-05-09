@@ -1363,7 +1363,7 @@ function apacFillTemplate(xmlStr, cv) {
   rep('Type Nationality', cv.NATIONALITY || '');
   rep('Language, Level', cv.LANGUAGES || '');
   var _ip = s.lastIndexOf('>Interests<');
-  if (_ip > -1) s = s.substring(0, _ip + 1) + xmlEsc(cv.INTERESTS || '') + s.substring(_ip + 11);
+  if (_ip > -1) s = s.substring(0, _ip + 1) + xmlEsc(cv.INTERESTS || '') + s.substring(_ip + 10);
   return s;
 }
 async function downloadHistory(index) {
