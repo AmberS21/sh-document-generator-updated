@@ -1166,6 +1166,7 @@ function hideProgress(msg) {
 function apacFillTemplate(xmlStr, cv) {
   // Replace APAC template placeholders with CV data
   var s = xmlStr;
+  s = s.replace(/ FORMTEXT /g, '');
   function xmlEsc(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   function rep(find, val) { s = s.split(find).join(xmlEsc(val)); }
   rep('Candidate Name', cv.CANDIDATE_NAME || '');
@@ -1174,17 +1175,17 @@ function apacFillTemplate(xmlStr, cv) {
   rep('Search Title', cv.SEARCH_TITLE || '');
   rep('[Date]', cv.MONTH_YEAR || '');
   rep('Type notes here', cv.SUMMARY || '');
-  rep('[SH Bullets]', cv.SUMMARY_BULLETS || '');
+  rep('[SH Bullets]', (cv.SUMMARY_BULLETS || '').split('|').map(function(b){return b.trim();}).filter(Boolean).join(' • '));
   for (var c = 1; c <= 5; c++) {
     var cn = cv['COMPANY_'+c+'_NAME'] || ''; var cl = cv['COMPANY_'+c+'_LOCATION'] || '';
-    rep('Company Name, Location', cn + (cl ? ', ' + cl : ''));
+    s = s.replace('Company Name, Location', xmlEsc(cn + (cl ? ', ' + cl : '')));
     var cd = cv['COMPANY_'+c+'_DATES'] || '';
     var firstMY = 'Month, Year – Month, Year';
     s = s.replace(firstMY, cd);
-    rep('Corporate Job Title, Function', (cv['COMPANY_'+c+'_ROLE'] || '') + (cv['COMPANY_'+c+'_FUNCTION'] ? ', ' + cv['COMPANY_'+c+'_FUNCTION'] : ''));
+    s = s.replace('Corporate Job Title, Function', xmlEsc((cv['COMPANY_'+c+'_ROLE'] || '') + (cv['COMPANY_'+c+'_FUNCTION'] ? ', ' + cv['COMPANY_'+c+'_FUNCTION'] : '')));
     s = s.replace(firstMY, cv['COMPANY_'+c+'_ROLE_DATES'] || '');
-    rep('Insert text', cv['COMPANY_'+c+'_BULLETS'] || '');
-    rep('SH Bullets', cv['COMPANY_'+c+'_BULLETS_2'] || '');
+    s = s.replace('Insert text', xmlEsc(cv['COMPANY_'+c+'_BULLETS'] || ''));
+    s = s.replace('SH Bullets', xmlEsc(cv['COMPANY_'+c+'_BULLETS_2'] || ''));
   }
   rep('Year – Year:', cv.EDU_1_YEARS || '');
   rep('Place of study', cv.EDU_1_INSTITUTION || '');
