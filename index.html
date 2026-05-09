@@ -7,7 +7,7 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* ── TOKENS ── */
+/* ── TOKENS ── */h
 :root {
   --navy:#0f1f45; --navy2:#1a2c5b; --navy3:#06101f;
   --blue:#1591D8; --light:#3BC9F3;
@@ -796,8 +796,7 @@ var TPL = {
     fmt:  'd',
     reg:  'Global',
     flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Business Experience','Education','Qualifications','Affiliations','Personal Details','Scorecard']
-  }
-},
+  },
   cv_apac_en: {
     name: 'APAC Candidate Profile',
     sub:  'English',
@@ -1209,7 +1208,7 @@ async function downloadHistory(index) {
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
       if (item.type === 'combined' && Array.isArray(item.content)) {
-        var         var _tplUrlC = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? '%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates%202025%20-%20Copy.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+        var _tplUrlC = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? '%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates%202025%20-%20Copy.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
         var _respC = await fetch(_tplUrlC);
         var _abC = await _respC.arrayBuffer();
         var _zipC = new JSZip();
