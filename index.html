@@ -1035,7 +1035,7 @@ var globalJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","SEARCH_TITLE":"
 var prompt = isApac
   ? 'You are a Sheffield Haworth executive search document assistant.\n\n' +
     (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
-    'Extract information from the candidate CV below for the APAC Candidate Profile template.\n\nCRITICAL RULES:\n- Extract ONLY what is explicitly stated. Do NOT invent or add anything.\n- Leave unfound fields as empty string.\n- COMPANY fields: Fill ALL companies in the CV (up to 5). For each company capture ALL roles.\n- COMPANY_X_NAME: Company name. COMPANY_X_LOCATION: City/location.\n- COMPANY_X_DATES: Overall tenure (earliest start to latest end date).\n- COMPANY_X_ROLE: Most recent/primary job title. COMPANY_X_FUNCTION: Department.\n- COMPANY_X_ROLE_DATES: Dates for COMPANY_X_ROLE specifically.\n- COMPANY_X_BULLETS: Full detailed description of ALL responsibilities and achievements at this company. Be thorough and comprehensive.\n- COMPANY_X_BULLETS_2: Additional role descriptions if needed, else leave empty.\n- SUMMARY: Concise 2-3 sentence executive summary of the candidate.\n- Copy job titles, company names, dates EXACTLY as written.\n' +
+    'Extract information from the candidate CV below for the APAC Candidate Profile template.\n\nCRITICAL RULES:\n- Extract ONLY what is explicitly stated. Do NOT invent or add anything.\n- Leave unfound fields as empty string.\n- COMPANY_1 = Most recent employer (current or latest). COMPANY_1_NAME = full company name. COMPANY_1_LOCATION = city/country. COMPANY_1_DATES = overall tenure at this company (earliest start date to latest end date or Present). COMPANY_1_ROLE = current or most recent job title at this company. COMPANY_1_FUNCTION = department or business unit. COMPANY_1_ROLE_DATES = dates for this specific role only. COMPANY_1_BULLETS = achievements and responsibilities for COMPANY_1_ROLE only (not all roles). Leave COMPANY_1_BULLETS_2 empty.\n- COMPANY_2 through COMPANY_5 = Previous roles in reverse chronological order (most recent first). For these blocks: put the role/job title in COMPANY_X_NAME. Put role dates in COMPANY_X_DATES. Put the role achievements and responsibilities in COMPANY_X_BULLETS. Leave COMPANY_X_LOCATION, COMPANY_X_ROLE, COMPANY_X_FUNCTION, COMPANY_X_ROLE_DATES, COMPANY_X_BULLETS_2 empty for roles 2-5. If the candidate has roles at DIFFERENT companies for positions 2-5, you may use the company name in COMPANY_X_NAME instead.\n- Fill up to 5 roles/positions total. Most recent 5 only if more exist.\n- COMPANY_X_BULLETS: List each bullet on a separate line. Be thorough and copy verbatim from CV.\n- SUMMARY: Copy the candidate's professional profile/summary section verbatim from their CV. Include the full paragraph(s) as written. Do not shorten or paraphrase.\n- SUMMARY_BULLETS: Leave as empty string.\n- Copy job titles, company names, dates EXACTLY as written.\n' +
     (isChineseApac ? '- All text values MUST be in Simplified Chinese.\n' : '') +
     '- Return ONLY valid JSON. No markdown. No code blocks.\n\nUse this JSON structure:\n' + apacJsonStr + '\n\nCandidate CV:\n' + inputText
   : 'You are a Sheffield Haworth executive search document assistant.\n\nExtract information from the candidate CV below and populate the JSON fields.\n\nCRITICAL RULES:\n- Extract ONLY what is explicitly stated. Do NOT invent, infer, rephrase, embellish or add anything.\n- If a field is not found, leave it as empty string.\n- For bullet fields: if no description exists for a role, leave ALL bullets for that role empty.\n- Copy job titles, company names, dates and education EXACTLY as written.\n- Return ONLY valid JSON. No markdown. No explanations. No code blocks.\n\nUse this JSON structure:\n' + globalJsonStr + '\n\nCandidate CV:\n' + inputText;
@@ -1184,7 +1184,15 @@ function apacFillTemplate(xmlStr, cv) {
     s = s.replace(firstMY, cd);
     s = s.replace('Corporate Job Title, Function', xmlEsc((cv['COMPANY_'+c+'_ROLE'] || '') + (cv['COMPANY_'+c+'_FUNCTION'] ? ', ' + cv['COMPANY_'+c+'_FUNCTION'] : '')));
     s = s.replace(firstMY, cv['COMPANY_'+c+'_ROLE_DATES'] || '');
-    s = s.replace('Insert text', xmlEsc(cv['COMPANY_'+c+'_BULLETS'] || ''));
+    var _bulletsRaw = (cv['COMPANY_'+c+'_BULLETS'] || ''); var _bullets = (_bulletsRaw.indexOf('|') > -1 ? _bulletsRaw.split('|') : _bulletsRaw.split('\n')).map(function(b){return b.trim();}).filter(Boolean);
+    if(_bullets.length === 0) { s = s.replace('Insert text', ''); }
+    else {
+      var _bulletParaStart = s.lastIndexOf('<w:p ', s.indexOf('Insert text'));
+      var _bulletParaEnd = s.indexOf('</w:p>', s.indexOf('Insert text')) + 6;
+      var _bulletTemplate = s.substring(_bulletParaStart, _bulletParaEnd);
+      var _bulletParas = _bullets.map(function(b){ return _bulletTemplate.replace('Insert text', xmlEsc(b)); }).join('');
+      s = s.substring(0, _bulletParaStart) + _bulletParas + s.substring(_bulletParaEnd);
+    }
     s = s.replace('SH Bullets', xmlEsc(cv['COMPANY_'+c+'_BULLETS_2'] || ''));
   }
   rep('Year – Year:', cv.EDU_1_YEARS || '');
