@@ -804,7 +804,7 @@ var TPL = {
     bg:   'rgba(43,124,211,.12)',
     fmt:  'd',
     reg:  'APAC',
-    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Business Experience (up to 5 companies)','Education','Qualifications','Nationality','Languages','Interests']
+    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Business Experience (all companies (up to 10))','Education','Qualifications','Nationality','Languages','Interests']
   },
   cv_apac_zh: {
     name: 'APAC Candidate Profile',
@@ -1030,15 +1030,61 @@ async function processOneCV(inputText, tpl, btn, returnOnly) {
 
 var isApac = (tpl === 'cv_apac_en' || tpl === 'cv_apac_zh');
 var isChineseApac = (tpl === 'cv_apac_zh');
-var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","COMPANY_1_NAME":"","COMPANY_1_LOCATION":"","COMPANY_1_DATES":"","COMPANY_1_ROLE":"","COMPANY_1_FUNCTION":"","COMPANY_1_ROLE_DATES":"","COMPANY_1_BULLETS":"","COMPANY_1_BULLETS_2":"","COMPANY_2_NAME":"","COMPANY_2_LOCATION":"","COMPANY_2_DATES":"","COMPANY_2_ROLE":"","COMPANY_2_FUNCTION":"","COMPANY_2_ROLE_DATES":"","COMPANY_2_BULLETS":"","COMPANY_2_BULLETS_2":"","COMPANY_3_NAME":"","COMPANY_3_LOCATION":"","COMPANY_3_DATES":"","COMPANY_3_ROLE":"","COMPANY_3_FUNCTION":"","COMPANY_3_ROLE_DATES":"","COMPANY_3_BULLETS":"","COMPANY_3_BULLETS_2":"","COMPANY_4_NAME":"","COMPANY_4_LOCATION":"","COMPANY_4_DATES":"","COMPANY_4_ROLE":"","COMPANY_4_FUNCTION":"","COMPANY_4_ROLE_DATES":"","COMPANY_4_BULLETS":"","COMPANY_4_BULLETS_2":"","COMPANY_5_NAME":"","COMPANY_5_LOCATION":"","COMPANY_5_DATES":"","COMPANY_5_ROLE":"","COMPANY_5_FUNCTION":"","COMPANY_5_ROLE_DATES":"","COMPANY_5_BULLETS":"","COMPANY_5_BULLETS_2":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","QUAL_1":"","QUAL_2":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
+var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","COMPANY_1_NAME":"","COMPANY_1_LOCATION":"","COMPANY_1_DATES":"","COMPANY_1_ROLE":"","COMPANY_1_FUNCTION":"","COMPANY_1_ROLE_DATES":"","COMPANY_1_BULLETS":"","COMPANY_1_BULLETS_2":"","COMPANY_2_NAME":"","COMPANY_2_LOCATION":"","COMPANY_2_DATES":"","COMPANY_2_ROLE":"","COMPANY_2_FUNCTION":"","COMPANY_2_ROLE_DATES":"","COMPANY_2_BULLETS":"","COMPANY_2_BULLETS_2":"","COMPANY_3_NAME":"","COMPANY_3_LOCATION":"","COMPANY_3_DATES":"","COMPANY_3_ROLE":"","COMPANY_3_FUNCTION":"","COMPANY_3_ROLE_DATES":"","COMPANY_3_BULLETS":"","COMPANY_3_BULLETS_2":"","COMPANY_4_NAME":"","COMPANY_4_LOCATION":"","COMPANY_4_DATES":"","COMPANY_4_ROLE":"","COMPANY_4_FUNCTION":"","COMPANY_4_ROLE_DATES":"","COMPANY_4_BULLETS":"","COMPANY_4_BULLETS_2":"","COMPANY_5_NAME":"","COMPANY_5_LOCATION":"","COMPANY_5_DATES":"","COMPANY_5_ROLE":"","COMPANY_5_FUNCTION":"","COMPANY_5_ROLE_DATES":"","COMPANY_5_BULLETS":"","COMPANY_5_BULLETS_2":"","COMPANY_6_NAME":"","COMPANY_6_LOCATION":"","COMPANY_6_DATES":"","COMPANY_6_ROLE":"","COMPANY_6_FUNCTION":"","COMPANY_6_ROLE_DATES":"","COMPANY_6_BULLETS":"","COMPANY_6_BULLETS_2":"","COMPANY_7_NAME":"","COMPANY_7_LOCATION":"","COMPANY_7_DATES":"","COMPANY_7_ROLE":"","COMPANY_7_FUNCTION":"","COMPANY_7_ROLE_DATES":"","COMPANY_7_BULLETS":"","COMPANY_7_BULLETS_2":"","COMPANY_8_NAME":"","COMPANY_8_LOCATION":"","COMPANY_8_DATES":"","COMPANY_8_ROLE":"","COMPANY_8_FUNCTION":"","COMPANY_8_ROLE_DATES":"","COMPANY_8_BULLETS":"","COMPANY_8_BULLETS_2":"","COMPANY_9_NAME":"","COMPANY_9_LOCATION":"","COMPANY_9_DATES":"","COMPANY_9_ROLE":"","COMPANY_9_FUNCTION":"","COMPANY_9_ROLE_DATES":"","COMPANY_9_BULLETS":"","COMPANY_9_BULLETS_2":"","COMPANY_10_NAME":"","COMPANY_10_LOCATION":"","COMPANY_10_DATES":"","COMPANY_10_ROLE":"","COMPANY_10_FUNCTION":"","COMPANY_10_ROLE_DATES":"","COMPANY_10_BULLETS":"","COMPANY_10_BULLETS_2":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","EDU_3_YEARS":"","EDU_3_INSTITUTION":"","EDU_3_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var globalJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","SEARCH_TITLE":"","CLIENT_COMPANY":"","MONTH_YEAR":"","SUMMARY_BULLET_1":"","SUMMARY_BULLET_2":"","SUMMARY_BULLET_3":"","COMPANY_1_NAME":"","COMPANY_1_LOCATION":"","COMPANY_1_ROLE":"","COMPANY_1_FUNCTION":"","COMPANY_1_DATES":"","COMPANY_1_BULLET_1":"","COMPANY_1_BULLET_2":"","COMPANY_1_BULLET_3":"","COMPANY_2_NAME":"","COMPANY_2_LOCATION":"","COMPANY_2_ROLE":"","COMPANY_2_FUNCTION":"","COMPANY_2_DATES":"","COMPANY_2_BULLET_1":"","COMPANY_2_BULLET_2":"","COMPANY_2_BULLET_3":"","COMPANY_3_NAME":"","COMPANY_3_LOCATION":"","COMPANY_3_ROLE":"","COMPANY_3_FUNCTION":"","COMPANY_3_DATES":"","COMPANY_3_BULLET_1":"","COMPANY_3_BULLET_2":"","COMPANY_3_BULLET_3":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","AFFILIATION_2":"","AFFILIATION_2_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var prompt = isApac
-  ? 'You are a Sheffield Haworth executive search document assistant.\n\n' +
-    (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
-    'Extract information from the candidate CV below for the APAC Candidate Profile template.\n\nCRITICAL RULES:\n- Extract ONLY what is explicitly stated. Do NOT invent or add anything.\n- Leave unfound fields as empty string.\n- COMPANY_1 = Most recent employer (current or latest). COMPANY_1_NAME = full company name. COMPANY_1_LOCATION = city/country. COMPANY_1_DATES = overall tenure at this company (earliest start date to latest end date or Present). COMPANY_1_ROLE = current or most recent job title at this company. COMPANY_1_FUNCTION = department or business unit. COMPANY_1_ROLE_DATES = dates for this specific role only. COMPANY_1_BULLETS = achievements and responsibilities for COMPANY_1_ROLE only (not all roles). Leave COMPANY_1_BULLETS_2 empty.\n- COMPANY_2 through COMPANY_5 = Previous roles in reverse chronological order (most recent first). For these blocks: put the role/job title in COMPANY_X_NAME. Put role dates in COMPANY_X_DATES. Put the role achievements and responsibilities in COMPANY_X_BULLETS. Leave COMPANY_X_LOCATION, COMPANY_X_ROLE, COMPANY_X_FUNCTION, COMPANY_X_ROLE_DATES, COMPANY_X_BULLETS_2 empty for roles 2-5. If the candidate has roles at DIFFERENT companies for positions 2-5, you may use the company name in COMPANY_X_NAME instead.\n- Fill up to 5 roles/positions total. Most recent 5 only if more exist.\n- COMPANY_X_BULLETS: List each bullet on a separate line. Be thorough and copy verbatim from CV.\n- SUMMARY: Copy the candidate\'s professional profile/summary section verbatim from their CV. Include the full paragraph(s) as written. Do not shorten or paraphrase.\n- SUMMARY_BULLETS: Leave as empty string.\n- Copy job titles, company names, dates EXACTLY as written.\n' +
-    (isChineseApac ? '- All text values MUST be in Simplified Chinese.\n' : '') +
-    '- Return ONLY valid JSON. No markdown. No code blocks.\n\nUse this JSON structure:\n' + apacJsonStr + '\n\nCandidate CV:\n' + inputText
-  : 'You are a Sheffield Haworth executive search document assistant.\n\nExtract information from the candidate CV below and populate the JSON fields.\n\nCRITICAL RULES:\n- Extract ONLY what is explicitly stated. Do NOT invent, infer, rephrase, embellish or add anything.\n- If a field is not found, leave it as empty string.\n- For bullet fields: if no description exists for a role, leave ALL bullets for that role empty.\n- Copy job titles, company names, dates and education EXACTLY as written.\n- Return ONLY valid JSON. No markdown. No explanations. No code blocks.\n\nUse this JSON structure:\n' + globalJsonStr + '\n\nCandidate CV:\n' + inputText;
+  ? (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
+    `You are a Sheffield Haworth executive search document assistant. Your task is to extract information from the candidate source below and fill the APAC Candidate Profile template fields EXACTLY as described.
+
+CRITICAL RULES — READ CAREFULLY:
+1. CANDIDATE_NAME: Extract the candidate full name exactly as written.
+2. CURRENT_EMPLOYER: Extract current/most recent employer name exactly.
+3. CLIENT_COMPANY: Leave EMPTY — do not fill this field.
+4. SEARCH_TITLE: Leave EMPTY — do not fill this field.
+5. MONTH_YEAR: Extract the date from the CV (use format "Month YYYY" e.g. "May 2026"). If not found, use today\'s month and year.
+6. SUMMARY: Copy the candidate summary/profile/objective section VERBATIM — do NOT rewrite, paraphrase, or change any wording. Copy exactly as it appears in the source. If summary is bullet points, join them with \\n.
+7. SUMMARY_BULLETS: Leave EMPTY unless there are distinct summary bullet points separate from the main summary paragraph.
+8. BUSINESS EXPERIENCE — CRITICAL: Extract ALL work history entries without exception. The template shows 5 slots but you MUST capture every single role. Use COMPANY_1 through COMPANY_10 fields. For each role:
+   - COMPANY_N_NAME: Company/organisation name
+   - COMPANY_N_LOCATION: City and Country (e.g. "Gurgaon, India")
+   - COMPANY_N_DATES: Employment period for the company (e.g. "June 2021 – Present")
+   - COMPANY_N_ROLE: Job title/position
+   - COMPANY_N_FUNCTION: Function or department (if listed, else leave empty)
+   - COMPANY_N_ROLE_DATES: Date range for that specific role (e.g. "June 2021 – Present")
+   - COMPANY_N_BULLETS: ALL bullet points for that role, each separated by \\n. Copy VERBATIM — do not rewrite.
+   - COMPANY_N_BULLETS_2: Leave EMPTY.
+9. EDUCATION: Extract ALL education entries.
+   - EDU_N_YEARS: Year range (e.g. "2011-2013")
+   - EDU_N_INSTITUTION: Full institution name and location
+   - EDU_N_DEGREE: Degree/qualification name
+10. QUAL_1, QUAL_2, QUAL_3: Professional qualifications/certifications if listed, else leave empty.
+11. NATIONALITY: Exact nationality as stated.
+12. LANGUAGES: All languages with proficiency levels exactly as stated.
+13. INTERESTS: Exact interests as stated.
+
+FORMATTING RULES:
+- Copy ALL text VERBATIM. Do NOT summarise, rephrase, or add content.
+- Do NOT skip any work history entry.
+- If fewer than 10 companies, leave unused COMPANY fields as empty string.
+- Return ONLY valid JSON. No markdown. No code blocks. No explanation.
+
+Use this exact JSON structure:\n` + apacJsonStr
+  : `You are a Sheffield Haworth executive search document assistant.
+
+Extract information from the candidate CV below for the Global Candidate Profile template.
+
+CRITICAL RULES:
+1. CANDIDATE_NAME: Full name exactly as written.
+2. CURRENT_EMPLOYER: Current/most recent employer exactly.
+3. CLIENT_COMPANY: Leave EMPTY.
+4. SEARCH_TITLE: Leave EMPTY.
+5. DATE: Today in format "Month YYYY" (e.g. "May 2026").
+6. SUMMARY: Copy verbatim — do NOT rewrite anything.
+7. Extract ALL work history entries.
+8. Copy all bullet points VERBATIM.
+9. Extract all education, languages, nationality, interests exactly as stated.
+
+Return ONLY valid JSON using this structure:\n` + globalJsonStr;
 
   return fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -1176,7 +1222,7 @@ function apacFillTemplate(xmlStr, cv) {
   rep('[Date]', cv.MONTH_YEAR || '');
   rep('Type notes here', cv.SUMMARY || '');
   rep('[SH Bullets]', (cv.SUMMARY_BULLETS || '').split('|').map(function(b){return b.trim();}).filter(Boolean).join(' • '));
-  for (var c = 1; c <= 5; c++) {
+  for (var c = 1; c <= 10; c++) {
     var cn = cv['COMPANY_'+c+'_NAME'] || ''; var cl = cv['COMPANY_'+c+'_LOCATION'] || '';
     s = s.replace('Company Name, Location', xmlEsc(cn + (cl ? ', ' + cl : '')));
     var cd = cv['COMPANY_'+c+'_DATES'] || '';
@@ -1198,6 +1244,22 @@ function apacFillTemplate(xmlStr, cv) {
   rep('Year – Year:', cv.EDU_1_YEARS || '');
   rep('Place of study', cv.EDU_1_INSTITUTION || '');
   rep('Details', cv.EDU_1_DEGREE || '');
+  // Additional education entries
+  [2, 3].forEach(function(n) {
+    var inst = cv['EDU_' + n + '_INSTITUTION'];
+    if (!inst) return;
+    var yrs = cv['EDU_' + n + '_YEARS'] || '';
+    var deg = cv['EDU_' + n + '_DEGREE'] || '';
+    var _eduStart = s.lastIndexOf('<w:tr ', s.indexOf(xmlEsc(cv.EDU_1_INSTITUTION || 'Place of study')));
+    var _eduEnd = s.indexOf('</w:tr>', _eduStart) + 7;
+    if (_eduStart > 0 && _eduEnd > 7) {
+      var _eduRow = s.substring(_eduStart, _eduEnd)
+        .replace(xmlEsc(cv.EDU_1_YEARS || 'Year – Year'), xmlEsc(yrs))
+        .replace(xmlEsc(cv.EDU_1_INSTITUTION || 'Place of study'), xmlEsc(inst))
+        .replace(xmlEsc(cv.EDU_1_DEGREE || 'Details'), xmlEsc(deg));
+      s = s.substring(0, _eduEnd) + _eduRow + s.substring(_eduEnd);
+    }
+  });
   rep('Year:', cv.QUAL_1 || '');
   rep('Qualification', cv.QUAL_2 || '');
   rep('Type Nationality', cv.NATIONALITY || '');
