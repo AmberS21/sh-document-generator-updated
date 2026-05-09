@@ -1244,7 +1244,7 @@ function apacFillTemplate(xmlStr, cv) {
       var _bulletParas = _bullets.map(function(b){ return _bulletTemplate.replace('Insert text', xmlEsc(b)); }).join('');
       s = s.substring(0, _bulletParaStart) + _bulletParas + s.substring(_bulletParaEnd);
     }
-    s = var _shBullVal = (cv['COMPANY_'+c+'_BULLETS_2'] || '').trim();
+    var _shBullVal = (cv['COMPANY_'+c+'_BULLETS_2'] || '').trim();
     if (_shBullVal) {
       s = s.replace('SH Bullets', xmlEsc(_shBullVal));
     } else {
