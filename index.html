@@ -1047,14 +1047,14 @@ CRITICAL RULES — READ CAREFULLY:
 5. MONTH_YEAR: Use today\'s month and year in format "Month YYYY". Today is May 2026. Always use the current month/year when generating this document.
 6. SUMMARY: Copy the candidate summary/profile/objective section VERBATIM — do NOT rewrite, paraphrase, or change any wording. Copy exactly as it appears in the source. If summary is bullet points, join them with \\n.
 7. SUMMARY_BULLETS: Leave EMPTY unless there are distinct summary bullet points separate from the main summary paragraph.
-8. BUSINESS EXPERIENCE — CRITICAL: Extract ALL work history entries WITHOUT EXCEPTION. Use COMPANY_1 through COMPANY_15. Each COMPANY_N = ONE ROLE. If candidate had multiple roles at the same company, create a SEPARATE entry for EACH ROLE:
-   - COMPANY_N_NAME: Company name (repeat for each role at same company)
+8. BUSINESS EXPERIENCE — CRITICAL: Extract ALL work history entries WITHOUT EXCEPTION. Use COMPANY_1 through COMPANY_15. Each COMPANY_N = ONE ROLE. If candidate had multiple roles at the same company, create a SEPARATE entry for EACH ROLE. IMPORTANT: Use the EXACT SAME company name string for all roles at the same company — this is how the system detects grouping.
+   - COMPANY_N_NAME: Company name. Must be IDENTICAL string for all roles at same company (e.g. "DuPont China Holding Company Limited" for all 10 DuPont roles)
    - COMPANY_N_LOCATION: City, Country (leave empty if not listed)
-   - COMPANY_N_DATES: Overall company tenure dates (e.g. "Mar 1996 – Present") for FIRST role at that company ONLY. Leave EMPTY for subsequent roles at same company.
+   - COMPANY_N_DATES: Overall company tenure (e.g. "Mar 1996 – Present") for FIRST role at that company ONLY. Leave EMPTY for subsequent roles at same company.
    - COMPANY_N_ROLE: Exact job title
    - COMPANY_N_FUNCTION: Department/function if listed, else empty
    - COMPANY_N_ROLE_DATES: Dates for THIS SPECIFIC ROLE (e.g. "Dec 2025 – Present")
-   - COMPANY_N_BULLETS: ALL bullet points for this role joined with | (pipe character). Copy text VERBATIM.
+   - COMPANY_N_BULLETS: ALL bullet points for this role joined with | (pipe). Copy text VERBATIM.
    - COMPANY_N_BULLETS_2: Always leave EMPTY.
 9. EDUCATION: Extract ALL education entries.
    - EDU_N_YEARS: Year range (e.g. "2011-2013")
@@ -1214,56 +1214,171 @@ function hideProgress(msg) {
 }
 
 function apacFillTemplate(xmlStr, cv) {
-  // Replace APAC template placeholders with CV data
   var s = xmlStr;
   s = s.replace(/ FORMTEXT /g, '');
   function xmlEsc(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   function rep(find, val) { s = s.split(find).join(xmlEsc(val)); }
+  
+  // Page 1 fields
   rep('Candidate Name', cv.CANDIDATE_NAME || '');
   rep('Current Employer', cv.CURRENT_EMPLOYER || '');
   rep('Client Company Name', cv.CLIENT_COMPANY || '');
   rep('Search Title', cv.SEARCH_TITLE || '');
   rep('[Date]', cv.MONTH_YEAR || '');
   rep('Type notes here', cv.SUMMARY || '');
-  rep('[SH Bullets]', (cv.SUMMARY_BULLETS || '').split('|').map(function(b){return b.trim();}).filter(Boolean).join(' • '));
+  
+  // Summary bullets - remove entire paragraph if empty
+  (function() {
+    var _sb = (cv.SUMMARY_BULLETS || '').trim();
+    var _sbPos = s.indexOf('[SH Bullets]');
+    if (_sbPos > -1) {
+      if (_sb) {
+        s = s.replace('[SH Bullets]', xmlEsc(_sb));
+      } else {
+        // Remove the paragraph containing [SH Bullets]
+        var _sbParaStart = s.lastIndexOf('<w:p ', _sbPos);
+        var _sbParaEnd = s.indexOf('</w:p>', _sbPos) + 6;
+        if (_sbParaStart > -1 && _sbParaEnd > 5) s = s.substring(0, _sbParaStart) + s.substring(_sbParaEnd);
+      }
+    }
+    // Also remove the standalone SH Bullets paragraph that follows (if still present)
+    var _sbPos2 = s.indexOf('[SH Bullets]');
+    if (_sbPos2 > -1) s = s.replace('[SH Bullets]', '');
+  })();
+  
+  // Build list of roles, grouping by company
+  // For same consecutive company: show company name+dates ONCE, then just role lines
   for (var c = 1; c <= 15; c++) {
-    var cn = cv['COMPANY_'+c+'_NAME'] || ''; var cl = cv['COMPANY_'+c+'_LOCATION'] || '';
-    s = s.replace('Company Name, Location', xmlEsc(cn + (cl ? ', ' + cl : '')));
+    var cn = cv['COMPANY_'+c+'_NAME'] || '';
+    var cl = cv['COMPANY_'+c+'_LOCATION'] || '';
     var cd = cv['COMPANY_'+c+'_DATES'] || '';
-    var firstMY = 'Month, Year – Month, Year';
-    s = s.replace(firstMY, cd);
-    s = s.replace('Corporate Job Title, Function', xmlEsc((cv['COMPANY_'+c+'_ROLE'] || '') + (cv['COMPANY_'+c+'_FUNCTION'] ? ', ' + cv['COMPANY_'+c+'_FUNCTION'] : '')));
-    s = s.replace(firstMY, cv['COMPANY_'+c+'_ROLE_DATES'] || '');
-    var _bulletsRaw = (cv['COMPANY_'+c+'_BULLETS'] || ''); var _bullets = (_bulletsRaw.indexOf('|') > -1 ? _bulletsRaw.split('|') : _bulletsRaw.split('\n')).map(function(b){return b.trim();}).filter(Boolean);
+    var cr = cv['COMPANY_'+c+'_ROLE'] || '';
+    var cf = cv['COMPANY_'+c+'_FUNCTION'] || '';
+    var crd = cv['COMPANY_'+c+'_ROLE_DATES'] || '';
+    
+    if (!cn && !cr) {
+      // No more companies - remove remaining placeholder paragraphs
+      // Remove: Company Name, Location paragraph
+      var _cnPos = s.indexOf('Company Name, Location');
+      while (_cnPos > -1) {
+        var _cnParaStart = s.lastIndexOf('<w:p ', _cnPos);
+        var _cnParaEnd = s.indexOf('</w:p>', _cnPos) + 6;
+        if (_cnParaStart > -1 && _cnParaEnd > 5) {
+          s = s.substring(0, _cnParaStart) + s.substring(_cnParaEnd);
+        } else break;
+        _cnPos = s.indexOf('Company Name, Location');
+      }
+      // Remove: Corporate Job Title, Function paragraph
+      var _jtPos = s.indexOf('Corporate Job Title, Function');
+      while (_jtPos > -1) {
+        var _jtParaStart = s.lastIndexOf('<w:p ', _jtPos);
+        var _jtParaEnd = s.indexOf('</w:p>', _jtPos) + 6;
+        if (_jtParaStart > -1 && _jtParaEnd > 5) {
+          s = s.substring(0, _jtParaStart) + s.substring(_jtParaEnd);
+        } else break;
+        _jtPos = s.indexOf('Corporate Job Title, Function');
+      }
+      // Remove all remaining Month, Year placeholders
+      var _myPos = s.indexOf('Month, Year – Month, Year');
+      while (_myPos > -1) {
+        var _myParaStart = s.lastIndexOf('<w:p ', _myPos);
+        var _myParaEnd = s.indexOf('</w:p>', _myPos) + 6;
+        if (_myParaStart > -1 && _myParaEnd > 5) {
+          s = s.substring(0, _myParaStart) + s.substring(_myParaEnd);
+        } else break;
+        _myPos = s.indexOf('Month, Year – Month, Year');
+      }
+      // Remove Insert text and SH Bullets
+      var _itPos = s.indexOf('Insert text');
+      while (_itPos > -1) {
+        var _itParaStart = s.lastIndexOf('<w:p ', _itPos);
+        var _itParaEnd = s.indexOf('</w:p>', _itPos) + 6;
+        if (_itParaStart > -1 && _itParaEnd > 5) {
+          s = s.substring(0, _itParaStart) + s.substring(_itParaEnd);
+        } else break;
+        _itPos = s.indexOf('Insert text');
+      }
+      var _shPos = s.indexOf('SH Bullets');
+      while (_shPos > -1) {
+        var _shParaStart = s.lastIndexOf('<w:p ', _shPos);
+        var _shParaEnd = s.indexOf('</w:p>', _shPos) + 6;
+        if (_shParaStart > -1 && _shParaEnd > 5) {
+          s = s.substring(0, _shParaStart) + s.substring(_shParaEnd);
+        } else break;
+        _shPos = s.indexOf('SH Bullets');
+      }
+      break;
+    }
+    
+    // Check if this is a repeat of the previous company (same name = same company, different role)
+    var prevCN = c > 1 ? (cv['COMPANY_'+(c-1)+'_NAME'] || '') : '';
+    var isSameCompany = cn && prevCN && cn === prevCN;
+    
+    if (isSameCompany) {
+      // Same company as previous entry: remove the Company Name line and its date
+      // Remove the Company Name, Location paragraph (and the date on same line)
+      var _cnPos2 = s.indexOf('Company Name, Location');
+      if (_cnPos2 > -1) {
+        var _cnParaStart2 = s.lastIndexOf('<w:p ', _cnPos2);
+        var _cnParaEnd2 = s.indexOf('</w:p>', _cnPos2) + 6;
+        if (_cnParaStart2 > -1 && _cnParaEnd2 > 5) s = s.substring(0, _cnParaStart2) + s.substring(_cnParaEnd2);
+      }
+      // The next Month, Year placeholder is now gone (it was on same line as company name)
+      // So now we have: Corporate Job Title, Function ... Month, Year – Month, Year
+      s = s.replace('Corporate Job Title, Function', xmlEsc(cr + (cf ? ', ' + cf : '')));
+      s = s.replace('Month, Year – Month, Year', xmlEsc(crd));
+    } else {
+      // New company: fill company name + full tenure dates
+      var companyLine = xmlEsc(cn + (cl ? ', ' + cl : ''));
+      s = s.replace('Company Name, Location', companyLine);
+      s = s.replace('Month, Year – Month, Year', xmlEsc(cd));
+      s = s.replace('Corporate Job Title, Function', xmlEsc(cr + (cf ? ', ' + cf : '')));
+      s = s.replace('Month, Year – Month, Year', xmlEsc(crd));
+    }
+    
+    // Bullets
+    var _bulletsRaw = (cv['COMPANY_'+c+'_BULLETS'] || '');
+    var _bullets = (_bulletsRaw.indexOf('|') > -1 ? _bulletsRaw.split('|') : _bulletsRaw.split('\n')).map(function(b){return b.trim();}).filter(Boolean);
     var _insertPos = s.indexOf('Insert text');
-    if(_bullets.length === 0) { if(_insertPos > -1) s = s.replace('Insert text', ''); }
-    else if (_insertPos > -1) {
+    if (_bullets.length === 0) {
+      if (_insertPos > -1) {
+        var _itParaStart2 = s.lastIndexOf('<w:p ', _insertPos);
+        var _itParaEnd2 = s.indexOf('</w:p>', _insertPos) + 6;
+        if (_itParaStart2 > -1 && _itParaEnd2 > 5) s = s.substring(0, _itParaStart2) + s.substring(_itParaEnd2);
+        else s = s.replace('Insert text', '');
+      }
+    } else if (_insertPos > -1) {
       var _bulletParaStart = s.lastIndexOf('<w:p ', _insertPos);
       var _bulletParaEnd = s.indexOf('</w:p>', _insertPos) + 6;
       var _bulletTemplate = s.substring(_bulletParaStart, _bulletParaEnd);
       var _bulletParas = _bullets.map(function(b){ return _bulletTemplate.replace('Insert text', xmlEsc(b)); }).join('');
       s = s.substring(0, _bulletParaStart) + _bulletParas + s.substring(_bulletParaEnd);
     }
+    
+    // SH Bullets 2 - always remove (leave empty)
     var _shBullVal = (cv['COMPANY_'+c+'_BULLETS_2'] || '').trim();
     if (_shBullVal) {
       s = s.replace('SH Bullets', xmlEsc(_shBullVal));
     } else {
-      var _shPos = s.indexOf('SH Bullets');
-      if (_shPos > -1) {
-        var _shParaStart = s.lastIndexOf('<w:p ', _shPos);
-        var _shParaEnd = s.indexOf('</w:p>', _shPos) + 6;
-        if (_shParaStart > -1 && _shParaEnd > 5) s = s.substring(0, _shParaStart) + s.substring(_shParaEnd);
+      var _shPos2 = s.indexOf('SH Bullets');
+      if (_shPos2 > -1) {
+        var _shParaStart2 = s.lastIndexOf('<w:p ', _shPos2);
+        var _shParaEnd2 = s.indexOf('</w:p>', _shPos2) + 6;
+        if (_shParaStart2 > -1 && _shParaEnd2 > 5) s = s.substring(0, _shParaStart2) + s.substring(_shParaEnd2);
       }
     }
   }
+  
+  // Education
   rep('Year – Year:', cv.EDU_1_YEARS || '');
   rep('Place of study', cv.EDU_1_INSTITUTION || '');
-  // Replace 'Details' only in education row - avoid hitting 'Personal Details' heading
+  // Replace degree 'Details' - must NOT hit 'Personal Details' heading
   (function() {
     var _eduDeg = cv.EDU_1_DEGREE || '';
     var _degPos = s.indexOf('Details');
-    // Skip occurrences preceded by 'Personal '
-    while (_degPos > -1 && s.substring(_degPos - 9, _degPos) === 'Personal ') {
+    while (_degPos > -1) {
+      var _before = s.substring(Math.max(0, _degPos - 9), _degPos);
+      if (_before.indexOf('Personal') === -1) break;
       _degPos = s.indexOf('Details', _degPos + 1);
     }
     if (_degPos > -1) s = s.substring(0, _degPos) + xmlEsc(_eduDeg) + s.substring(_degPos + 'Details'.length);
@@ -1274,29 +1389,40 @@ function apacFillTemplate(xmlStr, cv) {
     if (!inst) return;
     var yrs = cv['EDU_' + n + '_YEARS'] || '';
     var deg = cv['EDU_' + n + '_DEGREE'] || '';
-    var _eduStart = s.lastIndexOf('<w:tr ', s.indexOf(xmlEsc(cv.EDU_1_INSTITUTION || 'Place of study')));
+    var _eduRef = xmlEsc(cv.EDU_1_INSTITUTION || 'Place of study');
+    var _eduStart = s.lastIndexOf('<w:tr ', s.indexOf(_eduRef));
     var _eduEnd = s.indexOf('</w:tr>', _eduStart) + 7;
     if (_eduStart > 0 && _eduEnd > 7) {
       var _eduRow = s.substring(_eduStart, _eduEnd)
         .replace(xmlEsc(cv.EDU_1_YEARS || 'Year – Year'), xmlEsc(yrs))
-        .replace(xmlEsc(cv.EDU_1_INSTITUTION || 'Place of study'), xmlEsc(inst))
+        .replace(_eduRef, xmlEsc(inst))
         .replace(xmlEsc(cv.EDU_1_DEGREE || 'Details'), xmlEsc(deg));
       s = s.substring(0, _eduEnd) + _eduRow + s.substring(_eduEnd);
     }
   });
-  // Combine all qualifications into one cell under "Qualification"
+  
+  // Qualifications - combine into one cell, use exact position to avoid hitting 'Qualifications' heading
   (function() {
     var quals = [cv.QUAL_1, cv.QUAL_2, cv.QUAL_3].filter(function(q){ return q && q.trim(); });
     var qualStr = quals.join(' | ');
-    // 'Year:' cell: leave empty or use as label
+    // Clear 'Year:' cell (qual year column)
     rep('Year:', '');
-    // Put all quals in the 'Qualification' cell
-    rep('Qualification', qualStr);
+    // Replace 'Qualification' placeholder - but NOT the 's' in 'Qualifications'
+    // Find 'Qualification' that is NOT followed by 's'
+    var _qPos = s.indexOf('Qualification');
+    while (_qPos > -1) {
+      if (s.charAt(_qPos + 13) !== 's') break; // found standalone 'Qualification'
+      _qPos = s.indexOf('Qualification', _qPos + 1);
+    }
+    if (_qPos > -1) {
+      s = s.substring(0, _qPos) + xmlEsc(qualStr) + s.substring(_qPos + 'Qualification'.length);
+    }
   })();
+  
   rep('Type Nationality', cv.NATIONALITY || '');
   rep('Language, Level', cv.LANGUAGES || '');
   var s2 = s.lastIndexOf('>Interests<');
-  if (s2 > -1) { s = s.substring(0, s2+1) + cv.INTERESTS + s.substring(s2 + '>Interests<'.length - 1); }
+  if (s2 > -1) { s = s.substring(0, s2+1) + xmlEsc(cv.INTERESTS || '') + s.substring(s2 + '>Interests<'.length - 1); }
   return s;
 }
 
