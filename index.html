@@ -1071,7 +1071,7 @@ FORMATTING RULES:
 - If fewer than 10 companies, leave unused COMPANY fields as empty string.
 - Return ONLY valid JSON. No markdown. No code blocks. No explanation.
 
-Use this exact JSON structure:\n` + apacJsonStr
+Use this exact JSON structure:\n` + apacJsonStr + '\n\nCANDIDATE SOURCE — extract ALL information from this text:\n\n' + inputText
   : `You are a Sheffield Haworth executive search document assistant.
 
 Extract information from the candidate CV below for the Global Candidate Profile template.
