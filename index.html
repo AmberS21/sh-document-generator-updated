@@ -766,6 +766,9 @@ function goTab(t) {
     var tab = document.getElementById('tab-'+id);
     if (tab) tab.classList.toggle('active', id===t);
   });
+
+  window.scrollTo(0, 0);
+  if (t === 'hist') renderHistory();
 }
 
 // ══ INPUT SWITCH ══
@@ -1204,6 +1207,7 @@ function hideProgress(msg) {
     </div>
     `
   }).join('');
+  list.scrollTop = 0;
 
   var n = document.getElementById('histCount');
   if (n) n.textContent = history.length;
@@ -1280,7 +1284,7 @@ async function downloadHistory(index) {
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
       if (item.type === 'combined' && Array.isArray(item.content)) {
-        var _tplUrlC = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? '%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates%202025%20-%20Copy.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+        var _tplUrlC = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? 'APAC%20Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
         var _respC = await fetch(_tplUrlC);
         var _abC = await _respC.arrayBuffer();
         var _zipC = new JSZip();
@@ -1307,7 +1311,7 @@ async function downloadHistory(index) {
         return;
       }
     if (fmt === 'd') {
-      var tplUrl = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? '%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates%202025%20-%20Copy.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+      var tplUrl = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? 'APAC%20Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
       var resp = await fetch(tplUrl);
       var ab = await resp.arrayBuffer();
       var _isApacTpl = (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh');
