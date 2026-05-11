@@ -442,8 +442,6 @@ table.usage tr:last-child td{border-bottom:none;}
 <optgroup label="&#9472;&#9472; CV Profiles">
 <option value="cv_wam_n">Global Candidate Profile &#8212; No Scorecard</option>
 <option value="cv_wam_s">Global Candidate Profile &#8212; With Scorecard</option>
-</optgroup>
-<optgroup label="&#9472;&#9472; APAC Profiles">
 <option value="cv_apac_en">APAC Candidate Profile &#8212; English</option>
 <option value="cv_apac_zh">APAC Candidate Profile &#8212; Chinese</option>
 <option value="cv_apac_en2">APAC Candidate Profile (Updated) &#8212; English</option>
@@ -879,11 +877,11 @@ function filterTpl(q) {
   q = (q||'').trim().toLowerCase();
   sel.querySelectorAll('option').forEach(function(o) {
     if (!o.value) return;
-    o.style.display = (!q || o.textContent.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+    o.hidden = !(!q || o.textContent.toLowerCase().indexOf(q) !== -1);
   });
   if (sel.value) {
     var cur = sel.querySelector('option[value="'+sel.value+'"]');
-    if (cur && cur.style.display === 'none') { sel.value = ''; pickTpl(''); }
+    if (cur && cur.hidden) { sel.value = ''; pickTpl(''); }
   }
 }
 
