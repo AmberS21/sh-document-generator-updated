@@ -1293,7 +1293,7 @@ function apacFillTemplate(xmlStr, cv) {
       '<w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>' +
       '<w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>';
     return '<w:tbl>' +
-      '<w:tblPr><w:tblW w:w="9498" w:type="dxa"/><w:tblBorders>' + nb + '</w:tblBorders>' +
+      '<w:tblPr><w:tblW w:w="9498" w:type="dxa"/><w:tblBorders>' + nb + '</w:tblBorders><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar>' +
       '<w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="0"/></w:tblPr>' +
       '<w:tblGrid><w:gridCol w:w="' + LEFT_W + '"/><w:gridCol w:w="' + RIGHT_W + '"/></w:tblGrid>' +
       '<w:tr>' +
@@ -1335,16 +1335,18 @@ function apacFillTemplate(xmlStr, cv) {
   rep('Client Company Name', cv.CLIENT_COMPANY || '');
   rep('Search Title', cv.SEARCH_TITLE || '');
   stripField('[Date]', cv.MONTH_YEAR || '');
-  // Fix summary paragraph indent (SHText style has w:hanging="284" which indents text)
+  // Fix summary: use SHBullets style to display bullet point (•)
   (function(){
     var sp = s.indexOf('Type notes here');
     if (sp > -1) {
       var pStart = s.lastIndexOf('<w:p ', sp);
-      var pEnd = s.indexOf('</w:p>', sp) + 6;
-      if (pStart > -1 && pEnd > 5) {
+      var pEnd = s.indexOf('<\/w:p>', sp) + 7;
+      if (pStart > -1 && pEnd > 6) {
         var para = s.substring(pStart, pEnd);
+        // Switch to SHBullets style so Word renders the • bullet automatically
+        para = para.replace('<w:pStyle w:val="SHText"\/>', '<w:pStyle w:val="SHBullets"\/>');;
+        // Remove any inline w:ind overrides — SHBullets handles its own indent
         para = para.replace(/<w:ind[^>]*\/>/g, '');
-        para = para.replace('</w:pPr>', '<w:ind w:left="0" w:hanging="0"/></w:pPr>');
         s = s.substring(0, pStart) + para + s.substring(pEnd);
       }
     }
@@ -1477,6 +1479,19 @@ function apacFillTemplate(xmlStr, cv) {
           '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">Certifications: </w:t></w:r>' +
           '<w:r><w:t>' + xmlEsc(qualStr) + '</w:t></w:r></w:p>';
         s=s.substring(0,_qPS)+qualPara+s.substring(_qPE);
+      }
+    }
+    // Remove empty para between "Professional Qualifications" heading and the Certifications bullet
+    var _pqH=s.indexOf('Professional Qualifications');
+    if(_pqH>-1){
+      var _pqHEnd=s.indexOf('<\/w:p>',_pqH)+7;
+      var _nextPS=s.indexOf('<w:p',_pqHEnd);
+      if(_nextPS>-1){
+        var _nextPE=s.indexOf('<\/w:p>',_nextPS)+7;
+        var _npc=s.substring(_nextPS,_nextPE);
+        if(_npc.indexOf('<w:t>')===-1&&_npc.indexOf('<w:t ')===-1){
+          s=s.substring(0,_nextPS)+s.substring(_nextPE);
+        }
       }
     }
   })();
