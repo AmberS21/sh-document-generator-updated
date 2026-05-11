@@ -1234,25 +1234,49 @@ function apacFillTemplate(xmlStr, cv) {
       } else { s = s.replace(placeholder, xmlEsc(value)); pos = s.indexOf(placeholder); }
     }
   }
-  var TAB_POS = '9000';
-  function companyPara(name, date) {
-    var n = xmlEsc(name), d = xmlEsc(date);
-    return '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:ind w:hanging="284"/>' +
-      '<w:tabs><w:tab w:val="right" w:pos="' + TAB_POS + '"/></w:tabs>' +
-      '<w:rPr><w:b/><w:bCs/></w:rPr></w:pPr>' +
-      '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">' + n + '</w:t></w:r>' +
-      (d ? '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:tab/></w:r>' +
-           '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>' + d + '</w:t></w:r>' : '') +
-      '</w:p>';
+  // Remove an entire <w:p> containing the given text
+  function removeParaContaining(text) {
+    var pos = s.indexOf(text);
+    if (pos > -1) {
+      var ps = s.lastIndexOf('<w:p ', pos);
+      var pe = s.indexOf('</w:p>', pos) + 6;
+      if (ps > -1 && pe > 5) s = s.substring(0, ps) + s.substring(pe);
+    }
   }
-  function rolePara(role, date) {
-    var r = xmlEsc(role), d = xmlEsc(date);
-    return '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:ind w:hanging="284"/>' +
-      '<w:tabs><w:tab w:val="right" w:pos="' + TAB_POS + '"/></w:tabs>' +
-      '</w:pPr>' +
-      '<w:r><w:t xml:space="preserve">' + r + '</w:t></w:r>' +
-      (d ? '<w:r><w:tab/></w:r><w:r><w:t>' + d + '</w:t></w:r>' : '') +
-      '</w:p>';
+  // Build a 2-column borderless table for company/role + dates
+  function companyTable(leftLines, rightLines) {
+    var LEFT_W = '7000', RIGHT_W = '2498';
+    function cellPara(text, bold, align) {
+      var t = xmlEsc(text);
+      var jc = align === 'right' ? '<w:jc w:val="right"/>' : '';
+      var rpr = bold ? '<w:rPr><w:b/><w:bCs/></w:rPr>' : '';
+      return '<w:p><w:pPr><w:pStyle w:val="SHText"/>' + jc + '</w:pPr>' +
+        '<w:r>' + rpr + '<w:t xml:space="preserve">' + t + '</w:t></w:r></w:p>';
+    }
+    var lp = leftLines.map(function(l){return cellPara(l.text,l.bold,'left');}).join('');
+    var rp = rightLines.map(function(l){return cellPara(l.text,l.bold,'right');}).join('');
+    while (leftLines.length < rightLines.length) {
+      lp += '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
+      leftLines.push({text:'',bold:false});
+    }
+    while (rightLines.length < leftLines.length) {
+      rp += '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:jc w:val="right"/></w:pPr></w:p>';
+      rightLines.push({text:'',bold:false});
+    }
+    var nb = '<w:top w:val="none" w:sz="0" w:space="0" w:color="auto"/>' +
+      '<w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>' +
+      '<w:bottom w:val="none" w:sz="0" w:space="0" w:color="auto"/>' +
+      '<w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>' +
+      '<w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>' +
+      '<w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>';
+    return '<w:tbl>' +
+      '<w:tblPr><w:tblW w:w="9498" w:type="dxa"/><w:tblBorders>' + nb + '</w:tblBorders>' +
+      '<w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="0"/></w:tblPr>' +
+      '<w:tblGrid><w:gridCol w:w="' + LEFT_W + '"/><w:gridCol w:w="' + RIGHT_W + '"/></w:tblGrid>' +
+      '<w:tr>' +
+      '<w:tc><w:tcPr><w:tcW w:w="' + LEFT_W + '" w:type="dxa"/><w:tcBorders>' + nb + '</w:tcBorders></w:tcPr>' + lp + '</w:tc>' +
+      '<w:tc><w:tcPr><w:tcW w:w="' + RIGHT_W + '" w:type="dxa"/><w:tcBorders>' + nb + '</w:tcBorders></w:tcPr>' + rp + '</w:tc>' +
+      '</w:tr></w:tbl>';
   }
   s = s.replace(/ FORMTEXT /g, '');
   // Count companies
@@ -1291,7 +1315,7 @@ function apacFillTemplate(xmlStr, cv) {
   rep('Search Title', cv.SEARCH_TITLE || '');
   stripField('[Date]', cv.MONTH_YEAR || '');
   rep('Type notes here', cv.SUMMARY || '');
-  // Summary bullets
+  // Summary bullets - remove [SH Bullets] FORMTEXT and the nested sub-bullet
   (function() {
     var _sb = (cv.SUMMARY_BULLETS || '').trim();
     var _sbPos = s.indexOf('[SH Bullets]');
@@ -1304,6 +1328,8 @@ function apacFillTemplate(xmlStr, cv) {
       }
     }
     if (s.indexOf('[SH Bullets]') > -1) s = s.replace('[SH Bullets]', '');
+    // Remove the nested sub-bullet paragraph that follows in the Summary section
+    removeParaContaining('SH Bullets');
   })();
   // Company blocks
   for (var c = 1; c <= numCo; c++) {
@@ -1314,7 +1340,10 @@ function apacFillTemplate(xmlStr, cv) {
     var cf = cv['COMPANY_'+c+'_FUNCTION'] || '';
     var crd = cv['COMPANY_'+c+'_ROLE_DATES'] || '';
     var prevCN = c > 1 ? (cv['COMPANY_'+(c-1)+'_NAME'] || '') : '';
+    var nextCN = c < numCo ? (cv['COMPANY_'+(c+1)+'_NAME'] || '') : '';
     var isSame = cn && prevCN && cn === prevCN;
+    var isOnlyRole = !isSame && (nextCN !== cn);
+    var roleTitle = cr + (cf ? ', ' + cf : '');
     // Company name line
     var _cnP = s.indexOf('Company Name, Location');
     if (_cnP > -1) {
@@ -1322,24 +1351,32 @@ function apacFillTemplate(xmlStr, cv) {
       var _cnPE = s.indexOf('</w:p>', _cnP) + 6;
       if (isSame) {
         if (_cnPS > -1 && _cnPE > 5) s = s.substring(0, _cnPS) + s.substring(_cnPE);
+        s = s.replace('Month, Year – Month, Year', '');
       } else {
         var compName = cn + (cl ? ', ' + cl : '');
+        var compDate = isOnlyRole ? crd : cd;
         if (_cnPS > -1 && _cnPE > 5)
-          s = s.substring(0, _cnPS) + companyPara(compName, cd) + s.substring(_cnPE);
-        // The original para had Month,Year at end - now replaced by companyPara
-        // Skip the first Month,Year placeholder (it was on same para, now replaced)
+          s = s.substring(0, _cnPS) + companyTable(
+            [{text:compName,bold:true},{text:roleTitle,bold:false}],
+            [{text:compDate,bold:true},{text:isOnlyRole?'':crd,bold:false}]
+          ) + s.substring(_cnPE);
         s = s.replace('Month, Year – Month, Year', '');
       }
     }
-    // Role title line
+    // Role title line (only used for same-company subsequent roles)
     var _jtP = s.indexOf('Corporate Job Title, Function');
     if (_jtP > -1) {
       var _jtPS = s.lastIndexOf('<w:p ', _jtP);
       var _jtPE = s.indexOf('</w:p>', _jtP) + 6;
-      var roleTitle = cr + (cf ? ', ' + cf : '');
-      if (_jtPS > -1 && _jtPE > 5)
-        s = s.substring(0, _jtPS) + rolePara(roleTitle, crd) + s.substring(_jtPE);
-      // Skip the second Month,Year (was on same para)
+      if (isSame) {
+        if (_jtPS > -1 && _jtPE > 5)
+          s = s.substring(0, _jtPS) + companyTable(
+            [{text:roleTitle,bold:false}],
+            [{text:crd,bold:false}]
+          ) + s.substring(_jtPE);
+      } else {
+        if (_jtPS > -1 && _jtPE > 5) s = s.substring(0, _jtPS) + s.substring(_jtPE);
+      }
       s = s.replace('Month, Year – Month, Year', '');
     }
     // Bullets
@@ -1358,7 +1395,7 @@ function apacFillTemplate(xmlStr, cv) {
       var _bT=s.substring(_bPS,_bPE);
       s=s.substring(0,_bPS)+_bArr.map(function(b){return _bT.replace('Insert text',xmlEsc(b));}).join('')+s.substring(_bPE);
     }
-    // SH Bullets
+    // SH Bullets 2
     var _shV=(cv['COMPANY_'+c+'_BULLETS_2']||'').trim();
     if(_shV){s=s.replace('SH Bullets',xmlEsc(_shV));}
     else{
@@ -1396,14 +1433,22 @@ function apacFillTemplate(xmlStr, cv) {
       s=s.substring(0,_ee)+_row+s.substring(_ee);
     }
   });
-  // Qualifications
+  // Qualifications - output as SHBullets para with bold "Certifications:" prefix
   (function(){
     var quals=[cv.QUAL_1,cv.QUAL_2,cv.QUAL_3].filter(function(q){return q&&q.trim();});
     var qualStr=quals.join(' | ');
-    rep('Year:','');
+    // Find Qualification placeholder para (not "Professional Qualifications")
     var _qp=s.indexOf('Qualification');
     while(_qp>-1){if(s.charAt(_qp+13)!=='s')break;_qp=s.indexOf('Qualification',_qp+1);}
-    if(_qp>-1)s=s.substring(0,_qp)+xmlEsc(qualStr)+s.substring(_qp+13);
+    if(_qp>-1){
+      var _qPS=s.lastIndexOf('<w:p ',_qp), _qPE=s.indexOf('</w:p>',_qp)+6;
+      if(_qPS>-1&&_qPE>5){
+        var qualPara='<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr>' +
+          '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">Certifications: </w:t></w:r>' +
+          '<w:r><w:t>' + xmlEsc(qualStr) + '</w:t></w:r></w:p>';
+        s=s.substring(0,_qPS)+qualPara+s.substring(_qPE);
+      }
+    }
   })();
   rep('Type Nationality', cv.NATIONALITY || '');
   rep('Language, Level', cv.LANGUAGES || '');
