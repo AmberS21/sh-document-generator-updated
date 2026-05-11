@@ -1371,7 +1371,30 @@ function apacFillTemplate(xmlStr, cv) {
     // Remove the nested sub-bullet paragraph
     removeParaContaining('SH Bullets');
     // Remove all empty paragraphs between end of summary and Business Experience heading
-    // Keep one empty paragraph between summary and Business Experience heading for spacing
+    // Keep exactly 1 empty paragraph between summary and Business Experience heading
+    var _sumSnippet = xmlEsc((cv.SUMMARY||'').substring(Math.max(0,(cv.SUMMARY||'').length-15)));
+    var _sumEnd = _sumSnippet ? s.indexOf(_sumSnippet) : -1;
+    if (_sumEnd > -1) {
+      var _sumParaEnd = s.indexOf('<\/w:p>', _sumEnd) + 6;
+      var _busExpStart = s.lastIndexOf('<w:p ', s.indexOf('Business Experience', _sumParaEnd));
+      if (_sumParaEnd > 0 && _busExpStart > _sumParaEnd) {
+        var _between = s.substring(_sumParaEnd, _busExpStart);
+        var _keptOne = false;
+        var _cleaned = '';
+        var _bPos = 0;
+        while (_bPos < _between.length) {
+          var _ps = _between.indexOf('<w:p ', _bPos);
+          if (_ps === -1) { _cleaned += _between.substring(_bPos); break; }
+          _cleaned += _between.substring(_bPos, _ps);
+          var _pe = _between.indexOf('<\/w:p>', _ps) + 6;
+          var _para = _between.substring(_ps, _pe);
+          var _hasText = /<w:t[^>]*>[^<]+<\/w:t>/.test(_para);
+          if (_hasText || !_keptOne) { _cleaned += _para; if (!_hasText) _keptOne = true; }
+          _bPos = _pe;
+        }
+        s = s.substring(0, _sumParaEnd) + _cleaned + s.substring(_busExpStart);
+      }
+    }
   })();
   // Company blocks
   for (var c = 1; c <= numCo; c++) {
