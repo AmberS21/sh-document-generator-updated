@@ -947,14 +947,42 @@ async function generate() {
         var apiResp = await fetch(workerBase + '/v4/people/' + personId);
         if (!apiResp.ok) throw new Error('Ezekia API error: ' + apiResp.status);
         var personData = await apiResp.json();
-        // Also fetch positions
         var posResp = await fetch(workerBase + '/v2/people/' + personId + '/positions');
         var posData = posResp.ok ? await posResp.json() : {data:[]};
-        // Also fetch education
         var eduResp = await fetch(workerBase + '/people/' + personId + '/education');
         var eduData = eduResp.ok ? await eduResp.json() : {data:[]};
-        inputText = 'EZEKIA PROFILE\n' + JSON.stringify(personData, null, 2) + '\n\nPOSITIONS\n' + JSON.stringify(posData, null, 2) + '\n\nEDUCATION\n' + JSON.stringify(eduData, null, 2);
-      } else {
+        // Convert to clean readable text (reduces token count dramatically)
+        var p = personData.data || personData;
+        var lines = [];
+        lines.push('NAME: ' + (p.first_name||'') + ' ' + (p.last_name||''));
+        lines.push('CURRENT EMPLOYER: ' + ((p.current_position && p.current_position.company_name) || (p.positions && p.positions[0] && p.positions[0].company_name) || ''));
+        if (p.profile_summary) lines.push('\nSUMMARY:\n' + p.profile_summary);
+        if (p.nationality) lines.push('\nNATIONALITY: ' + p.nationality);
+        if (p.languages && p.languages.length) lines.push('LANGUAGES: ' + p.languages.map(function(l){return l.name + (l.proficiency ? ' (' + l.proficiency + ')' : '');}).join(', '));
+        // Positions
+        var positions = (posData.data || posData || []);
+        if (positions.length) {
+          lines.push('\nWORK HISTORY:');
+          positions.forEach(function(pos) {
+            var startDate = pos.start_date ? new Date(pos.start_date).toLocaleDateString('en-GB',{month:'short',year:'numeric'}) : '';
+            var endDate = pos.end_date ? new Date(pos.end_date).toLocaleDateString('en-GB',{month:'short',year:'numeric'}) : 'Present';
+            lines.push('\n' + (pos.company_name||'') + (pos.location ? ', ' + pos.location : '') + ' | ' + startDate + ' - ' + endDate);
+            if (pos.title) lines.push('Title: ' + pos.title);
+            if (pos.description) lines.push(pos.description);
+          });
+        }
+        // Education
+        var edus = (eduData.data || eduData || []);
+        if (edus.length) {
+          lines.push('\nEDUCATION:');
+          edus.forEach(function(e) {
+            var yr = (e.start_year||'') + (e.end_year ? ' - ' + e.end_year : '');
+            lines.push(yr + ' | ' + (e.institution||'') + ' | ' + (e.degree||''));
+          });
+        }
+        if (p.interests) lines.push('\nINTERESTS: ' + p.interests);
+        inputText = lines.join('\n');
+            } else {
         // Generic URL fallback using allorigins
         var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(urlVal);
         var urlResp = await fetch(proxyUrl);
