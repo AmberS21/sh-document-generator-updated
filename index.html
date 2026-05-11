@@ -939,7 +939,7 @@ async function generate() {
     btn.classList.add('loading'); btn.innerHTML = 'Fetching URL…';
     try {
       // Check if it's an Ezekia profile URL
-      var ezMatch = urlVal.match(/ezekia\.com\/people\/(\d+)/i);
+      var ezMatch = urlVal.match(/(?:app\.)?ezekia\.com\/#?\/people\/(\d+)/i);
       if (ezMatch) {
         // Use our Cloudflare proxy Worker
         var personId = ezMatch[1];
