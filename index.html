@@ -1343,7 +1343,7 @@ function apacFillTemplate(xmlStr, cv) {
       var pEnd = s.indexOf('</w:p>', sp) + 6;
       if (pStart > -1 && pEnd > 5) {
         var para = s.substring(pStart, pEnd);
-        para = para.replace(/<w:ind[^/]*/>/g, '');
+        para = para.replace(/<w:ind[^>]*\/>/g, '');
         para = para.replace('</w:pPr>', '<w:ind w:left="0" w:hanging="0"/></w:pPr>');
         s = s.substring(0, pStart) + para + s.substring(pEnd);
       }
