@@ -941,7 +941,6 @@ async function generate() {
       // Check if it's an Ezekia profile URL
       var ezMatch = urlVal.match(/(?:app\.)?ezekia\.com\/#?\/people\/(\d+)/i);
       if (ezMatch) {
-        // Use our Cloudflare proxy Worker
         var personId = ezMatch[1];
         var workerBase = localStorage.getItem('sh_ezekiaWorkerUrl') || 'https://damp-cake-fa1c.a-shamim.workers.dev';
         var apiResp = await fetch(workerBase + '/v4/people/' + personId);
@@ -951,36 +950,54 @@ async function generate() {
         var posData = posResp.ok ? await posResp.json() : {data:[]};
         var eduResp = await fetch(workerBase + '/people/' + personId + '/education');
         var eduData = eduResp.ok ? await eduResp.json() : {data:[]};
-        // Convert to clean readable text (reduces token count dramatically)
+        // Helper: format ISO date to "Mon YYYY", "9999-12-31" = Present
+        function fmtDate(d) {
+          if (!d || d.startsWith('9999')) return 'Present';
+          var dt = new Date(d);
+          return dt.toLocaleDateString('en-GB', {month:'short', year:'numeric'});
+        }
         var p = personData.data || personData;
+        var prof = p.profile || {};
         var lines = [];
-        lines.push('NAME: ' + (p.first_name||'') + ' ' + (p.last_name||''));
-        lines.push('CURRENT EMPLOYER: ' + ((p.current_position && p.current_position.company_name) || (p.positions && p.positions[0] && p.positions[0].company_name) || ''));
-        if (p.profile_summary) lines.push('\nSUMMARY:\n' + p.profile_summary);
-        if (p.nationality) lines.push('\nNATIONALITY: ' + p.nationality);
-        if (p.languages && p.languages.length) lines.push('LANGUAGES: ' + p.languages.map(function(l){return l.name + (l.proficiency ? ' (' + l.proficiency + ')' : '');}).join(', '));
-        // Positions
-        var positions = (posData.data || posData || []);
+        lines.push('NAME: ' + (p.firstName||'') + ' ' + (p.lastName||''));
+        // Current employer from first primary position
+        var positions = (posData.data || []);
+        var primary = positions.find(function(x){ return x.primary; }) || positions[0];
+        if (primary && primary.company && primary.company.name) {
+          lines.push('CURRENT EMPLOYER: ' + primary.company.name);
+        }
+        if (p.summary && p.summary.trim()) lines.push('\nSUMMARY:\n' + p.summary.trim());
+        if (prof.nationality) lines.push('\nNATIONALITY: ' + prof.nationality);
+        if (prof.languages && prof.languages.length) {
+          lines.push('LANGUAGES: ' + prof.languages.map(function(l){return l.name+(l.level?' ('+l.level+')':'');}).join(', '));
+        }
+        if (prof.interests) lines.push('INTERESTS: ' + prof.interests);
         if (positions.length) {
           lines.push('\nWORK HISTORY:');
           positions.forEach(function(pos) {
-            var startDate = pos.start_date ? new Date(pos.start_date).toLocaleDateString('en-GB',{month:'short',year:'numeric'}) : '';
-            var endDate = pos.end_date ? new Date(pos.end_date).toLocaleDateString('en-GB',{month:'short',year:'numeric'}) : 'Present';
-            lines.push('\n' + (pos.company_name||'') + (pos.location ? ', ' + pos.location : '') + ' | ' + startDate + ' - ' + endDate);
-            if (pos.title) lines.push('Title: ' + pos.title);
-            if (pos.description) lines.push(pos.description);
+            if (!pos.title) return;
+            var cName = (pos.company && pos.company.name) ? pos.company.name : '';
+            var loc = pos.location || '';
+            var sd = fmtDate(pos.startDate);
+            var ed = fmtDate(pos.endDate);
+            lines.push('\n' + cName + (loc ? ', ' + loc : '') + ' | ' + sd + ' - ' + ed);
+            lines.push('Title: ' + pos.title);
+            if (pos.achievements && pos.achievements.length) {
+              pos.achievements.forEach(function(a){ if(a.description) lines.push('- ' + a.description); });
+            }
+            if (pos.summary && pos.summary.trim()) lines.push(pos.summary.trim());
           });
         }
-        // Education
-        var edus = (eduData.data || eduData || []);
+        var edus = (eduData.data || []);
         if (edus.length) {
           lines.push('\nEDUCATION:');
           edus.forEach(function(e) {
-            var yr = (e.start_year||'') + (e.end_year ? ' - ' + e.end_year : '');
-            lines.push(yr + ' | ' + (e.institution||'') + ' | ' + (e.degree||''));
+            var yr = (e.startYear||e.start_year||'') + (e.endYear||e.end_year ? ' - '+(e.endYear||e.end_year) : '');
+            var inst = e.institution || (e.company && e.company.name) || '';
+            var deg = e.degree || e.title || '';
+            lines.push(yr + ' | ' + inst + ' | ' + deg);
           });
         }
-        if (p.interests) lines.push('\nINTERESTS: ' + p.interests);
         inputText = lines.join('\n');
             } else {
         // Generic URL fallback using allorigins
