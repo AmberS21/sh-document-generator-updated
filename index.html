@@ -817,6 +817,15 @@ var TPL = {
     fmt:  'd',
     reg:  'APAC',
     flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Business Experience (up to 5 companies)','Education','Qualifications','Nationality','Languages','Interests']
+  },
+  cv_apac_en2: {
+    name: 'APAC Candidate Profile (Updated)',
+    sub:  'English',
+    ico:  'doc',
+    bg:   'rgba(20,118,137,.15)',
+    fmt:  'd',
+    reg:  'APAC',
+    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Business Experience (all companies up to 15)','Education','Qualifications','Nationality','Languages','Interests']
   }
 };
 
@@ -1031,12 +1040,61 @@ async function processOneCV(inputText, tpl, btn, returnOnly) {
   btn.classList.add('loading');
   btn.innerHTML = '⏳ Generating profile with Claude...';
 
-var isApac = (tpl === 'cv_apac_en' || tpl === 'cv_apac_zh');
+var isApac = (tpl === 'cv_apac_en' || tpl === 'cv_apac_zh' || tpl === 'cv_apac_en2');
+var isApacUpdated = (tpl === 'cv_apac_en2');
 var isChineseApac = (tpl === 'cv_apac_zh');
 var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","COMPANY_1_NAME":"","COMPANY_1_LOCATION":"","COMPANY_1_DATES":"","COMPANY_1_ROLE":"","COMPANY_1_FUNCTION":"","COMPANY_1_ROLE_DATES":"","COMPANY_1_BULLETS":"","COMPANY_1_BULLETS_2":"","COMPANY_2_NAME":"","COMPANY_2_LOCATION":"","COMPANY_2_DATES":"","COMPANY_2_ROLE":"","COMPANY_2_FUNCTION":"","COMPANY_2_ROLE_DATES":"","COMPANY_2_BULLETS":"","COMPANY_2_BULLETS_2":"","COMPANY_3_NAME":"","COMPANY_3_LOCATION":"","COMPANY_3_DATES":"","COMPANY_3_ROLE":"","COMPANY_3_FUNCTION":"","COMPANY_3_ROLE_DATES":"","COMPANY_3_BULLETS":"","COMPANY_3_BULLETS_2":"","COMPANY_4_NAME":"","COMPANY_4_LOCATION":"","COMPANY_4_DATES":"","COMPANY_4_ROLE":"","COMPANY_4_FUNCTION":"","COMPANY_4_ROLE_DATES":"","COMPANY_4_BULLETS":"","COMPANY_4_BULLETS_2":"","COMPANY_5_NAME":"","COMPANY_5_LOCATION":"","COMPANY_5_DATES":"","COMPANY_5_ROLE":"","COMPANY_5_FUNCTION":"","COMPANY_5_ROLE_DATES":"","COMPANY_5_BULLETS":"","COMPANY_5_BULLETS_2":"","COMPANY_6_NAME":"","COMPANY_6_LOCATION":"","COMPANY_6_DATES":"","COMPANY_6_ROLE":"","COMPANY_6_FUNCTION":"","COMPANY_6_ROLE_DATES":"","COMPANY_6_BULLETS":"","COMPANY_6_BULLETS_2":"","COMPANY_7_NAME":"","COMPANY_7_LOCATION":"","COMPANY_7_DATES":"","COMPANY_7_ROLE":"","COMPANY_7_FUNCTION":"","COMPANY_7_ROLE_DATES":"","COMPANY_7_BULLETS":"","COMPANY_7_BULLETS_2":"","COMPANY_8_NAME":"","COMPANY_8_LOCATION":"","COMPANY_8_DATES":"","COMPANY_8_ROLE":"","COMPANY_8_FUNCTION":"","COMPANY_8_ROLE_DATES":"","COMPANY_8_BULLETS":"","COMPANY_8_BULLETS_2":"","COMPANY_9_NAME":"","COMPANY_9_LOCATION":"","COMPANY_9_DATES":"","COMPANY_9_ROLE":"","COMPANY_9_FUNCTION":"","COMPANY_9_ROLE_DATES":"","COMPANY_9_BULLETS":"","COMPANY_9_BULLETS_2":"","COMPANY_10_NAME":"","COMPANY_10_LOCATION":"","COMPANY_10_DATES":"","COMPANY_10_ROLE":"","COMPANY_10_FUNCTION":"","COMPANY_10_ROLE_DATES":"","COMPANY_10_BULLETS":"","COMPANY_10_BULLETS_2":"","COMPANY_11_NAME":"","COMPANY_11_LOCATION":"","COMPANY_11_DATES":"","COMPANY_11_ROLE":"","COMPANY_11_FUNCTION":"","COMPANY_11_ROLE_DATES":"","COMPANY_11_BULLETS":"","COMPANY_11_BULLETS_2":"","COMPANY_12_NAME":"","COMPANY_12_LOCATION":"","COMPANY_12_DATES":"","COMPANY_12_ROLE":"","COMPANY_12_FUNCTION":"","COMPANY_12_ROLE_DATES":"","COMPANY_12_BULLETS":"","COMPANY_12_BULLETS_2":"","COMPANY_13_NAME":"","COMPANY_13_LOCATION":"","COMPANY_13_DATES":"","COMPANY_13_ROLE":"","COMPANY_13_FUNCTION":"","COMPANY_13_ROLE_DATES":"","COMPANY_13_BULLETS":"","COMPANY_13_BULLETS_2":"","COMPANY_14_NAME":"","COMPANY_14_LOCATION":"","COMPANY_14_DATES":"","COMPANY_14_ROLE":"","COMPANY_14_FUNCTION":"","COMPANY_14_ROLE_DATES":"","COMPANY_14_BULLETS":"","COMPANY_14_BULLETS_2":"","COMPANY_15_NAME":"","COMPANY_15_LOCATION":"","COMPANY_15_DATES":"","COMPANY_15_ROLE":"","COMPANY_15_FUNCTION":"","COMPANY_15_ROLE_DATES":"","COMPANY_15_BULLETS":"","COMPANY_15_BULLETS_2":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","EDU_3_YEARS":"","EDU_3_INSTITUTION":"","EDU_3_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var globalJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","SEARCH_TITLE":"","CLIENT_COMPANY":"","MONTH_YEAR":"","SUMMARY_BULLET_1":"","SUMMARY_BULLET_2":"","SUMMARY_BULLET_3":"","COMPANY_1_NAME":"","COMPANY_1_LOCATION":"","COMPANY_1_ROLE":"","COMPANY_1_FUNCTION":"","COMPANY_1_DATES":"","COMPANY_1_BULLET_1":"","COMPANY_1_BULLET_2":"","COMPANY_1_BULLET_3":"","COMPANY_2_NAME":"","COMPANY_2_LOCATION":"","COMPANY_2_ROLE":"","COMPANY_2_FUNCTION":"","COMPANY_2_DATES":"","COMPANY_2_BULLET_1":"","COMPANY_2_BULLET_2":"","COMPANY_2_BULLET_3":"","COMPANY_3_NAME":"","COMPANY_3_LOCATION":"","COMPANY_3_ROLE":"","COMPANY_3_FUNCTION":"","COMPANY_3_DATES":"","COMPANY_3_BULLET_1":"","COMPANY_3_BULLET_2":"","COMPANY_3_BULLET_3":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","AFFILIATION_2":"","AFFILIATION_2_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var prompt = isApac
-  ? (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
+  ? isApacUpdated
+    ? `You are a document-filling assistant for Sheffield Haworth. Your task is to read the candidate CV below and extract ALL information into a structured JSON object for the APAC Candidate Profile (Updated) template.
+
+FIELD-BY-FIELD INSTRUCTIONS:
+
+1. CANDIDATE_NAME: Full name of the candidate exactly as written.
+2. CURRENT_EMPLOYER: Current or most recent employer name only (e.g. "DuPont China"). Do not include location or role.
+3. CLIENT_COMPANY: Leave EMPTY — do not fill this field.
+4. SEARCH_TITLE: Leave EMPTY — do not fill this field.
+5. MONTH_YEAR: Today's month and year: "May 2026". Always use this exact value.
+6. SUMMARY: Copy the candidate summary/profile section VERBATIM — word for word, no changes. If the summary has bullet points, join them into one paragraph separated by spaces or newlines.
+7. SUMMARY_BULLETS: Leave EMPTY.
+
+8. BUSINESS EXPERIENCE — CRITICAL RULES:
+   - Extract EVERY work history entry WITHOUT EXCEPTION.
+   - Each COMPANY_N = ONE ROLE (not one company). If candidate held multiple roles at the same company, create a SEPARATE COMPANY_N entry for each role.
+   - For all roles at the same company, use the EXACT SAME company name string in COMPANY_N_NAME (this triggers automatic grouping in the template).
+   - COMPANY_N_NAME: Full legal company name. IDENTICAL string for all roles at same company.
+   - COMPANY_N_LOCATION: City, Country if provided; leave empty if not.
+   - COMPANY_N_DATES: Overall company tenure dates (e.g. "Mar 1996 – Present") for FIRST role at that company ONLY. Leave EMPTY for all subsequent roles at same company.
+   - COMPANY_N_ROLE: Exact job title as written.
+   - COMPANY_N_FUNCTION: Department or function if listed, else empty.
+   - COMPANY_N_ROLE_DATES: Dates for THIS specific role only (e.g. "Dec 2025 – Present").
+   - COMPANY_N_BULLETS: All bullet points / achievements for this role, joined with | (pipe character). Copy text VERBATIM. Do NOT summarise.
+   - COMPANY_N_BULLETS_2: Always leave EMPTY.
+
+9. EDUCATION:
+   - EDU_1_YEARS, EDU_2_YEARS...: Year range (e.g. "1988–1992")
+   - EDU_1_INSTITUTION...: Full institution name
+   - EDU_1_DEGREE...: Degree or qualification name
+
+10. QUAL_1, QUAL_2, QUAL_3: Professional qualifications or certifications. First in QUAL_1, second in QUAL_2, third in QUAL_3. Leave empty if none.
+11. NATIONALITY: Exact nationality as stated; leave empty if not provided.
+12. LANGUAGES: Languages with proficiency levels as stated; leave empty if not provided.
+13. INTERESTS: As stated; leave empty if not provided.
+
+ABSOLUTE RULES:
+- Copy ALL text VERBATIM. Never summarise, rephrase, or add content not in the source.
+- Never skip any work history entry.
+- CLIENT_COMPANY and SEARCH_TITLE must always be empty strings.
+- Return ONLY valid JSON. No markdown, no code blocks, no explanations.
+
+JSON structure to use:
+` + apacJsonStr + `
+
+CANDIDATE SOURCE:
+
+` + inputText
+    : (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
     `You are a Sheffield Haworth executive search document assistant. Your task is to extract information from the candidate source below and fill the APAC Candidate Profile template fields EXACTLY as described.
 
 CRITICAL RULES — READ CAREFULLY:
@@ -1531,20 +1589,20 @@ async function downloadHistory(index) {
   var item = history[index];
   if (!item) return;
   var fmt = item.fmt || 'd';
-  var _scorecardLabel = item.template === 'cv_wam_s' ? 'with Scorecard' : item.template === 'cv_apac_en' ? 'English' : item.template === 'cv_apac_zh' ? 'Chinese' : 'No Scorecard';
-  var _profilePrefix = (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? 'APAC Profile' : 'Global';
+  var _scorecardLabel = item.template === 'cv_wam_s' ? 'with Scorecard' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_en2') ? 'English' : item.template === 'cv_apac_zh' ? 'Chinese' : 'No Scorecard';
+  var _profilePrefix = (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2') ? 'APAC Profile' : 'Global';
   var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
       if (item.type === 'combined' && Array.isArray(item.content)) {
-        var _tplUrlC = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? 'APAC%20Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+        var _tplUrlC = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2') ? 'APAC%20Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
         var _respC = await fetch(_tplUrlC);
         var _abC = await _respC.arrayBuffer();
         var _zipC = new JSZip();
         for (var _ci = 0; _ci < item.content.length; _ci++) {
           var _cvC = item.content[_ci];
           var _nameC = (_cvC && _cvC.CANDIDATE_NAME) ? _cvC.CANDIDATE_NAME : ('Profile_' + (_ci+1));
-          var _isApacC = (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh');
+          var _isApacC = (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2');
           var _outC;
           if (_isApacC) {
             var _azipC = await JSZip.loadAsync(_abC.slice(0));
@@ -1564,10 +1622,10 @@ async function downloadHistory(index) {
         return;
       }
     if (fmt === 'd') {
-      var tplUrl = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh') ? 'APAC%20Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+      var tplUrl = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2') ? 'APAC%20Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
       var resp = await fetch(tplUrl);
       var ab = await resp.arrayBuffer();
-      var _isApacTpl = (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh');
+      var _isApacTpl = (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2');
       var out;
       if (_isApacTpl) {
         var _apacZip = await JSZip.loadAsync(ab);
