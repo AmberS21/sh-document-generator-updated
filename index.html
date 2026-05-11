@@ -938,19 +938,36 @@ async function generate() {
     if (!urlVal) { notify('Please enter a URL'); return; }
     btn.classList.add('loading'); btn.innerHTML = 'Fetching URL…';
     try {
-      var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(urlVal);
-      var urlResp = await fetch(proxyUrl);
-      var urlData = await urlResp.json();
-      var parser = new DOMParser();
-      var doc2 = parser.parseFromString(urlData.contents, 'text/html');
-      // Remove scripts/styles
-      doc2.querySelectorAll('script,style,nav,header,footer').forEach(el => el.remove());
-      inputText = (doc2.body ? doc2.body.innerText : doc2.documentElement.innerText || '').replace(/\s+/g,' ').trim().substring(0, 15000);
-    } catch(urlErr) {
-      btn.classList.remove('loading'); btn.innerHTML = 'Generate Document';
-      notify('Could not fetch URL: ' + urlErr.message); return;
+      // Check if it's an Ezekia profile URL
+      var ezMatch = urlVal.match(/ezekia\.com\/people\/(\d+)/i);
+      if (ezMatch) {
+        // Use our Cloudflare proxy Worker
+        var personId = ezMatch[1];
+        var workerBase = localStorage.getItem('sh_ezekiaWorkerUrl') || 'https://damp-cake-fa1c.a-shamim.workers.dev';
+        var apiResp = await fetch(workerBase + '/v4/people/' + personId);
+        if (!apiResp.ok) throw new Error('Ezekia API error: ' + apiResp.status);
+        var personData = await apiResp.json();
+        // Also fetch positions
+        var posResp = await fetch(workerBase + '/v2/people/' + personId + '/positions');
+        var posData = posResp.ok ? await posResp.json() : {data:[]};
+        // Also fetch education
+        var eduResp = await fetch(workerBase + '/people/' + personId + '/education');
+        var eduData = eduResp.ok ? await eduResp.json() : {data:[]};
+        inputText = 'EZEKIA PROFILE\n' + JSON.stringify(personData, null, 2) + '\n\nPOSITIONS\n' + JSON.stringify(posData, null, 2) + '\n\nEDUCATION\n' + JSON.stringify(eduData, null, 2);
+      } else {
+        // Generic URL fallback using allorigins
+        var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(urlVal);
+        var urlResp = await fetch(proxyUrl);
+        var urlData = await urlResp.json();
+        var parser = new DOMParser();
+        var doc2 = parser.parseFromString(urlData.contents, 'text/html');
+        doc2.querySelectorAll('script,style,nav,header,footer').forEach(e => e.remove());
+        inputText = doc2.body ? doc2.body.innerText.trim() : urlData.contents;
+      }
+    } catch(e) {
+      notify('Error fetching URL: ' + e.message); btn.classList.remove('loading'); btn.innerHTML = '⚡ Generate Document'; return;
     }
-  } else if (activeType === 'file') {
+  } if (activeType === 'file') {
     var fileInput = document.getElementById('fileInputEl');
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) { notify('Please select a file'); return; }
         var filesToProcess = Array.from(fileInput.files);
