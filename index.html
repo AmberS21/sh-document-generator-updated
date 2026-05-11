@@ -1267,17 +1267,18 @@ function apacFillTemplate(xmlStr, cv) {
   }
   // Build a 2-column borderless table: left=company/role, right=dates (right-aligned)
   function companyTable(leftLines, rightLines) {
-    var LEFT_W = '6600', RIGHT_W = '2898';
-    function cellPara(text, bold, align) {
+    var LEFT_W = '6128', RIGHT_W = '2898'; // 6128+2898=9026 = A4 text area
+    function cellPara(text, bold, align, keepNext) {
       var t = xmlEsc(text);
       var jc = align === 'right' ? '<w:jc w:val="right"/>' : '<w:jc w:val="left"/>';
       var rpr = bold ? '<w:rPr><w:b/><w:bCs/></w:rPr>' : '<w:rPr/>';
-      return '<w:p><w:pPr><w:pStyle w:val="SHText"/>' + jc +
+      var kwn = keepNext ? '<w:keepNext/>' : '';
+      return '<w:p><w:pPr><w:pStyle w:val="SHText"/>' + kwn + jc +
         '<w:ind w:left="0" w:right="0" w:hanging="0"/></w:pPr>' +
         '<w:r>' + rpr + '<w:t xml:space="preserve">' + t + '</w:t></w:r></w:p>';
     }
-    var lp = leftLines.map(function(l){return cellPara(l.text,l.bold,'left');}).join('');
-    var rp = rightLines.map(function(l){return cellPara(l.text,l.bold,'right');}).join('');
+    var lp = leftLines.map(function(l,i){return cellPara(l.text,l.bold,'left',i>0);}).join('');
+    var rp = rightLines.map(function(l,i){return cellPara(l.text,l.bold,'right',i>0);}).join('');
     while (leftLines.length < rightLines.length) {
       lp += '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:jc w:val="left"/><w:ind w:left="0" w:right="0" w:hanging="0"/></w:pPr></w:p>';
       leftLines.push({text:'',bold:false});
@@ -1293,7 +1294,7 @@ function apacFillTemplate(xmlStr, cv) {
       '<w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>' +
       '<w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>';
     return '<w:tbl>' +
-      '<w:tblPr><w:tblW w:w="9498" w:type="dxa"/><w:tblBorders>' + nb + '</w:tblBorders><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar>' +
+      '<w:tblPr><w:tblW w:w="9026" w:type="dxa"/><w:tblInd w:w="0" w:type="dxa"/><w:tblBorders>' + nb + '</w:tblBorders><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar>' +
       '<w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="0"/></w:tblPr>' +
       '<w:tblGrid><w:gridCol w:w="' + LEFT_W + '"/><w:gridCol w:w="' + RIGHT_W + '"/></w:tblGrid>' +
       '<w:tr>' +
@@ -1335,18 +1336,20 @@ function apacFillTemplate(xmlStr, cv) {
   rep('Client Company Name', cv.CLIENT_COMPANY || '');
   rep('Search Title', cv.SEARCH_TITLE || '');
   stripField('[Date]', cv.MONTH_YEAR || '');
-  // Fix summary: use SHBullets style to display bullet point (•)
+  // Fix summary: use SHBullets style with explicit numPr to display bullet point (•)
   (function(){
     var sp = s.indexOf('Type notes here');
     if (sp > -1) {
       var pStart = s.lastIndexOf('<w:p ', sp);
-      var pEnd = s.indexOf('<\/w:p>', sp) + 7;
-      if (pStart > -1 && pEnd > 6) {
+      var pEnd = s.indexOf('<\/w:p>', sp) + 6;
+      if (pStart > -1 && pEnd > 5) {
         var para = s.substring(pStart, pEnd);
-        // Switch to SHBullets style so Word renders the • bullet automatically
-        para = para.replace('<w:pStyle w:val="SHText"\/>', '<w:pStyle w:val="SHBullets"\/>');;
+        // Switch to SHBullets style
+        para = para.replace('<w:pStyle w:val="SHText"\/>', '<w:pStyle w:val="SHBullets"\/>');
         // Remove any inline w:ind overrides — SHBullets handles its own indent
         para = para.replace(/<w:ind[^>]*\/>/g, '');
+        // Add explicit numPr so bullet renders reliably
+        para = para.replace('<\/w:pPr>', '<w:numPr><w:ilvl w:val="0"\/><w:numId w:val="5"\/><\/w:numPr><\/w:pPr>');
         s = s.substring(0, pStart) + para + s.substring(pEnd);
       }
     }
@@ -1368,8 +1371,7 @@ function apacFillTemplate(xmlStr, cv) {
     // Remove the nested sub-bullet paragraph
     removeParaContaining('SH Bullets');
     // Remove all empty paragraphs between end of summary and Business Experience heading
-    var sumSnippet = xmlEsc((cv.SUMMARY||'').substring(Math.max(0,(cv.SUMMARY||'').length-15)));
-    removeEmptyParasBetween(sumSnippet, 'Business Experience');
+    // Keep one empty paragraph between summary and Business Experience heading for spacing
   })();
   // Company blocks
   for (var c = 1; c <= numCo; c++) {
@@ -1475,7 +1477,7 @@ function apacFillTemplate(xmlStr, cv) {
     if(_qp>-1){
       var _qPS=s.lastIndexOf('<w:p ',_qp), _qPE=s.indexOf('</w:p>',_qp)+6;
       if(_qPS>-1&&_qPE>5){
-        var qualPara='<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr>' +
+        var qualPara='<w:p><w:pPr><w:pStyle w:val="SHBullets"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="5"/></w:numPr></w:pPr>' +
           '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">Certifications: </w:t></w:r>' +
           '<w:r><w:t>' + xmlEsc(qualStr) + '</w:t></w:r></w:p>';
         s=s.substring(0,_qPS)+qualPara+s.substring(_qPE);
