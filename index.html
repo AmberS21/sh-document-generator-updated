@@ -1260,7 +1260,7 @@ function apacFillTemplate(xmlStr, cv) {
       cleaned += between.substring(pos, pStart);
       var pEnd = between.indexOf('</w:p>', pStart) + 6;
       var para = between.substring(pStart, pEnd);
-      if (/<w:t[^>]*>[^<]+</w:t>/.test(para)) cleaned += para;
+      if (/<w:t[^>]*>[^<]+<\/w:t>/.test(para)) cleaned += para;
       pos = pEnd;
     }
     s = s.substring(0, aParaEnd) + cleaned + s.substring(bParaStart);
