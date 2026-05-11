@@ -1484,10 +1484,10 @@ function apacFillTemplate(xmlStr, cv) {
     // Remove empty para between "Professional Qualifications" heading and the Certifications bullet
     var _pqH=s.indexOf('Professional Qualifications');
     if(_pqH>-1){
-      var _pqHEnd=s.indexOf('<\/w:p>',_pqH)+7;
+      var _pqHEnd=s.indexOf('<\/w:p>',_pqH)+6;
       var _nextPS=s.indexOf('<w:p',_pqHEnd);
       if(_nextPS>-1){
-        var _nextPE=s.indexOf('<\/w:p>',_nextPS)+7;
+        var _nextPE=s.indexOf('<\/w:p>',_nextPS)+6;
         var _npc=s.substring(_nextPS,_nextPE);
         if(_npc.indexOf('<w:t>')===-1&&_npc.indexOf('<w:t ')===-1){
           s=s.substring(0,_nextPS)+s.substring(_nextPE);
