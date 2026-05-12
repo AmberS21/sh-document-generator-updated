@@ -446,6 +446,9 @@ table.usage tr:last-child td{border-bottom:none;}
 <option value="cv_apac_zh">APAC Candidate Profile &#8212; Chinese</option>
 <option value="cv_apac_en2">APAC Candidate Profile (Updated) &#8212; English</option>
 </optgroup>
+        <optgroup label="&#128202; Project Records">
+          <option value="proj_record">Project Record</option>
+        </optgroup>
 </select>
       </div>
       <div class="tpl-preview" id="tplPrev">
@@ -825,6 +828,15 @@ var TPL = {
     fmt:  'd',
     reg:  'APAC',
     flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Business Experience (all companies up to 15)','Education','Qualifications','Nationality','Languages','Interests']
+  },
+  proj_record: {
+    name: 'Project Record',
+    sub: 'Ezekia Project',
+    ico: 'doc',
+    bg: 'rgba(20,118,137,.15)',
+    fmt: 'd',
+    reg: 'Global',
+    flds: ['Project Name','Client Company','Search Title','Start Date','Status','Project Owner','Consultants','Candidates','Summary','Notes']
   }
 };
 
@@ -997,6 +1009,35 @@ async function generate() {
           });
         }
         inputText = lines.join('\n');
+        } else if (urlVal.match(/(?:app\.)?ezekia\.com\/#?\/projects\/([\w-]+)/)) {
+          var projMatch = urlVal.match(/(?:app\.)?ezekia\.com\/#?\/projects\/([\w-]+)/);
+          var projectId = projMatch[1];
+          var workerBase2 = localStorage.getItem('sh_ezekiaWorkerUrl') || 'https://damp-cake-fa1c.a-shamim.workers.dev';
+          var projResp = await fetch(workerBase2 + '/projects/' + projectId);
+          if (!projResp.ok) throw new Error('Ezekia project API error: ' + projResp.status);
+          var projData = await projResp.json();
+          var proj = projData.data || projData;
+          var projLines = [];
+          if (proj.name) projLines.push('PROJECT NAME: ' + proj.name);
+          if (proj.client && proj.client.name) projLines.push('CLIENT COMPANY: ' + proj.client.name);
+          if (proj.search_title || proj.searchTitle) projLines.push('SEARCH TITLE: ' + (proj.search_title || proj.searchTitle));
+          if (proj.start_date || proj.startDate) projLines.push('START DATE: ' + (proj.start_date || proj.startDate));
+          if (proj.status) projLines.push('STATUS: ' + proj.status);
+          if (proj.owner && proj.owner.name) projLines.push('PROJECT OWNER: ' + proj.owner.name);
+          if (proj.summary) projLines.push('\nSUMMARY:\n' + proj.summary);
+          var candResp = await fetch(workerBase2 + '/projects/' + projectId + '/candidates');
+          var candData = candResp.ok ? await candResp.json() : {data:[]};
+          var candidates = candData.data || [];
+          if (candidates.length) {
+            projLines.push('\nCANDIDATES:');
+            candidates.slice(0,20).forEach(function(c){
+              var cName = (c.first_name||'') + ' ' + (c.last_name||'');
+              var cTitle = c.current_title || '';
+              var cStatus = c.status || '';
+              projLines.push('- ' + cName.trim() + (cTitle ? ' (' + cTitle + ')' : '') + (cStatus ? ' [' + cStatus + ']' : ''));
+            });
+          }
+          inputText = projLines.join('\n');
             } else {
         // Generic URL fallback using allorigins
         var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(urlVal);
