@@ -1066,7 +1066,11 @@ async function generate() {
     } catch(e) {
       notify('Error fetching URL: ' + e.message); btn.classList.remove('loading'); btn.innerHTML = 'â¡ Generate Document'; return;
     }
-  } if (activeType === 'file') {
+  } else if (activeType === 'text') {
+    var pasteTA = document.querySelector('#inp-text textarea');
+    inputText = pasteTA ? pasteTA.value.trim() : '';
+    if (!inputText || inputText.length < 10) { notify('Please paste some candidate information first'); return; }
+  } else if (activeType === 'file') {
     var fileInput = document.getElementById('fileInputEl');
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) { notify('Please select a file'); return; }
         var filesToProcess = Array.from(fileInput.files);
@@ -1135,8 +1139,6 @@ async function generate() {
         }
         btn.classList.remove('loading'); btn.innerHTML = 'â¡ Generate Document';
         hideProgress(_totalFiles > 1 ? 'All done! ' + _totalFiles + ' profiles ready â check My History' : 'Done! Your profile is ready â check My History');
-        var txt = document.querySelector('#inp-text textarea');
-        if (txt) inputText = txt.value.trim();
   }
 
   if (!inputText || inputText.length < 10) {
