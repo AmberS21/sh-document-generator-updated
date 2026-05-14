@@ -1743,6 +1743,9 @@ async function downloadHistory(index) {
   try {
       if (item.type === 'combined' && Array.isArray(item.content)) {
         var _tplUrlC = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_proj') ? 'Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates%202025.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2') ? 'APAC%20Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates.docx' :(item.template === 'cv_wam_cs') ? 'Global%20Candidate%20Profile%20-%20with%20Career%20Summary.docm' :  'SH_Global_Candidate_Profile_No Scorecard.docx';
+        var _isDocm = _tplUrlC.endsWith('.docm');
+        var _docExt = _isDocm ? 'docm' : 'docx';
+        var _docMime = _isDocm ? 'application/vnd.ms-word.document.macroEnabled.12' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
         var _respC = await fetch(_tplUrlC);
         var _abC = await _respC.arrayBuffer();
         var _zipC = new JSZip();
@@ -1760,9 +1763,9 @@ async function downloadHistory(index) {
             var _zipI = new PizZip(_abC.slice(0));
             var _docC = new window.docxtemplater(_zipI, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
             _docC.render(_cvC);
-            _outC = _docC.getZip().generate({type:'arraybuffer',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+            _outC = _docC.getZip().generate({type:'arraybuffer',mimeType:_docMime});
           }
-          _zipC.file('Global - ' + _scorecardLabel + ' - ' + _nameC + '.docx', _outC);
+          _zipC.file('Global - ' + _scorecardLabel + ' - ' + _nameC + '.' + _docExt, _outC);
         }
         var _zipBlob = await _zipC.generateAsync({type:'blob'});
         var _aZ = document.createElement('a'); _aZ.href = URL.createObjectURL(_zipBlob); _aZ.download = baseName + '.zip'; document.body.appendChild(_aZ); _aZ.click(); document.body.removeChild(_aZ);
@@ -1770,6 +1773,9 @@ async function downloadHistory(index) {
       }
     if (fmt === 'd') {
       var tplUrl = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2') ? 'APAC%20Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates.docx' :(item.template === 'cv_wam_cs') ? 'Global%20Candidate%20Profile%20-%20with%20Career%20Summary.docm' :  'SH_Global_Candidate_Profile_No Scorecard.docx';
+      var _isDocmSingle = tplUrl.endsWith('.docm');
+      var _docExtSingle = _isDocmSingle ? 'docm' : 'docx';
+      var _docMimeSingle = _isDocmSingle ? 'application/vnd.ms-word.document.macroEnabled.12' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
       var resp = await fetch(tplUrl);
       var ab = await resp.arrayBuffer();
       var _isApacTpl = (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2' || item.template === 'cv_apac_proj');
@@ -1784,9 +1790,9 @@ async function downloadHistory(index) {
         var zip = new PizZip(ab);
         const doc = new window.docxtemplater(zip, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
         doc.render(item.content);
-        out = doc.getZip().generate({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+        out = doc.getZip().generate({type:'blob',mimeType:_docMimeSingle});
       }
-      var a = document.createElement('a'); a.href = URL.createObjectURL(out); a.download = baseName + '.docx'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      var a = document.createElement('a'); a.href = URL.createObjectURL(out); a.download = baseName + '.' + _docExtSingle; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
     } else if (fmt === 'f') {
       var tplUrl2 = item.template === 'cv_wam_s' ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
