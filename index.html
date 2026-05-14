@@ -447,6 +447,7 @@ table.usage tr:last-child td{border-bottom:none;}
 <option value="cv_apac_zh">APAC Candidate Profile &#8212; Chinese</option>
 <option value="cv_apac_en2">APAC Candidate Profile (Updated) &#8212; English</option>
         <option value="cv_apac_proj">APAC Candidate Profile &#8212; with Project Experiences</option>
+        <option value="cv_wam_cs">Global Candidate Profile &#8212; with Career Summary</option>
 </optgroup>
         <optgroup label="&#128202; Project Records">
           <option value="proj_record">Project Record</option>
@@ -835,6 +836,15 @@ var TPL = {
     fmt:  'd',
     reg:  'APAC',
     flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Project Experiences (any number of projects)','Education','Qualifications','Nationality','Languages','Interests']
+  },
+  cv_wam_cs: {
+    name: 'Global Candidate Profile',
+    sub:  'with Career Summary',
+    ico:  'doc',
+    bg:   'rgba(43,124,211,.12)',
+    fmt:  'd',
+    reg:  'Global',
+    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Career Summary','Business Experience','Education','Qualifications','Affiliations','Personal Details']
   },
   proj_record: {
     name: 'Project Record',
@@ -1726,13 +1736,13 @@ async function downloadHistory(index) {
   var item = history[index];
   if (!item) return;
   var fmt = item.fmt || 'd';
-  var _scorecardLabel = item.template === 'cv_wam_s' ? 'with Scorecard' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_en2') ? 'English' : item.template === 'cv_apac_zh' ? 'Chinese' : 'No Scorecard';
+  var _scorecardLabel = item.template === 'cv_wam_s' ? 'with Scorecard' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_en2') ? 'English' : item.template === 'cv_apac_zh' ? 'Chinese' :item.template === 'cv_wam_cs' ? 'with Career Summary' :  'No Scorecard';
   var _profilePrefix = (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2') ? 'APAC Profile' : 'Global';
   var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
       if (item.type === 'combined' && Array.isArray(item.content)) {
-        var _tplUrlC = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_proj') ? 'Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates%202025.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2') ? 'APAC%20Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+        var _tplUrlC = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_proj') ? 'Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates%202025.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2') ? 'APAC%20Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates.docx' :(item.template === 'cv_wam_cs') ? 'Global%20Candidate%20Profile%20-%20with%20Career%20Summary.docm' :  'SH_Global_Candidate_Profile_No Scorecard.docx';
         var _respC = await fetch(_tplUrlC);
         var _abC = await _respC.arrayBuffer();
         var _zipC = new JSZip();
@@ -1759,7 +1769,7 @@ async function downloadHistory(index) {
         return;
       }
     if (fmt === 'd') {
-      var tplUrl = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2') ? 'APAC%20Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+      var tplUrl = (item.template === 'cv_wam_s') ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2') ? 'APAC%20Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates.docx' :(item.template === 'cv_wam_cs') ? 'Global%20Candidate%20Profile%20-%20with%20Career%20Summary.docm' :  'SH_Global_Candidate_Profile_No Scorecard.docx';
       var resp = await fetch(tplUrl);
       var ab = await resp.arrayBuffer();
       var _isApacTpl = (item.template === 'cv_apac_en' || item.template === 'cv_apac_zh' || item.template === 'cv_apac_en2' || item.template === 'cv_apac_proj');
