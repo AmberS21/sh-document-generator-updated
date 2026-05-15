@@ -749,7 +749,7 @@ function doLogin() {
   if (uEl) uEl.textContent = name;
   notify('Welcome, ' + (name.split(' ')[0] || 'User') + '! Ready to generate.');
 }
-function adminClick() { if (isAdmin) goTab('admin'); }
+function adminClick() { if (isAdmin) { goTab('admin'); } else { var ov = document.getElementById('adminModalOv'); if(ov) ov.classList.add('show'); } }
 
 // Ã¢ÂÂÃ¢ÂÂ TABS Ã¢ÂÂÃ¢ÂÂ
 function goTab(t) {
