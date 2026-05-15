@@ -490,7 +490,7 @@ table.usage tr:last-child td{border-bottom:none;}
     <div class="row-between" style="align-items:center">
       <div>
         <div style="font-weight:600;font-size:14px;color:var(--txt)">File Output</div>
-        <div class="note" style="margin-top:2px">For multiple CVs Ã¢ÂÂ one combined deck or separate files</div>
+        <div class="note" style="margin-top:2px">For multiple CVs — one combined deck or separate files</div>
       </div>
       <div class="seg-wrap" id="outputModeBtns">
         <button class="seg-btn on" onclick="setOutputMode(this,'combined')">Combined</button>
@@ -1148,7 +1148,7 @@ async function generate() {
           renderHistory();
           btn.classList.remove('loading'); btn.innerHTML = ' Report Ready  Check My History';
           notify('Done! Project report saved  go to My History to download.');
-          setTimeout(function(){ btn.innerHTML = 'Ã¯Â¿Â½ Generate Document'; }, 3500);
+          setTimeout(function(){ btn.innerHTML = '&#9889; Generate Document'; }, 3500);
           return;
           inputText = 'services-profile_direct';
             } else {
@@ -1162,7 +1162,7 @@ async function generate() {
         inputText = doc2.body ? doc2.body.innerText.trim() : urlData.contents;
       }
     } catch(e) {
-      notify('Error fetching URL: ' + e.message); btn.classList.remove('loading'); btn.innerHTML = 'Ã¢ÂÂ¡ Generate Document'; return;
+      notify('Error fetching URL: ' + e.message); btn.classList.remove('loading'); btn.innerHTML = '&#9889; Generate Document'; return;
     }
   } else if (activeType === 'text') {
     var pasteTA = document.querySelector('#inp-text textarea');
@@ -1204,7 +1204,7 @@ async function generate() {
               inputText = await file.text();
             }
           } catch(fileErr) {
-            btn.classList.remove('loading'); btn.innerHTML = 'Ã¢ÂÂ¡ Generate Document';
+            btn.classList.remove('loading'); btn.innerHTML = '&#9889; Generate Document';
             notify('Could not read file: ' + fileErr.message); return;
           }
           if (inputText && inputText.length >= 10) {
@@ -1235,7 +1235,7 @@ async function generate() {
           localStorage.setItem('sh_history', JSON.stringify(_ch));
           renderHistory();
         }
-        btn.classList.remove('loading'); btn.innerHTML = 'Ã¢ÂÂ¡ Generate Document';
+        btn.classList.remove('loading'); btn.innerHTML = '&#9889; Generate Document';
         hideProgress(_totalFiles > 1 ? 'All done! ' + _totalFiles + ' profiles ready Ã¢ÂÂ check My History' : 'Done! Your profile is ready Ã¢ÂÂ check My History');
   }
 
@@ -1468,12 +1468,12 @@ try {
         btn.classList.remove('loading');
         btn.innerHTML = 'Ã¢ÂÂ Document Ready Ã¢ÂÂ Check My History';
         notify('Done! Go to My History to download.');
-        setTimeout(function(){ btn.innerHTML = 'Ã¢ÂÂ¡ Generate Document'; }, 3500);
+        setTimeout(function(){ btn.innerHTML = '&#9889; Generate Document'; }, 3500);
   })
   .catch(function(err) {
     console.error(err);
     btn.classList.remove('loading');
-    btn.innerHTML = 'Ã¢ÂÂ¡ Generate Document';
+    btn.innerHTML = '&#9889; Generate Document';
     notify('Generation failed. Check console.');
   });
 }
