@@ -763,31 +763,42 @@ function switchInp(type, el) {
 
 // Ã¢ÂÂÃ¢ÂÂ TEMPLATE DATA Ã¢ÂÂÃ¢ÂÂ
 // ══ TEMPLATES REGISTRY ══
-var TEMPLATES = {
-  'global-career-summary': {
-    label: 'Global Candidate Profile — with Career Summary',
-    file: 'Global%20Candidate%20Profile%20-%20with%20Career%20Summary.docx',
-    group: 'CV Profiles'
-  },
+const TEMPLATES = {
   'global-no-scorecard': {
     label: 'Global Candidate Profile — No Scorecard',
-    file: 'SH_Global_Candidate_Profile_No%20Scorecard.docx',
-    group: 'CV Profiles'
+    file: 'templates/SH_Global_No_Scorecard.docx',
+    patchFiles: ['word/document.xml'],
+    promptType: 'global-standard'
   },
   'global-with-scorecard': {
     label: 'Global Candidate Profile — With Scorecard',
-    file: 'SH_Global_Candidate_Profile_With_Scorecard.docx',
-    group: 'CV Profiles'
+    file: 'templates/SH_Global_With_Scorecard.docx',
+    patchFiles: ['word/document.xml'],
+    promptType: 'global-standard'
+  },
+  'global-career-summary': {
+    label: 'Global Candidate Profile — with Career Summary',
+    file: 'templates/SH_Global_Career_Summary.docx',
+    patchFiles: ['word/document.xml', 'word/header4.xml'],
+    promptType: 'career-summary'
   },
   'apac-profile': {
     label: 'APAC Candidate Profile — English',
-    file: 'APAC%20Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates.docx',
-    group: 'CV Profiles'
+    file: 'templates/SH_APAC_Profile.docx',
+    patchFiles: ['word/document.xml'],
+    promptType: 'apac'
   },
   'services-profile': {
     label: 'Services Candidate Profile',
-    file: 'Template-%5BCandidate%20Name_Company_Mon%20Year%5D%20CV%20Templates%202025.docx',
-    group: 'CV Profiles'
+    file: 'templates/SH_Services_Profile.docx',
+    patchFiles: ['word/document.xml', 'word/header1.xml'],
+    promptType: 'services'
+  },
+  'gb-profile': {
+    label: 'GB Candidate Profile',
+    file: 'templates/SH_GB_Profile.docx',
+    patchFiles: ['word/document.xml'],
+    promptType: 'gb'
   }
 };
 
