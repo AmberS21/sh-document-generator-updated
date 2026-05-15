@@ -764,43 +764,80 @@ function switchInp(type, el) {
 // Ã¢ÂÂÃ¢ÂÂ TEMPLATE DATA Ã¢ÂÂÃ¢ÂÂ
 // ══ TEMPLATES REGISTRY ══
 const TEMPLATES = {
+
   'global-no-scorecard': {
+
     label: 'Global Candidate Profile — No Scorecard',
+
     file: 'templates/SH_Global_No_Scorecard.docx',
+
     patchFiles: ['word/document.xml'],
+
     promptType: 'global-standard'
+
   },
+
   'global-with-scorecard': {
+
     label: 'Global Candidate Profile — With Scorecard',
+
     file: 'templates/SH_Global_With_Scorecard.docx',
+
     patchFiles: ['word/document.xml'],
+
     promptType: 'global-standard'
+
   },
+
   'global-career-summary': {
+
     label: 'Global Candidate Profile — with Career Summary',
+
     file: 'templates/SH_Global_Career_Summary.docx',
+
     patchFiles: ['word/document.xml', 'word/header4.xml'],
+
     promptType: 'career-summary'
+
   },
+
   'apac-profile': {
+
     label: 'APAC Candidate Profile — English',
+
     file: 'templates/SH_APAC_Profile.docx',
+
     patchFiles: ['word/document.xml'],
+
     promptType: 'apac'
+
   },
+
   'services-profile': {
+
     label: 'Services Candidate Profile',
+
     file: 'templates/SH_Services_Profile.docx',
+
     patchFiles: ['word/document.xml', 'word/header1.xml'],
+
     promptType: 'services'
+
   },
+
   'gb-profile': {
+
     label: 'GB Candidate Profile',
+
     file: 'templates/SH_GB_Profile.docx',
+
     patchFiles: ['word/document.xml'],
+
     promptType: 'gb'
+
   }
-};
+
+}
 
 // Populate dropdown from TEMPLATES registry
 (function() {
