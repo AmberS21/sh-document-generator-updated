@@ -303,6 +303,17 @@ table.usage tr:last-child td{border-bottom:none;}
 .seg-btn{background:transparent;border:none;padding:6px 16px;font-size:13px;font-weight:500;color:var(--mut);cursor:pointer;transition:background .15s,color .15s;}
 .seg-btn.on{background:var(--blue);color:#fff;}
 .seg-btn:not(.on):hover{background:var(--tbg);color:var(--txt);}
+
+/* Admin Modal */
+#adminModalOv{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:9999;}
+#adminModalOv.show{display:flex;}
+#adminModalBox{background:#fff;border-radius:12px;padding:36px 32px;width:360px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.18);font-family:inherit;}
+#adminModalBox h2{margin:0 0 20px;font-size:1.3rem;color:#1a2d5a;text-align:center;}
+#adminModalBox input{width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:14px;border:1px solid #cdd5e0;border-radius:6px;font-size:0.95rem;outline:none;}
+#adminModalBox input:focus{border-color:#2563eb;}
+#adminModalBox button{width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:4px;}
+#adminModalBox button:hover{background:#1d4ed8;}
+#adminErrMsg{color:#dc2626;font-size:0.85rem;text-align:center;margin-top:10px;min-height:18px;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
@@ -2222,7 +2233,68 @@ document.addEventListener('DOMContentLoaded', function() {
   loadSavedKeys();
 });
 
+// Admin auth
+(function(){
+  var ADMIN_HASH = '230fbbf51e90e9046e6a2a7277dc8f64be626effe6d312640bfe3ddc526e698b';
+  var ADMIN_EMAILS = [
+    'a.shamim@sheffieldhaworth.com',
+    'support@fyxo.global'
+  ];
+
+  function showAdminModal(){
+    var ov = document.getElementById('adminModalOv');
+    if(ov){ ov.classList.add('show'); }
+  }
+  function hideAdminModal(){
+    var ov = document.getElementById('adminModalOv');
+    if(ov){ ov.classList.remove('show'); }
+  }
+
+  function checkHash(){
+    if(window.location.hash === '#admin'){
+      showAdminModal();
+    }
+  }
+
+  window.adminLogin = async function(){
+    var email = (document.getElementById('adminEmail').value || '').trim().toLowerCase();
+    var pass  = document.getElementById('adminPassword').value || '';
+    var errEl = document.getElementById('adminErrMsg');
+    errEl.textContent = '';
+    if(!email || !pass){ errEl.textContent = 'Please enter email and password.'; return; }
+    if(!ADMIN_EMAILS.includes(email)){ errEl.textContent = 'Invalid credentials.'; return; }
+    try {
+      var buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
+      var hex  = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+      if(hex === ADMIN_HASH){
+        sessionStorage.setItem('adminAuthed','true');
+        var adminTab = document.getElementById('tab-admin');
+        if(adminTab){ adminTab.classList.remove('hidden'); adminTab.style.display=''; }
+        hideAdminModal();
+        window.location.hash = '';
+        goTab('admin');
+      } else {
+        errEl.textContent = 'Invalid credentials.';
+      }
+    } catch(e){ errEl.textContent = 'Auth error. Please try again.'; }
+  };
+
+  window.addEventListener('hashchange', checkHash);
+  window.addEventListener('load', checkHash);
+  if(document.readyState !== 'loading'){ checkHash(); }
+})();
+
 </script>
+
+<div id="adminModalOv">
+  <div id="adminModalBox">
+    <h2>Admin Access</h2>
+    <input type="email" id="adminEmail" placeholder="Email address" autocomplete="username" />
+    <input type="password" id="adminPassword" placeholder="Password" autocomplete="current-password" />
+    <button onclick="adminLogin()">Sign In</button>
+    <div id="adminErrMsg"></div>
+  </div>
+</div>
 </body>
 </html>
 h
