@@ -1310,38 +1310,101 @@ async function convertPdfToWord() {
   btn.innerHTML = 'Converting...';
   btn.disabled = true;
   try {
+    // STAGE 1: Extract text with PDF.js
     var arrayBuffer = await file.arrayBuffer();
     var uint8 = new Uint8Array(arrayBuffer);
     var pdf = await pdfjsLib.getDocument({ data: uint8 }).promise;
-    var allLines = [];
+    var pageTexts = [];
     for (var p = 1; p <= pdf.numPages; p++) {
       var page = await pdf.getPage(p);
       var textContent = await page.getTextContent();
-      var pageText = textContent.items.map(function(item){ return item.str; }).join(' ');
-      var pageLines = pageText.split(/\r?\n/);
-      pageLines.forEach(function(l){ allLines.push(l); });
-      if (p < pdf.numPages) allLines.push('');
+      pageTexts.push(textContent.items.map(function(item){ return item.str; }).join(' '));
     }
-    var paragraphs = allLines.map(function(line) {
-      if (!line.trim()) return '<w:p/>';
-      var escaped = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      return '<w:p><w:pPr><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr><w:t xml:space="preserve">'+escaped+'</w:t></w:r></w:p>';
-    }).join('\n');
-    var documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
-      '<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 wp14">'+
-      '<w:body>'+paragraphs+'<w:sectPr/></w:body></w:document>';
-    var contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
-      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
-      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
-      '<Default Extension="xml" ContentType="application/xml"/>'+
-      '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
+    var extractedText = pageTexts.join('
+
+');
+
+    // STAGE 2: Reformat with Claude API
+    btn.innerHTML = 'Formatting with AI...';
+    btn.disabled = true;
+    var claudeKey = localStorage.getItem('sh_claudeKey');
+    if (!claudeKey) {
+      alert('Please add your Claude API key in the Admin settings to use this feature.');
+      btn.innerHTML = origHTML;
+      btn.disabled = false;
+      return;
+    }
+    var apiResp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': claudeKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        system: 'You are a professional document formatter. Your job is to take raw text extracted from a PDF and reformat it into a clean, well-structured document.
+
+Rules:
+- Detect the document type automatically (CV, report, brief, meeting notes, financial document, etc.)
+- Apply appropriate structure for that document type
+- Use clear section headings in CAPITALS or Title Case
+- Use bullet points (•) for lists and achievements
+- Preserve ALL original content — do not add, remove or change any facts, names, dates or figures
+- Fix any broken line breaks or hyphenation from PDF extraction
+- Separate sections with a blank line
+- Return ONLY the formatted text — no explanation, no preamble, no markdown backticks
+- For CVs: structure as Name, Contact, Summary, Experience (company → role → bullets), Education, Qualifications, Skills
+- For reports: structure as Title, Summary, Sections, Conclusions
+- For any other document: use logical section breaks and appropriate formatting',
+        messages: [{ role: 'user', content: 'Reformat this document:
+
+' + extractedText }]
+      })
+    });
+    if (!apiResp.ok) {
+      var errData = await apiResp.json().catch(function(){ return {}; });
+      throw new Error((errData.error && errData.error.message) || ('API error ' + apiResp.status));
+    }
+    var apiData = await apiResp.json();
+    var formattedText = apiData.content && apiData.content[0] && apiData.content[0].text
+      ? apiData.content[0].text
+      : extractedText;
+
+    // STAGE 3: Build .docx from formatted text
+    var responseLines = formattedText.split('
+');
+    var paragraphs = responseLines.map(function(line) {
+      var escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      if (!line.trim()) {
+        return '<w:p/>';
+      } else if (line.startsWith('•')) {
+        return '<w:p><w:pPr><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">' + escaped + '</w:t></w:r></w:p>';
+      } else if ((line === line.toUpperCase() && line.trim().length > 0) || line.trim().endsWith(':')) {
+        return '<w:p><w:pPr><w:rPr><w:b/><w:sz w:val="24"/></w:rPr></w:pPr><w:r><w:rPr><w:b/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/></w:rPr><w:t>' + escaped + '</w:t></w:r></w:p>';
+      } else {
+        return '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">' + escaped + '</w:t></w:r></w:p>';
+      }
+    }).join('
+');
+
+    var documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 wp14">' +
+      '<w:body>' + paragraphs + '<w:sectPr/></w:body></w:document>';
+    var contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
       '</Types>';
-    var relsMain = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
-      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
-      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'+
+    var relsMain = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
       '</Relationships>';
-    var relsDoc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
-      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    var relsDoc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
       '</Relationships>';
     var zip = new JSZip();
     zip.file('[Content_Types].xml', contentTypes);
@@ -1349,7 +1412,7 @@ async function convertPdfToWord() {
     zip.folder('word').folder('_rels').file('document.xml.rels', relsDoc);
     zip.folder('word').file('document.xml', documentXml);
     var blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-    var baseName = file.name.replace(/\.pdf$/i, '');
+    var baseName = file.name.replace(/.pdf$/i, '');
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'Converted_' + baseName + '.docx';
