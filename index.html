@@ -1146,9 +1146,9 @@ async function generate() {
           projHistory.unshift(projItem);
           localStorage.setItem('sh_history', JSON.stringify(projHistory));
           renderHistory();
-          btn.classList.remove('loading'); btn.innerHTML = ' Report Ready  Check My History';
+          btn.classList.remove('loading'); btn.innerHTML = '\u2705 Document Ready \u2014 Check My History';
           notify('Done! Project report saved  go to My History to download.');
-          setTimeout(function(){ btn.innerHTML = '&#9889; Generate Document'; }, 3500);
+          setTimeout(function(){ btn.innerHTML = '\u26a1 Generate Document'; }, 3500);
           return;
           inputText = 'services-profile_direct';
             } else {
@@ -1162,7 +1162,7 @@ async function generate() {
         inputText = doc2.body ? doc2.body.innerText.trim() : urlData.contents;
       }
     } catch(e) {
-      notify('Error fetching URL: ' + e.message); btn.classList.remove('loading'); btn.innerHTML = '&#9889; Generate Document'; return;
+      notify('Error fetching URL: ' + e.message); btn.classList.remove('loading'); btn.innerHTML = '\u274c Error \u2014 Try Again'; return;
     }
   } else if (activeType === 'text') {
     var pasteTA = document.querySelector('#inp-text textarea');
@@ -1204,7 +1204,7 @@ async function generate() {
               inputText = await file.text();
             }
           } catch(fileErr) {
-            btn.classList.remove('loading'); btn.innerHTML = '&#9889; Generate Document';
+            btn.classList.remove('loading'); btn.innerHTML = '\u274c Error \u2014 Try Again';
             notify('Could not read file: ' + fileErr.message); return;
           }
           if (inputText && inputText.length >= 10) {
@@ -1235,12 +1235,12 @@ async function generate() {
           localStorage.setItem('sh_history', JSON.stringify(_ch));
           renderHistory();
         }
-        btn.classList.remove('loading'); btn.innerHTML = '&#9889; Generate Document';
+        btn.classList.remove('loading'); btn.innerHTML = '\u26a1 Generate Document';
         hideProgress(_totalFiles > 1 ? 'All done! ' + _totalFiles + ' profiles ready Ã¢ÂÂ check My History' : 'Done! Your profile is ready Ã¢ÂÂ check My History');
   }
 
   if (!inputText || inputText.length < 10) {
-    btn.classList.remove('loading'); btn.innerHTML = 'Generate Document';
+    btn.classList.remove('loading'); btn.innerHTML = '\u26a1 Generate Document';
     notify('Please provide candidate information first'); return;
   }
 
@@ -1255,7 +1255,7 @@ async function processOneCV(inputText, tpl, btn, returnOnly) {
   var claudeKey = localStorage.getItem('sh_claudeKey');
 
   btn.classList.add('loading');
-  btn.innerHTML = '&#9889; Generating profile with Claude...';
+  btn.innerHTML = '\u26a1 Generating profile with Claude...';
 
 var isCareerSummary = (tpl === 'global-career-summary');
 var isApac = (tpl === 'apac-profile');
@@ -1466,14 +1466,14 @@ try {
         renderHistory();
 
         btn.classList.remove('loading');
-        btn.innerHTML = 'Ã¢ÂÂ Document Ready Ã¢ÂÂ Check My History';
+        btn.innerHTML = '\u2705 Document Ready \u2014 Check My History';
         notify('Done! Go to My History to download.');
-        setTimeout(function(){ btn.innerHTML = '&#9889; Generate Document'; }, 3500);
+        setTimeout(function(){ btn.innerHTML = '\u26a1 Generate Document'; }, 3500);
   })
   .catch(function(err) {
     console.error(err);
     btn.classList.remove('loading');
-    btn.innerHTML = '&#9889; Generate Document';
+    btn.innerHTML = '\u274c Error \u2014 Try Again';
     notify('Generation failed. Check console.');
   });
 }
