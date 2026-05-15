@@ -7,7 +7,7 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* ── TOKENS ── */
+/* ââ TOKENS ââ */
 :root {
   --navy:#0f1f45; --navy2:#1a2c5b; --navy3:#06101f;
   --blue:#1591D8; --light:#3BC9F3;h
@@ -22,14 +22,14 @@
   --txt:#dce8ff; --mut:#7aa0c8; --chip:#0d1e3a; --tbg:#0a1e3a;
 }
 
-/* ── RESET ── */
+/* ââ RESET ââ */
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;font-size:14px;background:var(--bg);color:var(--txt);min-height:100vh;-webkit-font-smoothing:antialiased;}
 button,input,select,textarea{font-family:inherit;}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    LOGIN OVERLAY
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 #loginOv{position:fixed;inset:0;z-index:9999;background:#DBE7FF;display:flex;align-items:center;justify-content:center;padding:20px;}
 .lcard{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 16px 48px rgba(15,31,69,.18);}
 .lcard-head {
@@ -70,9 +70,9 @@ button,input,select,textarea{font-family:inherit;}
 .l-note strong{color:#5a7a9b;}
 .l-foot{text-align:center;margin-top:18px;font-size:11px;font-weight:600;color:#0f1f45;letter-spacing:.1px;}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    TOP NAV
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 .topnav {
   background:linear-gradient(135deg,#06101f 0%,#0f1f45 55%,#1e3a7a 100%);
   height:60px;display:flex;align-items:center;justify-content:space-between;
@@ -99,9 +99,9 @@ button,input,select,textarea{font-family:inherit;}
 .online{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 5px #22c55e;}
 .admin-badge{font-size:9px;font-weight:800;background:linear-gradient(135deg,#1591D8,#3BC9F3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    TABS
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 .tab-bar {
   background:var(--card);border-bottom:2px solid var(--brd);
   display:flex;padding:0 20px;overflow-x:auto;
@@ -118,9 +118,9 @@ button,input,select,textarea{font-family:inherit;}
 .tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600;}
 .tab-count{background:var(--blue);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:9px;}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    LAYOUT
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 .page{max-width:1100px;margin:0 auto;padding:16px 20px 0;}
 .hidden{display:none!important;}
 .card{background:var(--card);border:1px solid var(--brd);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);margin-bottom:12px;}
@@ -142,9 +142,9 @@ button,input,select,textarea{font-family:inherit;}
 .note{font-size:11px;color:var(--mut);margin-top:5px;line-height:1.6;}
 .row-between{display:flex;align-items:center;justify-content:space-between;}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    INPUT TABS
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 .inp-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:11px;}
 .itab{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid var(--brd);background:var(--chip);color:var(--mut);transition:all .2s;}
 .itab.on{background:var(--navy);color:#fff;border-color:var(--navy);}
@@ -154,9 +154,9 @@ textarea,input[type=text],input[type=url],input[type=email]{width:100%;border:1.
 textarea:focus,input:focus{border-color:var(--blue);}
 [data-dark="1"] textarea,[data-dark="1"] input{background:#0a1e3a;color:var(--txt);}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    TEMPLATE DROPDOWN
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 .tpl-search-wrap{position:relative;margin-bottom:9px;}
 .tpl-search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--mut);}
 .tpl-search{padding-left:33px!important;}
@@ -184,9 +184,9 @@ select.tpl-sel:focus{border-color:var(--blue);}
 .flds{display:flex;gap:4px;flex-wrap:wrap;}
 .fpill{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--chip);color:var(--mut);border:1px solid var(--brd);font-family:monospace;}
 
-/* ════════════════════════════════
-   FORMAT CHIPS — official app icons
-════════════════════════════════ */
+/* ââââââââââââââââââââââââââââââââ
+   FORMAT CHIPS â official app icons
+ââââââââââââââââââââââââââââââââ */
 .fmt-chips{display:flex;gap:6px;flex-wrap:wrap;}
 .fmt-chip{
   display:flex;align-items:center;gap:7px;
@@ -201,25 +201,25 @@ select.tpl-sel:focus{border-color:var(--blue);}
 /* App icon SVGs inside chips */
 .app-icon{width:16px;height:16px;flex-shrink:0;}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    UPLOAD ZONE
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 .upload-zone{border:2px dashed var(--brd);border-radius:var(--rs);padding:20px;text-align:center;cursor:pointer;color:var(--mut);transition:all .2s;}
 .upload-zone:hover{border-color:var(--blue);background:var(--tbg);}
 .prog-wrap{height:4px;background:var(--brd);border-radius:2px;overflow:hidden;margin-top:8px;}
 .prog-bar{height:100%;background:linear-gradient(90deg,var(--blue),var(--light));width:0;transition:width 1.5s ease;}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    TOGGLE
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 .tog{width:38px;height:20px;background:var(--brd);border-radius:10px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;}
 .tog.on{background:var(--blue);}
 .tok{width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
 .tog.on .tok{left:20px;}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    GENERATE BUTTON
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 .gen-btn{
   width:100%;padding:13px;margin-top:6px;
   background:linear-gradient(135deg,#06101f 0%,#0f1f45 50%,#1e3a7a 100%);
@@ -231,9 +231,9 @@ select.tpl-sel:focus{border-color:var(--blue);}
 .gen-btn.loading{opacity:.7;cursor:not-allowed;transform:none;}
 .gen-cap{text-align:center;font-size:11px;color:rgba(255,255,255,.65);flex:1;}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    HISTORY
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 .hist-row{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--brd);}
 .hist-row:last-child{border-bottom:none;}
 .hist-ico{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -243,18 +243,18 @@ select.tpl-sel:focus{border-color:var(--blue);}
 .ico-btn{background:var(--chip);border:1px solid var(--brd);border-radius:6px;padding:5px 9px;cursor:pointer;font-size:12px;color:var(--mut);transition:all .2s;}
 .ico-btn:hover{border-color:var(--blue);color:var(--blue);}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    HOW TO
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 .hw-step{display:flex;gap:12px;margin-bottom:18px;}
 .hw-num{min-width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .hw-title{font-size:13px;font-weight:600;margin-bottom:3px;color:var(--txt);}
 .hw-desc{font-size:12px;color:var(--mut);line-height:1.7;}
 .tip-box{background:var(--tbg);border-left:3px solid var(--blue);border-radius:0 var(--rs) var(--rs) 0;padding:10px 13px;font-size:12px;color:var(--mut);margin-top:9px;line-height:1.65;}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    ADMIN
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:13px;}
 .stat-c{background:var(--chip);border:1px solid var(--brd);border-radius:var(--rs);padding:13px;text-align:center;}
 .stat-n{font-size:24px;font-weight:700;background:linear-gradient(135deg,var(--blue),var(--light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
@@ -272,25 +272,25 @@ table.usage th{text-align:left;padding:7px 6px;color:var(--mut);font-weight:600;
 table.usage td{padding:7px 6px;border-bottom:1px solid var(--brd);color:var(--txt);}
 table.usage tr:last-child td{border-bottom:none;}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    FOOTER
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 .footer{background:linear-gradient(135deg,#06101f,#0f1f45);border-radius:var(--r);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
 .footer img{height:46px;display:block;}
 .footer-links{display:flex;gap:14px;}
 .footer-link{color:var(--light);font-size:12px;cursor:pointer;opacity:.8;background:none;border:none;}
 .footer-link:hover{opacity:1;}
 
-/* ════════════════════════════════
+/* ââââââââââââââââââââââââââââââââ
    NOTIFICATION
-════════════════════════════════ */
+ââââââââââââââââââââââââââââââââ */
 .notif{position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:11px 16px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:9998;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none;border-left:3px solid var(--light);max-width:300px;}
 .notif.show{transform:translateY(0);opacity:1;}
 
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-thumb{background:var(--brd);border-radius:3px;}
 
-/* ── PROGRESS BAR ── */
+/* ââ PROGRESS BAR ââ */
 #genProgress{display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--card);border-top:2px solid var(--brd);padding:12px 20px;box-shadow:0 -4px 16px rgba(15,31,69,.12);}
 #genProgress.show{display:block;}
 .gp-label{font-size:13px;font-weight:600;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
@@ -298,7 +298,7 @@ table.usage tr:last-child td{border-bottom:none;}
 .gp-bar{height:100%;background:var(--blue);border-radius:3px;transition:width .4s ease;width:0%;}
 .gp-label .gp-done{color:#22c55e;}
 
-/* ── SEGMENTED BUTTON ── */
+/* ââ SEGMENTED BUTTON ââ */
 .seg-wrap{display:flex;border:1.5px solid var(--brd);border-radius:8px;overflow:hidden;flex-shrink:0;}
 .seg-btn{background:transparent;border:none;padding:6px 16px;font-size:13px;font-weight:500;color:var(--mut);cursor:pointer;transition:background .15s,color .15s;}
 .seg-btn.on{background:var(--blue);color:#fff;}
@@ -313,9 +313,9 @@ table.usage tr:last-child td{border-bottom:none;}
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script></head>
 <body>
 
-<!-- ════════════════════════════════
+<!-- ââââââââââââââââââââââââââââââââ
      LOGIN OVERLAY
-════════════════════════════════ -->
+ââââââââââââââââââââââââââââââââ -->
 <div id="loginOv">
 
   <!-- SH Logo floats above the white card, on the #DBE7FF background -->
@@ -361,9 +361,9 @@ table.usage tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
-<!-- ════════════════════════════════
+<!-- ââââââââââââââââââââââââââââââââ
      TOP NAV
-════════════════════════════════ -->
+ââââââââââââââââââââââââââââââââ -->
 <div class="topnav">
   <div class="nav-left">
     <img src="DocGen Logo.png" alt="DocGen"/>
@@ -381,9 +381,9 @@ table.usage tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
-<!-- ════════════════════════════════
+<!-- ââââââââââââââââââââââââââââââââ
      TABS
-════════════════════════════════ -->
+ââââââââââââââââââââââââââââââââ -->
 <div class="tab-bar">
   <div class="tab active" id="tab-gen" onclick="goTab('gen')">&#9889; Generate</div>
   <div class="tab" id="tab-hist" onclick="goTab('hist')">&#128336; My History <span class="tab-count" id="histCount">3</span></div>
@@ -391,9 +391,9 @@ table.usage tr:last-child td{border-bottom:none;}
   <div class="tab hidden" id="tab-admin" onclick="goTab('admin')">&#9881; Admin</div>
 </div>
 
-<!-- ════════════════════════════════
+<!-- ââââââââââââââââââââââââââââââââ
      GENERATE TAB
-════════════════════════════════ -->
+ââââââââââââââââââââââââââââââââ -->
 <div class="page" id="sec-gen">
   <div class="two-col">
 
@@ -420,7 +420,7 @@ table.usage tr:last-child td{border-bottom:none;}
     <div style="font-size:28px;margin-bottom:6px;">&#128194;</div>
     <div style="font-weight:600;font-size:13px;margin-bottom:3px;">Drop files here or click to browse</div>
     <div class="note" id="fileNameLabel">Accepts .docx &middot; .pdf &middot; .xlsx &middot; .txt</div>
-    <input type="file" id="fileInputEl" accept=".docx,.pdf,.xlsx,.xls,.txt,.doc" multiple style="display:none" onchange="var lbl=document.getElementById('fileNameLabel');if(this.files.length>1){lbl.textContent=this.files.length+' files selected';}else if(this.files.length===1){lbl.textContent=this.files[0].name;}else{lbl.textContent='Accepts .docx · .pdf · .xlsx · .txt';}" />
+    <input type="file" id="fileInputEl" accept=".docx,.pdf,.xlsx,.xls,.txt,.doc" multiple style="display:none" onchange="var lbl=document.getElementById('fileNameLabel');if(this.files.length>1){lbl.textContent=this.files.length+' files selected';}else if(this.files.length===1){lbl.textContent=this.files[0].name;}else{lbl.textContent='Accepts .docx Â· .pdf Â· .xlsx Â· .txt';}" />
   </div>
   <div id="upProg" class="hidden" style="margin-top:8px;">
     <div class="prog-wrap"><div class="prog-bar" id="pbar"></div></div>
@@ -468,7 +468,7 @@ table.usage tr:last-child td{border-bottom:none;}
 
 
 
-  <!-- STEP 3 — full width -->
+  <!-- STEP 3 â full width -->
   <div class="card">
     <div class="card-title"><div class="step-dot">3</div> Output Options</div>
     <div style="margin-bottom:13px;">
@@ -502,7 +502,7 @@ table.usage tr:last-child td{border-bottom:none;}
     <div class="row-between" style="align-items:center">
       <div>
         <div style="font-weight:600;font-size:14px;color:var(--txt)">File Output</div>
-        <div class="note" style="margin-top:2px">For multiple CVs — one combined deck or separate files</div>
+        <div class="note" style="margin-top:2px">For multiple CVs â one combined deck or separate files</div>
       </div>
       <div class="seg-wrap" id="outputModeBtns">
         <button class="seg-btn on" onclick="setOutputMode(this,'combined')">Combined</button>
@@ -534,9 +534,9 @@ table.usage tr:last-child td{border-bottom:none;}
 </div>
 </div>
 
-<!-- ════════════════════════════════
+<!-- ââââââââââââââââââââââââââââââââ
      HISTORY TAB
-════════════════════════════════ -->
+ââââââââââââââââââââââââââââââââ -->
 <div class="page hidden" id="sec-hist">
   <div class="card">
     <div class="card-title"><div class="step-dot" style="background:var(--mut);">&#128336;</div> My Generated Documents</div>
@@ -545,9 +545,9 @@ table.usage tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
-<!-- ════════════════════════════════
+<!-- ââââââââââââââââââââââââââââââââ
      HOW TO USE TAB
-════════════════════════════════ -->
+ââââââââââââââââââââââââââââââââ -->
 <div class="page hidden" id="sec-how">
   <div class="card">
     <div class="card-title"><div class="step-dot" style="background:var(--mut);">&#128218;</div> How to Use This Tool</div>
@@ -562,9 +562,9 @@ table.usage tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
-<!-- ════════════════════════════════
+<!-- ââââââââââââââââââââââââââââââââ
      ADMIN TAB
-════════════════════════════════ -->
+ââââââââââââââââââââââââââââââââ -->
 <div class="page hidden" id="sec-admin">
   <div class="card">
     <div class="card-title"><div class="step-dot">&#128202;</div> Usage This Month</div>
@@ -621,7 +621,7 @@ table.usage tr:last-child td{border-bottom:none;}
   </div>
 
 
-  <!-- ════ API SETTINGS — ADMIN ONLY ════ -->
+  <!-- ââââ API SETTINGS â ADMIN ONLY ââââ -->
   <div style="height:4px;background:linear-gradient(90deg,var(--blue),var(--light));border-radius:2px;margin-bottom:12px;opacity:.3;"></div>
   <div class="card" id="apiSettingsCard">
     <div class="card-title"><div class="step-dot">&#128273;</div> API Settings <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(21,145,216,.15);color:#1264a3;letter-spacing:.3px;margin-left:4px;">ADMIN ONLY</span></div>
@@ -720,7 +720,7 @@ table.usage tr:last-child td{border-bottom:none;}
 </div>
 
 
-  <!-- ════ API SETTINGS CARD ════ -->
+  <!-- ââââ API SETTINGS CARD ââââ -->
 
 
 
@@ -731,7 +731,7 @@ table.usage tr:last-child td{border-bottom:none;}
 </div>
 
 <script>
-// ══ ADMIN GATE ══
+// ââ ADMIN GATE ââ
 var ADMINS = ['a.shamim@sheffieldhaworth.com'];
 var isAdmin = false;
 
@@ -760,7 +760,7 @@ function doLogin() {
 
 function adminClick() { if (isAdmin) goTab('admin'); }
 
-// ══ TABS ══
+// ââ TABS ââ
 function goTab(t) {
   ['gen','hist','how','admin'].forEach(function(id) {
     document.getElementById('sec-'+id).classList.toggle('hidden', id!==t);
@@ -772,7 +772,7 @@ function goTab(t) {
   if (t === 'hist') renderHistory();
 }
 
-// ══ INPUT SWITCH ══
+// ââ INPUT SWITCH ââ
 function switchInp(type, el) {
   document.querySelectorAll('.itab').forEach(function(t){ t.classList.remove('on'); });
   el.classList.add('on');
@@ -781,7 +781,7 @@ function switchInp(type, el) {
   });
 }
 
-// ══ TEMPLATE DATA ══
+// ââ TEMPLATE DATA ââ
 var TPL = {
   cv_wam_n: {
     name: 'Global Candidate Profile',
@@ -914,7 +914,7 @@ function filterTpl(q) {
   }
 }
 
-// ══ FORMAT CHIPS ══
+// ââ FORMAT CHIPS ââ
 function setFmt(el, k) {
   document.querySelectorAll('.fmt-chip').forEach(function(c) {
     ['on-d','on-p','on-x','on-f'].forEach(function(cls){ c.classList.remove(cls); });
@@ -922,7 +922,7 @@ function setFmt(el, k) {
   el.classList.add(FMT_CLS[k]);
 }
 
-// ══ TOGGLE ══
+// ââ TOGGLE ââ
 function togEl(el, rowId) {
   el.classList.toggle('on');
   if (rowId) document.getElementById(rowId).classList.toggle('hidden', !el.classList.contains('on'));
@@ -935,22 +935,88 @@ function setOutputMode(btn, mode) {
 }
 window._outputMode = 'combined';
 
-// ══ DARK MODE ══
+// ââ DARK MODE ââ
 function toggleDark() {
   var on = document.documentElement.getAttribute('data-dark') === '1';
   document.documentElement.setAttribute('data-dark', on ? '0' : '1');
   document.getElementById('darkBtn').innerHTML = on ? '&#127769;' : '&#9728;&#65039;';
 }
 
-// ══ FAKE UPLOAD ══
+// ââ FAKE UPLOAD ââ
 function fakeUpload() {
   var p=document.getElementById('upProg'), bar=document.getElementById('pbar'), lbl=document.getElementById('upLbl');
-  p.classList.remove('hidden'); bar.style.width='0'; lbl.textContent='Uploading…';
+  p.classList.remove('hidden'); bar.style.width='0'; lbl.textContent='Uploadingâ¦';
   setTimeout(function(){ bar.style.width='70%'; },100);
-  setTimeout(function(){ bar.style.width='100%'; lbl.textContent='✅ File uploaded successfully'; },1600);
+  setTimeout(function(){ bar.style.width='100%'; lbl.textContent='â File uploaded successfully'; },1600);
 }
 
-// ══ GENERATE ══
+// ââ GENERATE ââ
+
+// ══ CS FILL TEMPLATE ══
+function csFillTemplate(xmlStr, cv) {
+  var s = xmlStr;
+  function xmlEsc(v) {
+    return String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function rep(key, val) {
+    var ph = '{{' + key + '}}';
+    s = s.split(ph).join(xmlEsc(val));
+  }
+  rep('CANDIDATE_NAME', cv.CANDIDATE_NAME || '');
+  rep('CURRENT_EMPLOYER', cv.CURRENT_EMPLOYER || '');
+  rep('CLIENT_COMPANY', cv.CLIENT_COMPANY || '');
+  rep('SEARCH_TITLE', cv.SEARCH_TITLE || '');
+  rep('PROFILE_MONTH', cv.PROFILE_MONTH || '');
+  rep('CAREER_SUMMARY', cv.CAREER_SUMMARY || '');
+  rep('MOTIVATIONS', cv.MOTIVATIONS || '');
+  rep('CLIENT_COVERAGE', cv.CLIENT_COVERAGE || '');
+  rep('STRATEGY_EXPERIENCE', cv.STRATEGY_EXPERIENCE || '');
+  rep('FUNDRAISING_TRACK_RECORD', cv.FUNDRAISING_TRACK_RECORD || '');
+  rep('AREAS_OF_STRENGTH', cv.AREAS_OF_STRENGTH || '');
+  rep('AREAS_TO_EXPLORE', cv.AREAS_TO_EXPLORE || '');
+  rep('CLOSING_SUMMARY', cv.CLOSING_SUMMARY || '');
+  rep('COMPANY_1_NAME', cv.COMPANY_1_NAME || '');
+  rep('COMPANY_1_LOCATION', cv.COMPANY_1_LOCATION || '');
+  rep('COMPANY_1_START', cv.COMPANY_1_START || '');
+  rep('COMPANY_1_TITLE', cv.COMPANY_1_TITLE || '');
+  rep('COMPANY_1_FUNCTION', cv.COMPANY_1_FUNCTION || '');
+  rep('COMPANY_1_ROLE_START', cv.COMPANY_1_ROLE_START || '');
+  rep('COMPANY_1_ROLE_END', cv.COMPANY_1_ROLE_END || '');
+  rep('COMPANY_1_BULLET_1', cv.COMPANY_1_BULLET_1 || '');
+  rep('COMPANY_1_BULLET_2', cv.COMPANY_1_BULLET_2 || '');
+  rep('COMPANY_1_BULLET_3', cv.COMPANY_1_BULLET_3 || '');
+  [2,3,4,5,6].forEach(function(n) {
+    rep('COMPANY_'+n+'_NAME', cv['COMPANY_'+n+'_NAME'] || '');
+    rep('COMPANY_'+n+'_LOCATION', cv['COMPANY_'+n+'_LOCATION'] || '');
+    rep('COMPANY_'+n+'_START', cv['COMPANY_'+n+'_START'] || '');
+    rep('COMPANY_'+n+'_END', cv['COMPANY_'+n+'_END'] || '');
+    rep('COMPANY_'+n+'_TITLE', cv['COMPANY_'+n+'_TITLE'] || '');
+    rep('COMPANY_'+n+'_FUNCTION', cv['COMPANY_'+n+'_FUNCTION'] || '');
+    rep('COMPANY_'+n+'_ROLE_START', cv['COMPANY_'+n+'_ROLE_START'] || '');
+    rep('COMPANY_'+n+'_ROLE_END', cv['COMPANY_'+n+'_ROLE_END'] || '');
+    rep('COMPANY_'+n+'_BULLETS', cv['COMPANY_'+n+'_BULLETS'] || '');
+  });
+  [1,2].forEach(function(n) {
+    rep('EDU_'+n+'_START', cv['EDU_'+n+'_START'] || '');
+    rep('EDU_'+n+'_END', cv['EDU_'+n+'_END'] || '');
+    rep('EDU_'+n+'_INSTITUTION', cv['EDU_'+n+'_INSTITUTION'] || '');
+    rep('EDU_'+n+'_LOCATION', cv['EDU_'+n+'_LOCATION'] || '');
+    rep('EDU_'+n+'_DEGREE', cv['EDU_'+n+'_DEGREE'] || '');
+    rep('EDU_'+n+'_DETAILS', cv['EDU_'+n+'_DETAILS'] || '');
+  });
+  rep('QUAL_ACCREDITATION', cv.QUAL_ACCREDITATION || '');
+  rep('QUAL_TECHNICAL', cv.QUAL_TECHNICAL || '');
+  rep('AFFILIATIONS', cv.AFFILIATIONS || '');
+  rep('MEDIA', cv.MEDIA || '');
+  rep('PUBLICATIONS', cv.PUBLICATIONS || '');
+  rep('NATIONALITY', cv.NATIONALITY || '');
+  rep('LANGUAGES', cv.LANGUAGES || '');
+  rep('LANGUAGES_LEVEL', cv.LANGUAGES_LEVEL || '');
+  rep('INTERESTS', cv.INTERESTS || '');
+  s = s.replace(/\{\{[A-Z_0-9]+\}\}/g, '');
+  return s;
+}
+
 async function generate() {
   var tpl = document.getElementById('tplSel').value;
   var btn = document.getElementById('genBtn');
@@ -963,7 +1029,7 @@ async function generate() {
   if (activeType === 'url') {
     var urlVal = (document.getElementById('urlInput') || {value:''}).value.trim();
     if (!urlVal) { notify('Please enter a URL'); return; }
-    btn.classList.add('loading'); btn.innerHTML = 'Fetching URL…';
+    btn.classList.add('loading'); btn.innerHTML = 'Fetching URLâ¦';
     try {
       // Check if it's an Ezekia profile URL
       var ezMatch = urlVal.match(/(?:app\.)?ezekia\.com\/#?\/people\/(\d+)/i);
@@ -1067,7 +1133,7 @@ async function generate() {
           renderHistory();
           btn.classList.remove('loading'); btn.innerHTML = ' Report Ready  Check My History';
           notify('Done! Project report saved  go to My History to download.');
-          setTimeout(function(){ btn.innerHTML = '� Generate Document'; }, 3500);
+          setTimeout(function(){ btn.innerHTML = 'ï¿½ Generate Document'; }, 3500);
           return;
           inputText = 'proj_record_direct';
             } else {
@@ -1081,7 +1147,7 @@ async function generate() {
         inputText = doc2.body ? doc2.body.innerText.trim() : urlData.contents;
       }
     } catch(e) {
-      notify('Error fetching URL: ' + e.message); btn.classList.remove('loading'); btn.innerHTML = '⚡ Generate Document'; return;
+      notify('Error fetching URL: ' + e.message); btn.classList.remove('loading'); btn.innerHTML = 'â¡ Generate Document'; return;
     }
   } else if (activeType === 'text') {
     var pasteTA = document.querySelector('#inp-text textarea');
@@ -1099,7 +1165,7 @@ async function generate() {
         for (var fi = 0; fi < filesToProcess.length; fi++) {
           var file = filesToProcess[fi];
           var ext = file.name.split('.').pop().toLowerCase();
-          btn.innerHTML = 'Reading ' + file.name + '…';
+          btn.innerHTML = 'Reading ' + file.name + 'â¦';
           try {
             if (ext === 'txt') {
               inputText = await file.text();
@@ -1123,11 +1189,11 @@ async function generate() {
               inputText = await file.text();
             }
           } catch(fileErr) {
-            btn.classList.remove('loading'); btn.innerHTML = '⚡ Generate Document';
+            btn.classList.remove('loading'); btn.innerHTML = 'â¡ Generate Document';
             notify('Could not read file: ' + fileErr.message); return;
           }
           if (inputText && inputText.length >= 10) {
-            btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + '…';
+            btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + 'â¦';
             showProgress(fi+1, _totalFiles);
             if (_isCombined) {
               var _cvOutput = await processOneCV(inputText, tpl, btn, true);
@@ -1154,8 +1220,8 @@ async function generate() {
           localStorage.setItem('sh_history', JSON.stringify(_ch));
           renderHistory();
         }
-        btn.classList.remove('loading'); btn.innerHTML = '⚡ Generate Document';
-        hideProgress(_totalFiles > 1 ? 'All done! ' + _totalFiles + ' profiles ready — check My History' : 'Done! Your profile is ready — check My History');
+        btn.classList.remove('loading'); btn.innerHTML = 'â¡ Generate Document';
+        hideProgress(_totalFiles > 1 ? 'All done! ' + _totalFiles + ' profiles ready â check My History' : 'Done! Your profile is ready â check My History');
   }
 
   if (!inputText || inputText.length < 10) {
@@ -1165,7 +1231,7 @@ async function generate() {
 
 
 showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn);
-  hideProgress('Done! Your profile is ready — check My History');
+  hideProgress('Done! Your profile is ready â check My History');
 }
 
 async function processOneCV(inputText, tpl, btn, returnOnly) {
@@ -1174,7 +1240,7 @@ async function processOneCV(inputText, tpl, btn, returnOnly) {
   var claudeKey = localStorage.getItem('sh_claudeKey');
 
   btn.classList.add('loading');
-  btn.innerHTML = '⏳ Generating profile with Claude...';
+  btn.innerHTML = 'â³ Generating profile with Claude...';
 
 var isCareerSummary = (tpl === 'cv_wam_cs');
 var isApac = (tpl === 'cv_apac_en' || tpl === 'cv_apac_zh' || tpl === 'cv_apac_en2' || tpl === 'cv_apac_proj');
@@ -1191,27 +1257,27 @@ FIELD-BY-FIELD INSTRUCTIONS:
 
 1. CANDIDATE_NAME: Full name of the candidate exactly as written.
 2. CURRENT_EMPLOYER: Current or most recent employer name only (e.g. "DuPont China"). Do not include location or role.
-3. CLIENT_COMPANY: Leave EMPTY — do not fill this field.
-4. SEARCH_TITLE: Leave EMPTY — do not fill this field.
+3. CLIENT_COMPANY: Leave EMPTY â do not fill this field.
+4. SEARCH_TITLE: Leave EMPTY â do not fill this field.
 5. MONTH_YEAR: Today's month and year: "May 2026". Always use this exact value.
-6. SUMMARY: Copy the candidate summary/profile section VERBATIM — word for word, no changes. If the summary has bullet points, join them into one paragraph separated by spaces or newlines.
+6. SUMMARY: Copy the candidate summary/profile section VERBATIM â word for word, no changes. If the summary has bullet points, join them into one paragraph separated by spaces or newlines.
 7. SUMMARY_BULLETS: Leave EMPTY.
 
-8. BUSINESS EXPERIENCE — CRITICAL RULES:
+8. BUSINESS EXPERIENCE â CRITICAL RULES:
    - Extract EVERY work history entry WITHOUT EXCEPTION.
    - Each COMPANY_N = ONE ROLE (not one company). If candidate held multiple roles at the same company, create a SEPARATE COMPANY_N entry for each role.
    - For all roles at the same company, use the EXACT SAME company name string in COMPANY_N_NAME (this triggers automatic grouping in the template).
    - COMPANY_N_NAME: Full legal company name. IDENTICAL string for all roles at same company.
    - COMPANY_N_LOCATION: City, Country if provided; leave empty if not.
-   - COMPANY_N_DATES: Overall company tenure dates (e.g. "Mar 1996 – Present") for FIRST role at that company ONLY. Leave EMPTY for all subsequent roles at same company.
+   - COMPANY_N_DATES: Overall company tenure dates (e.g. "Mar 1996 â Present") for FIRST role at that company ONLY. Leave EMPTY for all subsequent roles at same company.
    - COMPANY_N_ROLE: Exact job title as written.
    - COMPANY_N_FUNCTION: Department or function if listed, else empty.
-   - COMPANY_N_ROLE_DATES: Dates for THIS specific role only (e.g. "Dec 2025 – Present").
+   - COMPANY_N_ROLE_DATES: Dates for THIS specific role only (e.g. "Dec 2025 â Present").
    - COMPANY_N_BULLETS: All bullet points / achievements for this role, joined with | (pipe character). Copy text VERBATIM. Do NOT summarise.
    - COMPANY_N_BULLETS_2: Always leave EMPTY.
 
 9. EDUCATION:
-   - EDU_1_YEARS, EDU_2_YEARS...: Year range (e.g. "1988–1992")
+   - EDU_1_YEARS, EDU_2_YEARS...: Year range (e.g. "1988â1992")
    - EDU_1_INSTITUTION...: Full institution name
    - EDU_1_DEGREE...: Degree or qualification name
 
@@ -1219,11 +1285,11 @@ FIELD-BY-FIELD INSTRUCTIONS:
 11. NATIONALITY: Exact nationality as stated; leave empty if not provided.
 12. LANGUAGES: Languages with proficiency levels as stated; leave empty if not provided.
 13. INTERESTS: As stated; leave empty if not provided.
-14. PROJECT EXPERIENCES — fill only if the source contains project or assignment experience:
+14. PROJECT EXPERIENCES â fill only if the source contains project or assignment experience:
    - PROJECT_N_TITLE: Project or assignment title
    - PROJECT_N_CLIENT: Client name or industry sector (leave empty if not stated)
-   - PROJECT_N_DATE: Date range for the project (e.g. "Jan 2023 – Mar 2023")
-   - PROJECT_N_DESCRIPTION: Full description of project scope, responsibilities, and outcomes — copy VERBATIM
+   - PROJECT_N_DATE: Date range for the project (e.g. "Jan 2023 â Mar 2023")
+   - PROJECT_N_DESCRIPTION: Full description of project scope, responsibilities, and outcomes â copy VERBATIM
    - Extract ALL projects found. Use PROJECT_1 for the first, PROJECT_2 for the second, etc. Up to PROJECT_10.
    - Leave all unused PROJECT fields as empty strings.
    - If the source has NO project experience section, leave ALL PROJECT fields as empty strings.
@@ -1252,14 +1318,14 @@ ABSOLUTE RULES:
 FIELD INSTRUCTIONS:
 - PROFILE_MONTH: Today's month and year in format "Month YYYY" e.g. "May 2026". Always populate this.
 - CAREER_SUMMARY: Copy the full text of the candidate's "Summary" or "Profile" section VERBATIM from the CV. Do not leave empty if the CV has a summary.
-- MOTIVATIONS, CLIENT_COVERAGE, STRATEGY_EXPERIENCE, FUNDRAISING_TRACK_RECORD, AREAS_OF_STRENGTH, AREAS_TO_EXPLORE, CLOSING_SUMMARY: leave empty string "" — these are filled in manually.
+- MOTIVATIONS, CLIENT_COVERAGE, STRATEGY_EXPERIENCE, FUNDRAISING_TRACK_RECORD, AREAS_OF_STRENGTH, AREAS_TO_EXPLORE, CLOSING_SUMMARY: leave empty string "" â these are filled in manually.
 - CURRENT_EMPLOYER: The candidate's current or most recent employer name.
 
 COMPANY FIELDS (repeat for each of the 6 most recent companies):
 - COMPANY_X_NAME: Full company name (e.g. "PIMCO")
 - COMPANY_X_LOCATION: City, Country/State (e.g. "New York, NY")
 - COMPANY_X_START: Year company was first joined (e.g. "2020")
-- COMPANY_X_END: Year left the company (e.g. "2022") — leave empty for current employer (COMPANY_1)
+- COMPANY_X_END: Year left the company (e.g. "2022") â leave empty for current employer (COMPANY_1)
 - COMPANY_X_TITLE: Job title / role title verbatim (e.g. "Senior Vice President, Head of U.S. GWM Marketing")
 - COMPANY_X_FUNCTION: Department or function (e.g. "Marketing")
 - COMPANY_X_ROLE_START: Start year of this specific role
@@ -1276,24 +1342,24 @@ EDUCATION FIELDS:
 OTHER: Extract QUAL_ACCREDITATION, QUAL_TECHNICAL, AFFILIATIONS, MEDIA, PUBLICATIONS, NATIONALITY, LANGUAGES, LANGUAGES_LEVEL, INTERESTS exactly as stated.
 
 Return ONLY valid JSON using this structure
-` + csJsonStr +'\n\nCANDIDATE SOURCE — extract ALL information from this text:\n\n' + inputText    : (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
+` + csJsonStr +'\n\nCANDIDATE SOURCE â extract ALL information from this text:\n\n' + inputText    : (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
     `You are a Sheffield Haworth executive search document assistant. Your task is to extract information from the candidate source below and fill the APAC Candidate Profile template fields EXACTLY as described.
 
-CRITICAL RULES — READ CAREFULLY:
+CRITICAL RULES â READ CAREFULLY:
 1. CANDIDATE_NAME: Extract the candidate full name exactly as written.
 2. CURRENT_EMPLOYER: Extract current/most recent employer name exactly.
-3. CLIENT_COMPANY: Leave EMPTY — do not fill this field.
-4. SEARCH_TITLE: Leave EMPTY — do not fill this field.
+3. CLIENT_COMPANY: Leave EMPTY â do not fill this field.
+4. SEARCH_TITLE: Leave EMPTY â do not fill this field.
 5. MONTH_YEAR: Use today\'s month and year in format "Month YYYY". Today is May 2026. Always use the current month/year when generating this document.
-6. SUMMARY: Copy the candidate summary/profile/objective section VERBATIM — do NOT rewrite, paraphrase, or change any wording. Copy exactly as it appears in the source. If summary is bullet points, join them with \\n.
+6. SUMMARY: Copy the candidate summary/profile/objective section VERBATIM â do NOT rewrite, paraphrase, or change any wording. Copy exactly as it appears in the source. If summary is bullet points, join them with \\n.
 7. SUMMARY_BULLETS: Leave EMPTY unless there are distinct summary bullet points separate from the main summary paragraph.
-8. BUSINESS EXPERIENCE — CRITICAL: Extract ALL work history entries WITHOUT EXCEPTION. Use COMPANY_1 through COMPANY_15. Each COMPANY_N = ONE ROLE. If candidate had multiple roles at the same company, create a SEPARATE entry for EACH ROLE. IMPORTANT: Use the EXACT SAME company name string for all roles at the same company — this is how the system detects grouping.
+8. BUSINESS EXPERIENCE â CRITICAL: Extract ALL work history entries WITHOUT EXCEPTION. Use COMPANY_1 through COMPANY_15. Each COMPANY_N = ONE ROLE. If candidate had multiple roles at the same company, create a SEPARATE entry for EACH ROLE. IMPORTANT: Use the EXACT SAME company name string for all roles at the same company â this is how the system detects grouping.
    - COMPANY_N_NAME: Company name. Must be IDENTICAL string for all roles at same company (e.g. "DuPont China Holding Company Limited" for all 10 DuPont roles)
    - COMPANY_N_LOCATION: City, Country (leave empty if not listed)
-   - COMPANY_N_DATES: Overall company tenure (e.g. "Mar 1996 – Present") for FIRST role at that company ONLY. Leave EMPTY for subsequent roles at same company.
+   - COMPANY_N_DATES: Overall company tenure (e.g. "Mar 1996 â Present") for FIRST role at that company ONLY. Leave EMPTY for subsequent roles at same company.
    - COMPANY_N_ROLE: Exact job title
    - COMPANY_N_FUNCTION: Department/function if listed, else empty
-   - COMPANY_N_ROLE_DATES: Dates for THIS SPECIFIC ROLE (e.g. "Dec 2025 – Present")
+   - COMPANY_N_ROLE_DATES: Dates for THIS SPECIFIC ROLE (e.g. "Dec 2025 â Present")
    - COMPANY_N_BULLETS: ALL bullet points for this role joined with | (pipe). Copy text VERBATIM.
    - COMPANY_N_BULLETS_2: Always leave EMPTY.
 9. EDUCATION: Extract ALL education entries.
@@ -1304,7 +1370,7 @@ CRITICAL RULES — READ CAREFULLY:
 11. NATIONALITY: Exact nationality as stated.
 12. LANGUAGES: All languages with proficiency levels exactly as stated.
 13. INTERESTS: Exact interests as stated.
-14. PROJECT EXPERIENCES — fill only if the source contains project or assignment experience:
+14. PROJECT EXPERIENCES â fill only if the source contains project or assignment experience:
    - PROJECT_N_TITLE: Project title; PROJECT_N_CLIENT: Client or sector; PROJECT_N_DATE: Date range; PROJECT_N_DESCRIPTION: Full description VERBATIM.
    - Use PROJECT_1 through PROJECT_10. Leave unused fields as empty strings.
 
@@ -1314,7 +1380,7 @@ FORMATTING RULES:
 - If fewer than 15 companies, leave unused COMPANY fields as empty string.
 - Return ONLY valid JSON. No markdown. No code blocks. No explanation.
 
-Use this exact JSON structure:\n` + apacJsonStr + '\n\nCANDIDATE SOURCE — extract ALL information from this text:\n\n' + inputText
+Use this exact JSON structure:\n` + apacJsonStr + '\n\nCANDIDATE SOURCE â extract ALL information from this text:\n\n' + inputText
   : `You are a Sheffield Haworth executive search document assistant.
 
 Extract information from the candidate CV below for the Global Candidate Profile template.
@@ -1325,12 +1391,12 @@ CRITICAL RULES:
 3. CLIENT_COMPANY: Leave EMPTY.
 4. SEARCH_TITLE: Leave EMPTY.
 5. DATE: Today in format "Month YYYY" (e.g. "May 2026").
-6. SUMMARY: Copy verbatim — do NOT rewrite anything.
+6. SUMMARY: Copy verbatim â do NOT rewrite anything.
 7. Extract ALL work history entries.
 8. Copy all bullet points VERBATIM.
 9. Extract all education, languages, nationality, interests exactly as stated.
 
-Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE — extract ALL information from this text:\n\n' + inputText;
+Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE â extract ALL information from this text:\n\n' + inputText;
 
   return fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -1365,6 +1431,11 @@ try {
   return;
 }
 
+        if (output && isCareerSummary) {
+          var _now = new Date();
+          var _mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+          output.PROFILE_MONTH = _mNames[_now.getMonth()] + ' ' + _now.getFullYear();
+        }
         if (returnOnly) { return output; }
         var item = {
           name: (output && output.CANDIDATE_NAME) ? output.CANDIDATE_NAME : 'Unknown Candidate',
@@ -1380,18 +1451,18 @@ try {
         renderHistory();
 
         btn.classList.remove('loading');
-        btn.innerHTML = '✓ Document Ready — Check My History';
+        btn.innerHTML = 'â Document Ready â Check My History';
         notify('Done! Go to My History to download.');
-        setTimeout(function(){ btn.innerHTML = '⚡ Generate Document'; }, 3500);
+        setTimeout(function(){ btn.innerHTML = 'â¡ Generate Document'; }, 3500);
   })
   .catch(function(err) {
     console.error(err);
     btn.classList.remove('loading');
-    btn.innerHTML = '⚡ Generate Document';
+    btn.innerHTML = 'â¡ Generate Document';
     notify('Generation failed. Check console.');
   });
 }
-// ══ NOTIFY ══
+// ââ NOTIFY ââ
 function notify(msg) {
   var n = document.getElementById('notif');
   n.textContent = msg; n.classList.add('show');
@@ -1579,7 +1650,7 @@ function apacFillTemplate(xmlStr, cv) {
   rep('Client Company Name', cv.CLIENT_COMPANY || '');
   rep('Search Title', cv.SEARCH_TITLE || '');
   stripField('[Date]', cv.MONTH_YEAR || '');
-  // Fix summary: use SHBullets style with explicit numPr to display bullet point (•)
+  // Fix summary: use SHBullets style with explicit numPr to display bullet point (â¢)
   (function(){
     var sp = s.indexOf('Type notes here');
     if (sp > -1) {
@@ -1589,7 +1660,7 @@ function apacFillTemplate(xmlStr, cv) {
         var para = s.substring(pStart, pEnd);
         // Switch to SHBullets style
         para = para.replace('<w:pStyle w:val="SHText"\/>', '<w:pStyle w:val="SHBullets"\/>');
-        // Remove any inline w:ind overrides — SHBullets handles its own indent
+        // Remove any inline w:ind overrides â SHBullets handles its own indent
         para = para.replace(/<w:ind[^>]*\/>/g, '');
         // Add explicit numPr so bullet renders reliably
         para = para.replace('<\/w:pPr>', '<w:numPr><w:ilvl w:val="0"\/><w:numId w:val="5"\/><\/w:numPr><\/w:pPr>');
@@ -1658,7 +1729,7 @@ function apacFillTemplate(xmlStr, cv) {
       var _cnPE = s.indexOf('</w:p>', _cnP) + 6;
       if (isSame) {
         if (_cnPS > -1 && _cnPE > 5) s = s.substring(0, _cnPS) + s.substring(_cnPE);
-        s = s.replace('Month, Year – Month, Year', '');
+        s = s.replace('Month, Year â Month, Year', '');
       } else {
         var compName = cn + (cl ? ', ' + cl : '');
         var compDate = isOnlyRole ? crd : cd;
@@ -1667,7 +1738,7 @@ function apacFillTemplate(xmlStr, cv) {
             [{text:compName,bold:true},{text:roleTitle,bold:false}],
             [{text:compDate,bold:true},{text:isOnlyRole?'':crd,bold:false}]
           ) + s.substring(_cnPE);
-        s = s.replace('Month, Year – Month, Year', '');
+        s = s.replace('Month, Year â Month, Year', '');
       }
     }
     var _jtP = s.indexOf('Corporate Job Title, Function');
@@ -1683,7 +1754,7 @@ function apacFillTemplate(xmlStr, cv) {
       } else {
         if (_jtPS > -1 && _jtPE > 5) s = s.substring(0, _jtPS) + s.substring(_jtPE);
       }
-      s = s.replace('Month, Year – Month, Year', '');
+      s = s.replace('Month, Year â Month, Year', '');
     }
     var _bRaw = cv['COMPANY_'+c+'_BULLETS'] || '';
     var _bArr = (_bRaw.indexOf('|') > -1 ? _bRaw.split('|') : _bRaw.split('\n'))
@@ -1711,10 +1782,10 @@ function apacFillTemplate(xmlStr, cv) {
   var _rp;
   while((_rp=s.indexOf('Company Name, Location'))>-1){var _a=s.lastIndexOf('<w:p ',_rp),_b=s.indexOf('</w:p>',_rp)+6;if(_a>-1&&_b>5)s=s.substring(0,_a)+s.substring(_b);else break;}
   while((_rp=s.indexOf('Corporate Job Title, Function'))>-1){var _a=s.lastIndexOf('<w:p ',_rp),_b=s.indexOf('</w:p>',_rp)+6;if(_a>-1&&_b>5)s=s.substring(0,_a)+s.substring(_b);else break;}
-  while((_rp=s.indexOf('Month, Year – Month, Year'))>-1){var _a=s.lastIndexOf('<w:p ',_rp),_b=s.indexOf('</w:p>',_rp)+6;if(_a>-1&&_b>5)s=s.substring(0,_a)+s.substring(_b);else break;}
+  while((_rp=s.indexOf('Month, Year â Month, Year'))>-1){var _a=s.lastIndexOf('<w:p ',_rp),_b=s.indexOf('</w:p>',_rp)+6;if(_a>-1&&_b>5)s=s.substring(0,_a)+s.substring(_b);else break;}
   while((_rp=s.indexOf('Insert text'))>-1){var _a=s.lastIndexOf('<w:p ',_rp),_b=s.indexOf('</w:p>',_rp)+6;if(_a>-1&&_b>5)s=s.substring(0,_a)+s.substring(_b);else break;}
   while((_rp=s.indexOf('SH Bullets'))>-1){var _a=s.lastIndexOf('<w:p ',_rp),_b=s.indexOf('</w:p>',_rp)+6;if(_a>-1&&_b>5)s=s.substring(0,_a)+s.substring(_b);else break;}
-  rep('Year – Year:', cv.EDU_1_YEARS || '');
+  rep('Year â Year:', cv.EDU_1_YEARS || '');
   rep('Place of study', cv.EDU_1_INSTITUTION || '');
   (function(){
     var _deg=cv.EDU_1_DEGREE||'', _dp=s.indexOf('Details');
@@ -1824,6 +1895,15 @@ async function downloadHistory(index) {
         var _apacFilled = apacFillTemplate(_apacXml, item.content);
         _apacZip.file('word/document.xml', _apacFilled);
         out = await _apacZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+      } else if (item.template === 'cv_wam_cs') {
+        var _csZip = await JSZip.loadAsync(ab);
+        var _csDocXml = await _csZip.files['word/document.xml'].async('string');
+        _csZip.file('word/document.xml', csFillTemplate(_csDocXml, item.content));
+        if (_csZip.files['word/header4.xml']) {
+          var _csHdr4Xml = await _csZip.files['word/header4.xml'].async('string');
+          _csZip.file('word/header4.xml', csFillTemplate(_csHdr4Xml, item.content));
+        }
+        out = await _csZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       } else {
         var zip = new PizZip(ab);
         const doc = new window.docxtemplater(zip, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
@@ -1841,7 +1921,7 @@ async function downloadHistory(index) {
       doc2.render(item.content);
       const out2 = doc2.getZip().generate({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       var pdfUrl = URL.createObjectURL(out2);
-      notify('PDF: Document will open — use Print → Save as PDF');
+      notify('PDF: Document will open â use Print â Save as PDF');
       window.open(pdfUrl, '_blank');
 
     } else if (fmt === 'p') {
@@ -1868,7 +1948,7 @@ async function downloadHistory(index) {
       [{n:cv.COMPANY_1_NAME,r:cv.COMPANY_1_ROLE,d:cv.COMPANY_1_DATES,b:[cv.COMPANY_1_BULLET_1,cv.COMPANY_1_BULLET_2,cv.COMPANY_1_BULLET_3]},{n:cv.COMPANY_2_NAME,r:cv.COMPANY_2_ROLE,d:cv.COMPANY_2_DATES,b:[cv.COMPANY_2_BULLET_1,cv.COMPANY_2_BULLET_2,cv.COMPANY_2_BULLET_3]},{n:cv.COMPANY_3_NAME,r:cv.COMPANY_3_ROLE,d:cv.COMPANY_3_DATES,b:[cv.COMPANY_3_BULLET_1,cv.COMPANY_3_BULLET_2,cv.COMPANY_3_BULLET_3]}].forEach(function(co){
         if (!co.n||yp>6.5) return;
         sl2.addText((co.r||'')+' | '+(co.n||'')+' | '+(co.d||''), {x:0.4,y:yp,w:12,h:0.3,fontSize:11,bold:true,color:SH_NAVY}); yp+=0.3;
-        co.b.filter(Boolean).forEach(function(b){ if(yp>6.8)return; sl2.addText('• '+b,{x:0.6,y:yp,w:11.5,h:0.28,fontSize:10,color:'444444'}); yp+=0.28; });
+        co.b.filter(Boolean).forEach(function(b){ if(yp>6.8)return; sl2.addText('â¢ '+b,{x:0.6,y:yp,w:11.5,h:0.28,fontSize:10,color:'444444'}); yp+=0.28; });
       });
       var sl3 = pptx.addSlide();
       sl3.background = {color: SH_WHITE};
@@ -1877,9 +1957,9 @@ async function downloadHistory(index) {
       var ey = 0.85;
       [[cv.EDU_1_INSTITUTION,cv.EDU_1_DEGREE,cv.EDU_1_YEARS],[cv.EDU_2_INSTITUTION,cv.EDU_2_DEGREE,cv.EDU_2_YEARS]].forEach(function(e){ if(!e[0])return; sl3.addText((e[1]||'')+', '+(e[0]||'')+' ('+(e[2]||'')+')',{x:0.4,y:ey,w:12,h:0.3,fontSize:11,color:'333333'}); ey+=0.35; });
       ey+=0.2; sl3.addText('Qualifications',{x:0.4,y:ey,w:12,h:0.35,fontSize:13,bold:true,color:SH_NAVY}); ey+=0.4;
-      [cv.QUAL_1,cv.QUAL_2,cv.QUAL_3].filter(Boolean).forEach(function(q){ sl3.addText('• '+q,{x:0.5,y:ey,w:12,h:0.28,fontSize:11,color:'333333'}); ey+=0.3; });
+      [cv.QUAL_1,cv.QUAL_2,cv.QUAL_3].filter(Boolean).forEach(function(q){ sl3.addText('â¢ '+q,{x:0.5,y:ey,w:12,h:0.28,fontSize:11,color:'333333'}); ey+=0.3; });
       ey+=0.2; sl3.addText('Affiliations',{x:0.4,y:ey,w:12,h:0.35,fontSize:13,bold:true,color:SH_NAVY}); ey+=0.4;
-      [cv.AFFILIATION_1,cv.AFFILIATION_2].filter(Boolean).forEach(function(af){ sl3.addText('• '+af,{x:0.5,y:ey,w:12,h:0.28,fontSize:11,color:'333333'}); ey+=0.3; });
+      [cv.AFFILIATION_1,cv.AFFILIATION_2].filter(Boolean).forEach(function(af){ sl3.addText('â¢ '+af,{x:0.5,y:ey,w:12,h:0.28,fontSize:11,color:'333333'}); ey+=0.3; });
       await pptx.writeFile({fileName: baseName + '.pptx'});
 
     } else if (fmt === 'x') {
@@ -1929,9 +2009,9 @@ async function downloadHistory(index) {
 }renderHistory();
 // Load saved keys on startup 
 
-// ══════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââ
 // API KEY MANAGEMENT
-// ══════════════════════════════════════
+// ââââââââââââââââââââââââââââââââââââââ
 
 // Load saved keys on startup
 function loadSavedKeys() {
@@ -1964,12 +2044,12 @@ function saveKey(which) {
   var btn = document.getElementById(btnMap[which]);
   if (!el || !el.value.trim()) { notify('Please enter a key first'); return; }
   localStorage.setItem('sh_' + inputMap[which], el.value.trim());
-  if (btn) { btn.textContent = 'Saved ✓'; btn.style.background = '#166534'; btn.style.opacity = '1'; }
+  if (btn) { btn.textContent = 'Saved â'; btn.style.background = '#166534'; btn.style.opacity = '1'; }
   setTimeout(function() {
     if (btn) { btn.textContent = 'Save'; btn.style.background = 'var(--blue)'; btn.style.opacity = '1'; }
   }, 2000);
   updateKeysSummary();
-  notify('✅ ' + (which === 'claude' ? 'Claude' : which === 'ezekia' ? 'Ezekia' : 'Ezekia URL') + ' key saved securely.');
+  notify('â ' + (which === 'claude' ? 'Claude' : which === 'ezekia' ? 'Ezekia' : 'Ezekia URL') + ' key saved securely.');
 }
 
 function toggleVis(inputId, btnId) {
@@ -1989,7 +2069,7 @@ function testKey(which) {
   var btn    = document.getElementById(btnMap[which]);
   if (!el || !el.value.trim()) { notify('Enter a key first'); return; }
 
-  btn.textContent = 'Testing…';
+  btn.textContent = 'Testingâ¦';
   btn.style.opacity = '.6';
   status.style.display = 'none';
 
@@ -2014,33 +2094,33 @@ function testKey(which) {
       btn.textContent = 'Test';
       btn.style.opacity = '1';
       if (res.ok) {
-        status.textContent = '✅ Connected';
+        status.textContent = 'â Connected';
         status.style.background = '#dcfce7';
         status.style.color = '#166534';
         status.style.display = 'inline-block';
-        notify('✅ Claude API key is working!');
+        notify('â Claude API key is working!');
       } else {
         var msg = res.data && res.data.error ? res.data.error.message : 'Invalid key';
-        status.textContent = '❌ ' + msg;
+        status.textContent = 'â ' + msg;
         status.style.background = '#fee2e2';
         status.style.color = '#b91c1c';
         status.style.display = 'inline-block';
-        notify('❌ Claude: ' + msg);
+        notify('â Claude: ' + msg);
       }
     })
     .catch(function(err) {
       btn.textContent = 'Test';
       btn.style.opacity = '1';
-      status.textContent = '❌ Connection failed';
+      status.textContent = 'â Connection failed';
       status.style.background = '#fee2e2';
       status.style.color = '#b91c1c';
       status.style.display = 'inline-block';
-      notify('❌ Could not reach Anthropic API. Check your connection.');
+      notify('â Could not reach Anthropic API. Check your connection.');
     });
 
   } else if (which === 'ezekia') {
     var baseUrl = localStorage.getItem('sh_ezekiaBaseUrl') || 'https://ezekia.com/api';
-    // Try a lightweight endpoint — /me or /ping or /users/me
+    // Try a lightweight endpoint â /me or /ping or /users/me
     fetch(baseUrl + '/api/users/me', {
       method: 'GET',
       headers: {
@@ -2053,28 +2133,28 @@ function testKey(which) {
       btn.textContent = 'Test';
       btn.style.opacity = '1';
       if (res.ok || res.status === 200) {
-        status.textContent = '✅ Connected';
+        status.textContent = 'â Connected';
         status.style.background = '#dcfce7';
         status.style.color = '#166534';
         status.style.display = 'inline-block';
-        notify('✅ Ezekia API key is working!');
+        notify('â Ezekia API key is working!');
       } else {
-        status.textContent = '❌ Auth failed (' + res.status + ')';
+        status.textContent = 'â Auth failed (' + res.status + ')';
         status.style.background = '#fee2e2';
         status.style.color = '#b91c1c';
         status.style.display = 'inline-block';
-        notify('❌ Ezekia: Authentication failed. Check key and base URL.');
+        notify('â Ezekia: Authentication failed. Check key and base URL.');
       }
     })
     .catch(function(err) {
       btn.textContent = 'Test';
       btn.style.opacity = '1';
-      // CORS error is actually expected from a local file — key may still be valid
-      status.textContent = '⚠️ CORS (expected from local file)';
+      // CORS error is actually expected from a local file â key may still be valid
+      status.textContent = 'â ï¸ CORS (expected from local file)';
       status.style.background = '#fef3c7';
       status.style.color = '#92400e';
       status.style.display = 'inline-block';
-      notify('⚠️ CORS error — this is normal when running locally. Key saved, will work on SharePoint.');
+      notify('â ï¸ CORS error â this is normal when running locally. Key saved, will work on SharePoint.');
     });
   }
 }
@@ -2096,7 +2176,7 @@ function updateKeysSummary() {
   summary.style.display = 'block';
   rows.innerHTML = saved.map(function(item) {
     var val = localStorage.getItem(item.key) || '';
-    var masked = val.length > 8 ? val.substring(0, 6) + '••••••••' + val.slice(-4) : '••••••••';
+    var masked = val.length > 8 ? val.substring(0, 6) + 'â¢â¢â¢â¢â¢â¢â¢â¢' + val.slice(-4) : 'â¢â¢â¢â¢â¢â¢â¢â¢';
     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--brd);font-size:11px;">'
       + '<span style="color:var(--mut);">' + item.label + '</span>'
       + '<span style="font-family:monospace;color:var(--txt);">' + masked + '</span>'
@@ -2130,3 +2210,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+h
