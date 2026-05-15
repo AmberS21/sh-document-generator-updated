@@ -2270,6 +2270,9 @@ document.addEventListener('DOMContentLoaded', function() {
         sessionStorage.setItem('adminAuthed','true');
         var adminTab = document.getElementById('tab-admin');
         if(adminTab){ adminTab.classList.remove('hidden'); adminTab.style.display=''; }
+        window.isAdmin = true;
+        var badge = document.getElementById('adminBadge');
+        if(badge){ badge.classList.remove('hidden'); }
         hideAdminModal();
         window.location.hash = '';
         goTab('admin');
