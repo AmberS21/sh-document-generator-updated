@@ -443,7 +443,7 @@ table.usage tr:last-child td{border-bottom:none;}
       </div>
       <div class="tpl-drop-wrap">
         <select class="tpl-sel" id="tplSel" onchange="pickTpl(this.value)">
-<option value="">— Choose a template —</option>
+<option value="" disabled selected>— Choose a template —</option>
 </select>
       </div>
       <div class="tpl-preview" id="tplPrev">
@@ -843,23 +843,12 @@ const TEMPLATES = {
 (function() {
   var sel = document.getElementById('tplSel');
   if (!sel) return;
-  var groups = {};
   Object.keys(TEMPLATES).forEach(function(key) {
     var t = TEMPLATES[key];
-    var grp = t.group || 'Other';
-    if (!groups[grp]) groups[grp] = [];
-    groups[grp].push({key: key, label: t.label});
-  });
-  Object.keys(groups).forEach(function(grp) {
-    var og = document.createElement('optgroup');
-    og.label = '── ' + grp;
-    groups[grp].forEach(function(item) {
-      var opt = document.createElement('option');
-      opt.value = item.key;
-      opt.textContent = item.label;
-      og.appendChild(opt);
-    });
-    sel.appendChild(og);
+    var opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = t.label;
+    sel.appendChild(opt);
   });
 })();
 
