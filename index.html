@@ -2270,9 +2270,7 @@ document.addEventListener('DOMContentLoaded', function() {
         sessionStorage.setItem('adminAuthed','true');
         var adminTab = document.getElementById('tab-admin');
         if(adminTab){ adminTab.classList.remove('hidden'); adminTab.style.display=''; }
-        window.isAdmin = true;
-        var badge = document.getElementById('adminBadge');
-        if(badge){ badge.classList.remove('hidden'); }
+        activateAdmin();
         hideAdminModal();
         window.location.hash = '';
         goTab('admin');
@@ -2282,9 +2280,23 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch(e){ errEl.textContent = 'Auth error. Please try again.'; }
   };
 
+  function activateAdmin(){
+    window.isAdmin = true;
+    var badge = document.getElementById('adminBadge');
+    if(badge){ badge.classList.remove('hidden'); }
+    var adminTab = document.getElementById('tab-admin');
+    if(adminTab){ adminTab.classList.remove('hidden'); adminTab.style.display=''; }
+  }
+
+  function restoreAdminState(){
+    if(sessionStorage.getItem('adminAuthed') === 'true'){
+      activateAdmin();
+    }
+  }
+
   window.addEventListener('hashchange', checkHash);
-  window.addEventListener('load', checkHash);
-  if(document.readyState !== 'loading'){ checkHash(); }
+  window.addEventListener('load', function(){ restoreAdminState(); checkHash(); });
+  if(document.readyState !== 'loading'){ restoreAdminState(); checkHash(); }
 })();
 
 </script>
@@ -2300,4 +2312,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 </body>
 </html>
-h
