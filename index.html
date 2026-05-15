@@ -729,23 +729,15 @@ function ssoLogin() {
 
 function doLogin() {
   var el = document.getElementById('loginEmail');
-  var email = el ? el.value.trim().toLowerCase() : '';
-  localStorage.setItem('sh_loggedInEmail', email);
+  var email = el ? el.value.trim() : '';
   if (!email) { notify('Please enter your email address'); return; }
-  isAdmin = ADMINS.indexOf(email) !== -1;
   var parts = email.split('@')[0].replace(/[._]/g,' ').split(' ');
   var name = parts.map(function(p){ return p.charAt(0).toUpperCase()+p.slice(1); }).join(' ');
   document.getElementById('loginOv').style.display = 'none';
-  document.getElementById('userName').textContent = name;
-  if (isAdmin) {
-    ['adminBadge','tab-admin','footerAdmin','footerDot'].forEach(function(id) {
-      var e = document.getElementById(id);
-      if (e) e.classList.remove('hidden');
-    });
-  }
-  notify('Welcome, ' + name.split(' ')[0] + '! Ready to generate.');
+  var uEl = document.getElementById('userName');
+  if (uEl) uEl.textContent = name;
+  notify('Welcome, ' + (name.split(' ')[0] || 'User') + '! Ready to generate.');
 }
-
 function adminClick() { if (isAdmin) goTab('admin'); }
 
 // Ã¢ÂÂÃ¢ÂÂ TABS Ã¢ÂÂÃ¢ÂÂ
