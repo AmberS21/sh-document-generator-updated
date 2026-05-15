@@ -228,7 +228,7 @@ select.tpl-sel:focus{border-color:var(--blue);}
   display:flex;align-items:center;justify-content:center;gap:8px;
 }
 .gen-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(21,145,216,.35);}
-.gen-btn.loading{opacity:.7;cursor:not-allowed;transform:none;}
+.gen-btn.loading{opacity:.7;cursor:not-allowed;transform:none;pointer-events:none;}
 .gen-cap{text-align:center;font-size:11px;color:rgba(255,255,255,.65);flex:1;}
 
 /* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
@@ -290,13 +290,6 @@ table.usage tr:last-child td{border-bottom:none;}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-thumb{background:var(--brd);border-radius:3px;}
 
-/* Ã¢ÂÂÃ¢ÂÂ PROGRESS BAR Ã¢ÂÂÃ¢ÂÂ */
-#genProgress{display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--card);border-top:2px solid var(--brd);padding:12px 20px;box-shadow:0 -4px 16px rgba(15,31,69,.12);}
-#genProgress.show{display:block;}
-.gp-label{font-size:13px;font-weight:600;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:8px;}
-.gp-bar-wrap{height:6px;background:var(--brd);border-radius:3px;overflow:hidden;}
-.gp-bar{height:100%;background:var(--blue);border-radius:3px;transition:width .4s ease;width:0%;}
-.gp-label .gp-done{color:#22c55e;}
 
 /* Ã¢ÂÂÃ¢ÂÂ SEGMENTED BUTTON Ã¢ÂÂÃ¢ÂÂ */
 .seg-wrap{display:flex;border:1.5px solid var(--brd);border-radius:8px;overflow:hidden;flex-shrink:0;}
@@ -724,10 +717,6 @@ table.usage tr:last-child td{border-bottom:none;}
 
 
 <div class="notif" id="notif"></div>
-<div id="genProgress">
-  <div class="gp-label" id="gpLabel">Preparing...</div>
-  <div class="gp-bar-wrap"><div class="gp-bar" id="gpBar"></div></div>
-</div>
 
 <script>
 // Ã¢ÂÂÃ¢ÂÂ ADMIN GATE Ã¢ÂÂÃ¢ÂÂ
@@ -1055,7 +1044,7 @@ async function generate() {
   if (activeType === 'url') {
     var urlVal = (document.getElementById('urlInput') || {value:''}).value.trim();
     if (!urlVal) { notify('Please enter a URL'); return; }
-    btn.classList.add('loading'); btn.innerHTML = 'Fetching URLÃ¢ÂÂ¦';
+    btn.classList.add('loading'); btn.innerHTML = 'Fetching URL...';
     try {
       // Check if it's an Ezekia profile URL
       var ezMatch = urlVal.match(/(?:app\.)?ezekia\.com\/#?\/people\/(\d+)/i);
@@ -1191,7 +1180,7 @@ async function generate() {
         for (var fi = 0; fi < filesToProcess.length; fi++) {
           var file = filesToProcess[fi];
           var ext = file.name.split('.').pop().toLowerCase();
-          btn.innerHTML = 'Reading ' + file.name + 'Ã¢ÂÂ¦';
+          btn.innerHTML = 'Reading ' + file.name + '...';
           try {
             if (ext === 'txt') {
               inputText = await file.text();
@@ -1219,7 +1208,7 @@ async function generate() {
             notify('Could not read file: ' + fileErr.message); return;
           }
           if (inputText && inputText.length >= 10) {
-            btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + 'Ã¢ÂÂ¦';
+            btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + '...';
             showProgress(fi+1, _totalFiles);
             if (_isCombined) {
               var _cvOutput = await processOneCV(inputText, tpl, btn, true);
@@ -1266,7 +1255,7 @@ async function processOneCV(inputText, tpl, btn, returnOnly) {
   var claudeKey = localStorage.getItem('sh_claudeKey');
 
   btn.classList.add('loading');
-  btn.innerHTML = 'Ã¢ÂÂ³ Generating profile with Claude...';
+  btn.innerHTML = '&#9889; Generating profile with Claude...';
 
 var isCareerSummary = (tpl === 'global-career-summary');
 var isApac = (tpl === 'apac-profile');
@@ -1496,32 +1485,12 @@ function notify(msg) {
 }
 
 function showProgress(current, total, msg) {
-  var el = document.getElementById('genProgress');
-  var lbl = document.getElementById('gpLabel');
-  var bar = document.getElementById('gpBar');
-  if (!el) return;
-  el.classList.add('show');
-  var pct = total > 0 ? Math.round((current / total) * 100) : 0;
-  if (msg) {
-    lbl.innerHTML = msg;
-  } else {
-    lbl.textContent = 'Processing ' + current + ' of ' + total + '...';
-  }
-  if (bar) bar.style.width = pct + '%';
+  var b = document.getElementById('genBtn');
+  if (b) b.disabled = true;
 }
 function hideProgress(msg) {
-  var el = document.getElementById('genProgress');
-  var lbl = document.getElementById('gpLabel');
-  var bar = document.getElementById('gpBar');
-  if (!el) return;
-  if (msg) {
-    bar.style.width = '100%';
-    lbl.innerHTML = '<span class="gp-done">&#10003;</span> ' + msg;
-    setTimeout(function(){ el.classList.remove('show'); bar.style.width = '0%'; }, 4000);
-  } else {
-    el.classList.remove('show');
-    bar.style.width = '0%';
-  }
+  var b = document.getElementById('genBtn');
+  if (b) b.disabled = false;
 }
  function renderHistory() {
     var list = document.getElementById('historyList');
