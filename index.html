@@ -2127,16 +2127,22 @@ function keyChanged(which) {
 function saveKey(which) {
   var inputMap  = {claude:'claudeKey', ezekia:'ezekiaKey', ezekiaUrl:'ezekiaBaseUrl', proxyUrl:'proxyUrl'};
   var btnMap    = {claude:'claudeSaveBtn', ezekia:'ezkiaSaveBtn', ezekiaUrl:'ezekiaUrlSaveBtn', proxyUrl:'proxyUrlSaveBtn'};
+  var lsKeyMap  = {claude:'sh_claudeKey', ezekia:'sh_ezekiaKey', ezekiaUrl:'sh_ezekiaBaseUrl', proxyUrl:'sh_proxy_url'};
   var el  = document.getElementById(inputMap[which]);
   var btn = document.getElementById(btnMap[which]);
-  if (!el) { return; }
-  if (el.value.trim()) { localStorage.setItem(key, el.value.trim()); } else { localStorage.removeItem(key); }
-  if (btn) { btn.textContent = 'Saved Ã¢ÂÂ'; btn.style.background = '#166534'; btn.style.opacity = '1'; }
-  setTimeout(function() {
-    if (btn) { btn.textContent = 'Save'; btn.style.background = 'var(--blue)'; btn.style.opacity = '1'; }
-  }, 2000);
-  updateKeysSummary();
-  notify('Ã¢ÂÂ ' + (which === 'claude' ? 'Claude' : which === 'ezekia' ? 'Ezekia' : 'Ezekia URL') + ' key saved securely.');
+  var key = lsKeyMap[which];
+  if (!el || !key) { return; }
+  var val = el.value.trim();
+  if (val) {
+    localStorage.setItem(key, val);
+  } else {
+    localStorage.removeItem(key);
+  }
+  if (btn) {
+    var orig = btn.textContent;
+    btn.textContent = 'Saved!';
+    setTimeout(function(){ btn.textContent = orig; }, 2000);
+  }
 }
 
 function toggleVis(inputId, btnId) {
