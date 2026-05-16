@@ -1263,7 +1263,7 @@ async function convertPdfToWord() {
       method: 'POST',
       headers: _fetchHeaders,
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 4000,
         system: 'You are a professional document formatter. Take raw text extracted from a PDF and reformat it into a clean well-structured document. Detect the document type automatically. Use clear section headings. Use bullet points for lists. Preserve ALL original content exactly. Fix broken line breaks from PDF extraction. Return ONLY the formatted text with no explanation or markdown backticks.',
         messages: [{ role: 'user', content: 'Reformat this document:\n\n' + extractedText }]
