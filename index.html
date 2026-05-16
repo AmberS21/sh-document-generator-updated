@@ -615,6 +615,27 @@ table.usage tr:last-child td{border-bottom:none;}
       </div>
     </div>
 
+    <div class="divider"></div>
+
+    <!-- CLAUDE PROXY URL -->
+    <div style="margin-bottom:4px;">
+      <div style="font-size:12px;font-weight:600;color:var(--dark);display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        Claude API Proxy URL
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="proxyUrl" placeholder="https://yourname--proxy.web.val.run"
+          style="flex:1;" oninput="keyChanged('proxyUrl')">
+        <button onclick="saveKey('proxyUrl')" id="proxyUrlSaveBtn"
+          style="background:var(--blue);border:none;border-radius:8px;color:#fff;padding:0 16px;cursor:pointer;font-size:13px;">
+          Save
+        </button>
+      </div>
+      <div style="font-size:10px;color:var(--mut);margin-top:4px;">
+        Optional Val Town proxy URL to avoid CORS. If blank, calls Anthropic directly.
+      </div>
+    </div>
+
     <!-- KEY STATUS SUMMARY -->
     <div id="keysSummary" style="margin-top:16px;padding:12px 14px;background:var(--tbg);border-radius:var(--rs);border:1px solid var(--brd);display:none;">
       <div style="font-size:11px;font-weight:600;color:var(--txt);margin-bottom:8px;">&#128274; Keys saved in this browser</div>
@@ -1227,14 +1248,12 @@ async function convertPdfToWord() {
       btn.disabled = false;
       return;
     }
-    var apiResp = await fetch(ANTHROPIC_API_URL, {
+    var _proxyUrl = localStorage.getItem('sh_proxy_url');
+    var _apiUrl = _proxyUrl || ANTHROPIC_API_URL;
+    var _hdrs = _proxyUrl ? {'Content-Type':'application/json'} : {'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
+    var apiResp = await fetch(_apiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': claudeKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
+      headers: _hdrs,
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 4000,
@@ -1468,14 +1487,12 @@ CRITICAL RULES:
 
 Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE Ã¢ÂÂ extract ALL information from this text:\n\n' + inputText;
 
-  return fetch(ANTHROPIC_API_URL, {
+  var _proxyUrl = localStorage.getItem('sh_proxy_url');
+  var _apiUrl = _proxyUrl || ANTHROPIC_API_URL;
+  var _hdrs = _proxyUrl ? {'Content-Type':'application/json'} : {'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
+  return fetch(_apiUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': claudeKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
+    headers: _hdrs,
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 6000,
@@ -2069,8 +2086,8 @@ function loadSavedKeys() {
   if (!localStorage.getItem('sh_ezekiaBaseUrl')) {
     localStorage.setItem('sh_ezekiaBaseUrl', 'https://ezekia.com/api');
   }
-  var keys = ['claudeKey','ezekiaKey','ezekiaBaseUrl'];
-  var ids   = ['claude','ezekia','ezekiaUrl'];
+  var keys = ['claudeKey','ezekiaKey','ezekiaBaseUrl','proxyUrl'];
+  var ids   = ['claude','ezekia','ezekiaUrl','proxyUrl'];
   keys.forEach(function(storageKey, i) {
     var saved = localStorage.getItem('sh_' + storageKey);
     if (saved) {
@@ -2082,14 +2099,14 @@ function loadSavedKeys() {
 }
 
 function keyChanged(which) {
-  var btnMap = {claude:'claudeSaveBtn', ezekia:'ezkiaSaveBtn', ezekiaUrl:'ezekiaUrlSaveBtn'};
+  var btnMap = {claude:'claudeSaveBtn', ezekia:'ezkiaSaveBtn', ezekiaUrl:'ezekiaUrlSaveBtn', proxyUrl:'proxyUrlSaveBtn'};
   var btn = document.getElementById(btnMap[which]);
   if (btn) btn.style.opacity = '1';
 }
 
 function saveKey(which) {
-  var inputMap  = {claude:'claudeKey', ezekia:'ezekiaKey', ezekiaUrl:'ezekiaBaseUrl'};
-  var btnMap    = {claude:'claudeSaveBtn', ezekia:'ezkiaSaveBtn', ezekiaUrl:'ezekiaUrlSaveBtn'};
+  var inputMap  = {claude:'claudeKey', ezekia:'ezekiaKey', ezekiaUrl:'ezekiaBaseUrl', proxyUrl:'proxyUrl'};
+  var btnMap    = {claude:'claudeSaveBtn', ezekia:'ezkiaSaveBtn', ezekiaUrl:'ezekiaUrlSaveBtn', proxyUrl:'proxyUrlSaveBtn'};
   var el  = document.getElementById(inputMap[which]);
   var btn = document.getElementById(btnMap[which]);
   if (!el || !el.value.trim()) { notify('Please enter a key first'); return; }
