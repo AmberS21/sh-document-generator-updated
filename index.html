@@ -636,6 +636,7 @@ table.usage tr:last-child td{border-bottom:none;}
 // Ã¢ÂÂÃ¢ÂÂ ADMIN GATE Ã¢ÂÂÃ¢ÂÂ
 var ADMINS = ['a.shamim@sheffieldhaworth.com'];
 var isAdmin = false;
+const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
 function adminClick() { if (isAdmin) { goTab('admin'); } else { var ov = document.getElementById('adminModalOv'); if(ov) ov.classList.add('show'); } }
 
@@ -1226,7 +1227,7 @@ async function convertPdfToWord() {
       btn.disabled = false;
       return;
     }
-    var apiResp = await fetch('https://api.anthropic.com/v1/messages', {
+    var apiResp = await fetch(ANTHROPIC_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1467,7 +1468,7 @@ CRITICAL RULES:
 
 Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE Ã¢ÂÂ extract ALL information from this text:\n\n' + inputText;
 
-  return fetch('https://api.anthropic.com/v1/messages', {
+  return fetch(ANTHROPIC_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
