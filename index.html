@@ -1237,23 +1237,8 @@ async function convertPdfToWord() {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 4000,
-        system: 'You are a professional document formatter. Your job is to take raw text extracted from a PDF and reformat it into a clean, well-structured document.
-
-Rules:
-- Detect the document type automatically (CV, report, brief, meeting notes, financial document, etc.)
-- Apply appropriate structure for that document type
-- Use clear section headings in CAPITALS or Title Case
-- Use bullet points (•) for lists and achievements
-- Preserve ALL original content — do not add, remove or change any facts, names, dates or figures
-- Fix any broken line breaks or hyphenation from PDF extraction
-- Separate sections with a blank line
-- Return ONLY the formatted text — no explanation, no preamble, no markdown backticks
-- For CVs: structure as Name, Contact, Summary, Experience (company → role → bullets), Education, Qualifications, Skills
-- For reports: structure as Title, Summary, Sections, Conclusions
-- For any other document: use logical section breaks and appropriate formatting',
-        messages: [{ role: 'user', content: 'Reformat this document:
-
-' + extractedText }]
+        system: 'You are a professional document formatter. Your job is to take raw text extracted from a PDF and reformat it into a clean, well-structured document.\n\nRules:\n- Detect the document type automatically (CV, report, brief, meeting notes, financial document, etc.)\n- Apply appropriate structure for that document type\n- Use clear section headings in CAPITALS or Title Case\n- Use bullet points (•) for lists and achievements\n- Preserve ALL original content — do not add, remove or change any facts, names, dates or figures\n- Fix any broken line breaks or hyphenation from PDF extraction\n- Separate sections with a blank line\n- Return ONLY the formatted text — no explanation, no preamble, no markdown backticks\n- For CVs: structure as Name, Contact, Summary, Experience (company → role → bullets), Education, Qualifications, Skills\n- For reports: structure as Title, Summary, Sections, Conclusions\n- For any other document: use logical section breaks and appropriate formatting',
+        messages: [{ role: 'user', content: 'Reformat this document:\n\n' + extractedText }]
       })
     });
     if (!apiResp.ok) {
@@ -1266,8 +1251,7 @@ Rules:
       : extractedText;
 
     // STAGE 3: Build .docx from formatted text
-    var responseLines = formattedText.split('
-');
+    var responseLines = formattedText.split('\n');
     var paragraphs = responseLines.map(function(line) {
       var escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       if (!line.trim()) {
@@ -1279,8 +1263,7 @@ Rules:
       } else {
         return '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">' + escaped + '</w:t></w:r></w:p>';
       }
-    }).join('
-');
+    }).join('\n');
 
     var documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 wp14">' +
