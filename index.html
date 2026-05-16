@@ -1241,7 +1241,7 @@ async function convertPdfToWord() {
     // STAGE 2: Reformat with Claude API
         btn.innerHTML = 'Converting...';
     btn.disabled = true;
-    var claudeKey = localStorage.getItem('sh_claudeKey');
+    var claudeKey = (localStorage.getItem('sh_claudeKey') || '').trim();
     if (!claudeKey) {
       alert('Please add your Claude API key in the Admin settings to use this feature.');
       btn.innerHTML = origHTML;
@@ -1346,7 +1346,7 @@ async function convertPdfToWord() {
 async function processOneCV(inputText, tpl, btn, returnOnly) {
   var selChip = document.querySelector('.fmt-chip.on-d,.fmt-chip.on-p,.fmt-chip.on-x,.fmt-chip.on-f');
   var fmt = selChip ? (selChip.className.match(/on-([dpxf])/) ? selChip.className.match(/on-([dpxf])/)[1] : 'd') : 'd';
-  var claudeKey = localStorage.getItem('sh_claudeKey');
+  var claudeKey = (localStorage.getItem('sh_claudeKey') || '').trim();
 
   btn.classList.add('loading');
   btn.innerHTML = '\u26a1 Generating profile with Claude...';
