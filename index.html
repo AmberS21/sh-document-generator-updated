@@ -1253,9 +1253,9 @@ async function convertPdfToWord() {
     var fetchUrl = proxy.length > 0 ? proxy : 'https://api.anthropic.com/v1/messages';
     var _fetchHeaders = {};
     _fetchHeaders['Content-Type'] = 'application/json';
+    _fetchHeaders['x-api-key'] = claudeKey;
+    _fetchHeaders['anthropic-version'] = '2023-06-01';
     if (proxy.length === 0) {
-      _fetchHeaders['x-api-key'] = claudeKey;
-      _fetchHeaders['anthropic-version'] = '2023-06-01';
       _fetchHeaders['anthropic-dangerous-direct-browser-access'] = 'true';
     }
     console.log('PDF converter using URL:', fetchUrl);
@@ -1507,9 +1507,16 @@ CRITICAL RULES:
 
 Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE Ã¢ÂÂ extract ALL information from this text:\n\n' + inputText;
 
-  var _proxyUrl = localStorage.getItem('sh_proxy_url');
-  var _apiUrl = _proxyUrl || ANTHROPIC_API_URL;
-  var _hdrs = _proxyUrl ? {'Content-Type':'application/json'} : {'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
+  var _proxyUrl = localStorage.getItem('sh_proxy_url') || '';
+  _proxyUrl = _proxyUrl.trim();
+  var _apiUrl = _proxyUrl.length > 0 ? _proxyUrl : ANTHROPIC_API_URL;
+  var _hdrs = {};
+  _hdrs['Content-Type'] = 'application/json';
+  _hdrs['x-api-key'] = claudeKey;
+  _hdrs['anthropic-version'] = '2023-06-01';
+  if (_proxyUrl.length === 0) {
+    _hdrs['anthropic-dangerous-direct-browser-access'] = 'true';
+  }
   return fetch(_apiUrl, {
     method: 'POST',
     headers: _hdrs,
