@@ -322,7 +322,7 @@ table.usage tr:last-child td{border-bottom:none;}
 <!-- Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
      LOGIN OVERLAY
 Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ -->
-<div id="loginOv">
+<div id="loginOv" style="display:flex">
 
   <!-- SH Logo floats above the white card, on the #DBE7FF background -->
   <div style="display:flex;flex-direction:column;align-items:center;width:100%;max-width:420px;">
@@ -370,6 +370,7 @@ table.usage tr:last-child td{border-bottom:none;}
 <!-- Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
      TOP NAV
 Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ -->
+<div id="mainApp" style="display:none">
 <div class="topnav">
   <div class="nav-left">
     <img src="DocGen Logo.png" alt="DocGen"/>
@@ -722,6 +723,7 @@ table.usage tr:last-child td{border-bottom:none;}
 
 
 <div class="notif" id="notif"></div>
+</div>
 
 <script>
 // Ã¢ÂÂÃ¢ÂÂ ADMIN GATE Ã¢ÂÂÃ¢ÂÂ
@@ -733,15 +735,15 @@ function ssoLogin() {
 }
 
 function doLogin() {
-  var el = document.getElementById('loginEmail');
-  var email = el ? el.value.trim() : '';
-  if (!email) { notify('Please enter your email address'); return; }
-  var parts = email.split('@')[0].replace(/[._]/g,' ').split(' ');
-  var name = parts.map(function(p){ return p.charAt(0).toUpperCase()+p.slice(1); }).join(' ');
+  var email = document.getElementById('loginEmail').value.trim();
+  if (!email) { 
+    alert('Please enter your email address'); 
+    return; 
+  }
   document.getElementById('loginOv').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
   var uEl = document.getElementById('userName');
-  if (uEl) uEl.textContent = name;
-  notify('Welcome, ' + (name.split(' ')[0] || 'User') + '! Ready to generate.');
+  if (uEl) uEl.textContent = email.split('@')[0];
 }
 function adminClick() { if (isAdmin) { goTab('admin'); } else { var ov = document.getElementById('adminModalOv'); if(ov) ov.classList.add('show'); } }
 
