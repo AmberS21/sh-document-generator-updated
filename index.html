@@ -1239,7 +1239,7 @@ async function convertPdfToWord() {
     var extractedText = pageTexts.join('\n\n');
 
     // STAGE 2: Reformat with Claude API
-    btn.innerHTML = 'Formatting with AI...';
+        btn.innerHTML = 'Converting...';
     btn.disabled = true;
     var claudeKey = localStorage.getItem('sh_claudeKey');
     if (!claudeKey) {
