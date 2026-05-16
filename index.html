@@ -11,7 +11,7 @@
 :root {
   --navy:#0f1f45; --navy2:#1a2c5b; --navy3:#06101f;
   --blue:#1591D8; --light:#3BC9F3;h
-  --bg:#f0f3f9; --card:#ffffff; --brd:#dce6f0;
+  --bg:#f0f3f9; --card:#ffffff; --brd:#dce6f0;h
   --txt:#0f1f45; --mut:#6b85a5; --chip:#eef2f9; --tbg:#e6eef8;
   --r:12px; --rs:8px;
   --shadow:0 1px 8px rgba(15,31,69,.08);
@@ -1242,7 +1242,7 @@ async function convertPdfToWord() {
     btn.innerHTML = 'Formatting with AI...';
     btn.disabled = true;
     var claudeKey = localStorage.getItem('sh_claudeKey');
-    if (!claudeKey && !localStorage.getItem('sh_proxy_url')) {
+    if (!claudeKey) {
       alert('Please add your Claude API key in the Admin settings to use this feature.');
       btn.innerHTML = origHTML;
       btn.disabled = false;
@@ -1271,7 +1271,7 @@ async function convertPdfToWord() {
     });
     if (!apiResp.ok) {
       var errData = await apiResp.json().catch(function(){ return {}; });
-      throw new Error((errData.error && errData.error.message) || ('API error ' + apiResp.status));
+      throw new Error((errData.error && errData.error.message) || ('API error ' + apiResp.status));h
     }
     var apiData = await apiResp.json();
     // Debug - log what we got
