@@ -1266,9 +1266,21 @@ async function convertPdfToWord() {
       throw new Error((errData.error && errData.error.message) || ('API error ' + apiResp.status));
     }
     var apiData = await apiResp.json();
-    var formattedText = apiData.content && apiData.content[0] && apiData.content[0].text
-      ? apiData.content[0].text
-      : extractedText;
+    // Debug - log what we got
+    console.log('API response:', JSON.stringify(apiData).substring(0, 200));
+    if (apiData.error) {
+      throw new Error(apiData.error.message || JSON.stringify(apiData.error));
+    }
+    var formattedText = extractedText; // fallback
+    if (apiData.content && Array.isArray(apiData.content)) {
+      var textBlock = apiData.content.find(function(b){ return b.type === 'text'; });
+      if (textBlock && textBlock.text) formattedText = textBlock.text;
+    } else if (apiData.choices && apiData.choices[0]) {
+      formattedText = apiData.choices[0].message.content;
+    }
+    if (formattedText === extractedText) {
+      console.warn('Could not parse AI response, using raw extracted text');
+    }
 
     // STAGE 3: Build .docx from formatted text
     var responseLines = formattedText.split('\n');
