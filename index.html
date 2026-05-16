@@ -1248,16 +1248,24 @@ async function convertPdfToWord() {
       btn.disabled = false;
       return;
     }
-    var _proxyUrl = localStorage.getItem('sh_proxy_url');
-    var _apiUrl = _proxyUrl || ANTHROPIC_API_URL;
-    var _hdrs = _proxyUrl ? {'Content-Type':'application/json'} : {'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
-    var apiResp = await fetch(_apiUrl, {
+    var proxy = localStorage.getItem('sh_proxy_url') || '';
+    proxy = proxy.trim();
+    var fetchUrl = proxy.length > 0 ? proxy : 'https://api.anthropic.com/v1/messages';
+    var _fetchHeaders = {};
+    _fetchHeaders['Content-Type'] = 'application/json';
+    if (proxy.length === 0) {
+      _fetchHeaders['x-api-key'] = claudeKey;
+      _fetchHeaders['anthropic-version'] = '2023-06-01';
+      _fetchHeaders['anthropic-dangerous-direct-browser-access'] = 'true';
+    }
+    console.log('PDF converter using URL:', fetchUrl);
+    var apiResp = await fetch(fetchUrl, {
       method: 'POST',
-      headers: _hdrs,
+      headers: _fetchHeaders,
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 4000,
-        system: 'You are a professional document formatter. Your job is to take raw text extracted from a PDF and reformat it into a clean, well-structured document.\n\nRules:\n- Detect the document type automatically (CV, report, brief, meeting notes, financial document, etc.)\n- Apply appropriate structure for that document type\n- Use clear section headings in CAPITALS or Title Case\n- Use bullet points (•) for lists and achievements\n- Preserve ALL original content — do not add, remove or change any facts, names, dates or figures\n- Fix any broken line breaks or hyphenation from PDF extraction\n- Separate sections with a blank line\n- Return ONLY the formatted text — no explanation, no preamble, no markdown backticks\n- For CVs: structure as Name, Contact, Summary, Experience (company → role → bullets), Education, Qualifications, Skills\n- For reports: structure as Title, Summary, Sections, Conclusions\n- For any other document: use logical section breaks and appropriate formatting',
+        system: 'You are a professional document formatter. Take raw text extracted from a PDF and reformat it into a clean well-structured document. Detect the document type automatically. Use clear section headings. Use bullet points for lists. Preserve ALL original content exactly. Fix broken line breaks from PDF extraction. Return ONLY the formatted text with no explanation or markdown backticks.',
         messages: [{ role: 'user', content: 'Reformat this document:\n\n' + extractedText }]
       })
     });
