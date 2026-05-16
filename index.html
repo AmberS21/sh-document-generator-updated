@@ -89,12 +89,12 @@ button,input,select,textarea{font-family:inherit;}
 #sec-gen .gen-right-col{grid-column:2;grid-row:1;}
 #sec-gen .gen-btn{margin-top:8px;}
 
-#sec-gen .footer{grid-column:1/-1;grid-row:2;}
+#sec-gen .footer{grid-column:1/-1;grid-row:3;}
 .gen-right-col{display:flex;flex-direction:column;gap:16px;}
 #sec-gen .two-col>.card{height:100%;}
 #sec-gen #inp-text textarea{min-height:380px;resize:vertical;}
 #sec-gen #inp-file .upload-zone{min-height:360px;display:flex;flex-direction:column;justify-content:center;}
-@media(max-width:720px){#sec-gen{grid-template-columns:1fr;}#sec-gen .two-col,#sec-gen .gen-right-col{grid-column:1;}}
+@media(max-width:720px){#sec-gen{grid-template-columns:1fr;}#sec-gen .two-col,#sec-gen .gen-right-col{grid-column:1;}#sec-gen #genBtnWrap{grid-template-columns:1fr!important;}#sec-gen #genBtnWrap #pdfConvertBtn,#sec-gen #genBtnWrap #genBtn{grid-column:1!important;}}
 .divider{height:1px;background:var(--brd);margin:12px 0;}
 .note{font-size:11px;color:var(--mut);margin-top:5px;line-height:1.6;}
 .row-between{display:flex;align-items:center;justify-content:space-between;}
@@ -420,9 +420,9 @@ table.usage tr:last-child td{border-bottom:none;}
   </div>
     </div>
   
-  <div id="genBtnWrap" style="display:flex;gap:8px;align-items:stretch;">
-    <button id="pdfConvertBtn" style="display:none;width:35%;padding:13px;background:#4FA3E3;color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0;align-items:center;justify-content:center;gap:4px;transition:all .25s;flex-direction:row;" onclick="convertPdfToWord()"><img src="pdf_logo.png" style="height:20px;vertical-align:middle;margin-right:6px;"> Convert PDF to Word</button>
-    <button class="gen-btn" id="genBtn" style="width:65%;margin-top:0;flex:1;" onclick="generate()">&#9889; Generate Document</button>
+  <div id="genBtnWrap" style="grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:44% 56%;gap:16px;align-items:stretch;">
+    <button id="pdfConvertBtn" style="display:none;grid-column:1;width:100%;padding:13px;background:#4FA3E3;color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:4px;transition:all .25s;" onclick="convertPdfToWord()"><img src="pdf_logo.png" style="height:20px;vertical-align:middle;margin-right:6px;"> Convert PDF to Word</button>
+    <button class="gen-btn" id="genBtn" style="grid-column:2;width:100%;margin-top:0;" onclick="generate()">&#9889; Generate Document</button>
   </div>
   </div>
   <div class="footer">
