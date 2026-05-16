@@ -1214,9 +1214,7 @@ async function convertPdfToWord() {
       var textContent = await page.getTextContent();
       pageTexts.push(textContent.items.map(function(item){ return item.str; }).join(' '));
     }
-    var extractedText = pageTexts.join('
-
-');
+    var extractedText = pageTexts.join('\n\n');
 
     // STAGE 2: Reformat with Claude API
     btn.innerHTML = 'Formatting with AI...';
