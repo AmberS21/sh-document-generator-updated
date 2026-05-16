@@ -1242,7 +1242,7 @@ async function convertPdfToWord() {
     btn.innerHTML = 'Formatting with AI...';
     btn.disabled = true;
     var claudeKey = localStorage.getItem('sh_claudeKey');
-    if (!claudeKey) {
+    if (!claudeKey && !localStorage.getItem('sh_proxy_url')) {
       alert('Please add your Claude API key in the Admin settings to use this feature.');
       btn.innerHTML = origHTML;
       btn.disabled = false;
