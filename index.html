@@ -290,7 +290,7 @@ table.usage tr:last-child td{border-bottom:none;}
     <button class="nav-btn" onclick="goTab('how')" title="Help">&#10067;</button>
     <div class="user-pill" id="userPill" onclick="adminClick()">
       <div class="online"></div>
-      <span id="userName">&#8212;</span>
+      <span id="userName">—</span>
       <span class="admin-badge hidden" id="adminBadge">ADMIN</span>
     </div>
   </div>
@@ -303,7 +303,7 @@ table.usage tr:last-child td{border-bottom:none;}
   <div class="tab active" id="tab-gen" onclick="goTab('gen')">&#9889; Generate</div>
   <div class="tab" id="tab-hist" onclick="goTab('hist')">&#128336; My History <span class="tab-count" id="histCount">3</span></div>
   <div class="tab" id="tab-how" onclick="goTab('how')">&#128218; How to Use</div>
-  <div class="tab hidden" id="tab-admin" onclick="goTab('admin')">&#9881; Admin</div>
+  <div class="tab hidden" id="tab-admin" onclick="goTab('admin'); loadUsageLogs();">&#9881; Admin</div>
 </div>
 
 <!-- ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
@@ -484,8 +484,8 @@ table.usage tr:last-child td{border-bottom:none;}
   <div class="card">
     <div class="card-title"><div class="step-dot">&#128202;</div> Usage This Month</div>
     <div class="stat-grid">
-      <div class="stat-c"><div class="stat-n">47</div><div class="stat-l">Docs Generated</div></div>
-      <div class="stat-c"><div class="stat-n">8</div><div class="stat-l">Active Users</div></div>
+      <div class="stat-c"><div class="stat-n" id="usageTotalCount">—</div><div class="stat-l">Docs Generated</div></div>
+      <div class="stat-c"><div class="stat-n" id="usageTodayCount">—</div><div class="stat-l">Today</div></div>
       <div class="stat-c"><div class="stat-n">~&#163;1.85</div><div class="stat-l">Est. API Cost</div></div>
     </div>
     <div class="row-between">
@@ -495,9 +495,7 @@ table.usage tr:last-child td{border-bottom:none;}
   </div>
   <div class="card">
     <div class="card-title"><div class="step-dot">&#128202;</div> Usage by User</div>
-    <table class="usage">
-      <thead><tr><th>User</th><th>CV Profile</th><th>Assignment</th><th>Newsletter</th><th>Total</th></tr></thead>
-      <tbody>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;"></div><div style="display:flex;gap:8px;"><button onclick="loadUsageLogs()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x21BA; Refresh</button><button onclick="exportUsageLogs()" style="background:#C9A227;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">&#x2193; Export CSV</button></div></div><table class="usage"><thead><tr><th>User</th><th>Template</th><th>Input</th><th>Status</th><th>Date &amp; Time</th></tr></thead><tbody id="usageLogBody">
         <tr><td>Amber Shamim</td><td>12</td><td>4</td><td>2</td><td style="font-weight:600;">18</td></tr>
         <tr><td>Priya Mehta</td><td>8</td><td>3</td><td>1</td><td style="font-weight:600;">12</td></tr>
         <tr><td>Tom Bradley</td><td>5</td><td>2</td><td>3</td><td style="font-weight:600;">10</td></tr>
@@ -1005,6 +1003,7 @@ async function generate() {
   var tpl = document.getElementById('tplSel').value;
   var btn = document.getElementById('genBtn');
   if (!tpl) { notify('Please select a template first'); return; }
+  logUsage(tpl, activeType, 'attempted');
 
   var inputText = '';
   var activeTab = document.querySelector('.itab.on');
@@ -2393,5 +2392,32 @@ document.addEventListener('DOMContentLoaded', function() {
     <div id="adminErrMsg"></div>
   </div>
 </div>
+
+<style>
+.usage-chip{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:4px 12px;font-size:12px;color:#fff;}
+.status-completed{color:#2ecc71;font-weight:600;}
+.status-attempted{color:#f39c12;font-weight:600;}
+.status-failed{color:#e74c3c;font-weight:600;}
+</style>
+<div id="namePromptOverlay" style="display:none;position:fixed;inset:0;background:rgba(11,31,58,.88);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#0f1f45;border:1px solid rgba(201,162,39,.4);border-radius:16px;padding:36px;max-width:400px;width:90%;text-align:center;">
+    <div style="font-size:32px;margin-bottom:10px;">&#x1F44B;</div>
+    <h2 style="color:#fff;margin:0 0 8px;font-size:18px;">Welcome to SH Document Generator</h2>
+    <p style="color:rgba(255,255,255,.6);font-size:13px;margin:0 0 20px;">Enter your name so we can personalise your experience and track usage across the team.</p>
+    <input id="namePromptInput" type="text" placeholder="Your full name (e.g. Amber Shamim)"
+      style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:14px;margin-bottom:16px;outline:none;"
+      onkeydown="if(event.key==='Enter') saveUserName()" />
+    <button onclick="saveUserName()" style="width:100%;padding:11px;background:#C9A227;border:none;color:#fff;font-weight:700;font-size:14px;border-radius:8px;cursor:pointer;">Get Started</button>
+  </div>
+</div>
+<script>
+const SH_LOGGER = 'https://ambers21--99a8a8be51da11f192efee650bb23af1.web.val.run';
+function initUserName(){var n=localStorage.getItem('sh_userName');if(!n){document.getElementById('namePromptOverlay').style.display='flex';}else{document.getElementById('userName').textContent=n;}}
+function saveUserName(){var inp=document.getElementById('namePromptInput');var name=inp.value.trim();if(!name){inp.style.border='1.5px solid #e74c3c';return;}localStorage.setItem('sh_userName',name);document.getElementById('userName').textContent=name;document.getElementById('namePromptOverlay').style.display='none';notify('Welcome, '+name+'!');}
+function logUsage(template,inputMethod,status){var name=localStorage.getItem('sh_userName')||'Unknown';fetch(SH_LOGGER+'/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userName:name,template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()})}).catch(function(){});}
+function loadUsageLogs(){var tbody=document.getElementById('usageLogBody');var summary=document.getElementById('usageSummary');if(!tbody)return;tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>';fetch(SH_LOGGER+'/logs').then(function(r){return r.json();}).then(function(rows){if(!rows.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">No usage data yet</td></tr>';return;}tbody.innerHTML=rows.map(function(r){var d=new Date(r[7]||r.created_at);var date=isNaN(d)?r[7]:d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});return'<tr><td>'+(r[1]||r.user_name||'')+'</td><td>'+(r[2]||r.template||'')+'</td><td>'+(r[3]||r.input_method||'')+'</td><td class="status-'+(r[4]||r.status||'')+'">'+(r[4]||r.status||'')+'</td><td>'+date+'</td></tr>';}).join('');var counts={};rows.forEach(function(r){var n=r[1]||r.user_name||'Unknown';counts[n]=(counts[n]||0)+1;});summary.innerHTML=Object.entries(counts).sort(function(a,b){return b[1]-a[1];}).map(function(e){return'<span class="usage-chip"><b>'+e[0]+'</b> '+e[1]+' docs</span>';}).join('');document.getElementById('usageTotalCount').textContent=rows.length;var today=rows.filter(function(r){return new Date(r[7]||r.created_at).toDateString()===new Date().toDateString();}).length;document.getElementById('usageTodayCount').textContent=today;}).catch(function(){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#e74c3c;padding:20px">Could not load logs</td></tr>';});}
+function exportUsageLogs(){fetch(SH_LOGGER+'/logs').then(function(r){return r.json();}).then(function(rows){var headers=['ID','User','Template','Input Method','Status','Timestamp'];var csv=[headers.join(',')].concat(rows.map(function(r){return[r[0],r[1],r[2],r[3],r[4],r[5]].map(function(v){return'"'+(v||'').toString().replace(/"/g,'""')+'"';}).join(',');})).join('\n');var blob=new Blob([csv],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='SH_Usage_Logs_'+new Date().toISOString().slice(0,10)+'.csv';a.click();notify('Exported '+rows.length+' records ✓');});}
+window.addEventListener('load',function(){if(typeof restoreAdminState==='function')restoreAdminState();if(typeof checkHash==='function')checkHash();initUserName();});
+</script>
 </body>
 </html>
