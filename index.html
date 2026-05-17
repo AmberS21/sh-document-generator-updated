@@ -2006,7 +2006,7 @@ async function downloadHistory(index) {
         }
         out = await _csZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       } else {
-        
+        if(item.content&&item.content.companies){item.content.companies_xml=buildCompaniesXml(item.content.companies);}
         var zip = new PizZip(ab);
         const doc = new window.docxtemplater(zip, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
         doc.render(item.content);
