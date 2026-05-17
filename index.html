@@ -2006,8 +2006,8 @@ async function downloadHistory(index) {
         }
         out = await _csZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       } else {
-        if(item.content&&item.content.companies){item.content.companies_xml=buildCompaniesXml(item.content.companies);}
-        var zip = new PizZip(ab);
+        var zip=new PizZip(ab);
+        if(item.content&&item.content.companies){var _docXml=zip.files['word/document.xml'].asText();_docXml=_docXml.replace('{{{companies_xml}}}',buildCompaniesXml(item.content.companies));zip.file('word/document.xml',_docXml);}
         const doc = new window.docxtemplater(zip, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
         doc.render(item.content);
         out = doc.getZip().generate({type:'blob',mimeType:_docMimeSingle});
