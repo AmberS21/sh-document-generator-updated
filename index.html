@@ -658,7 +658,7 @@ table.usage tr:last-child td{border-bottom:none;}
 
 
 
-<div class="notif" id="notif"></div>
+
 </div>
 
 <script>
@@ -2419,5 +2419,6 @@ function loadUsageLogs(){var tbody=document.getElementById('usageLogBody');var s
 function exportUsageLogs(){fetch(SH_LOGGER+'/logs').then(function(r){return r.json();}).then(function(rows){var headers=['ID','User','Template','Input Method','Status','Timestamp'];var csv=[headers.join(',')].concat(rows.map(function(r){return[r[0],r[1],r[2],r[3],r[4],r[5]].map(function(v){return'"'+(v||'').toString().replace(/"/g,'""')+'"';}).join(',');})).join('\n');var blob=new Blob([csv],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='SH_Usage_Logs_'+new Date().toISOString().slice(0,10)+'.csv';a.click();notify('Exported '+rows.length+' records ✓');});}
 window.addEventListener('load',function(){if(typeof restoreAdminState==='function')restoreAdminState();if(typeof checkHash==='function')checkHash();initUserName();var f=document.querySelector('.footer');var p=document.querySelector('.page:not(.hidden)');if(f&&p)p.appendChild(f);});
 </script>
+<div class="notif" id="notif"></div> 
 </body>
 </html>
