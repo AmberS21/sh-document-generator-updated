@@ -2284,6 +2284,7 @@ function updateKeysSummary() {
   summary.style.display = 'block';
   rows.innerHTML = saved.map(function(item) {
     var val = localStorage.getItem(item.key) || '';
+    var masked = val.length > 8 ? val.substring(0, 4) + '........' + val.slice(-4) : val;
     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--brd);font-size:11px;">'
       + '<span style="color:var(--mut);">' + item.label + '</span>'
       + '<span style="font-family:monospace;color:var(--txt);">' + masked + '</span>'
