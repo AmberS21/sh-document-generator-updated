@@ -1107,7 +1107,7 @@ async function generate() {
             name: (proj.name || 'Project Report') + (proj.client && proj.client.name ? ' - ' + proj.client.name : ''),
             date: new Date().toLocaleString(),
             template: tpl,
-            fmt: 'x',
+            fmt: 'd',
             content: projContent
           };
           var projHistory = JSON.parse(localStorage.getItem('sh_history') || '[]');
