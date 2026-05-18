@@ -1,0 +1,16 @@
+# Exclude everything by default.
+**
+
+# Keep container build files.
+!.dockerignore
+!Dockerfile
+!nginx.conf
+
+# Keep web app assets.
+!index.html
+!templates/
+!templates/**
+!Updated Logo.png
+!SH_Global_Candidate_Profile_No Scorecard.docx
+!SH_Global_Candidate_Profile_With_Scorecard.docx
+!Service Team - Project Report (with Notes).xlsx
