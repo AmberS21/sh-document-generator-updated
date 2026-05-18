@@ -1987,7 +1987,7 @@ async function downloadHistory(index) {
       var _isDocmSingle = tplUrl.endsWith('.docm');
       var _docExtSingle = _isDocmSingle ? 'docm' : 'docx';
       var _docMimeSingle = _isDocmSingle ? 'application/vnd.ms-word.document.macroEnabled.12' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      var resp = await fetch(tplUrl);
+      var resp = await fetch(tplUrl + '?v=' + Date.now());
       var ab = await resp.arrayBuffer();
       var _isApacTpl = false;
       var out;
