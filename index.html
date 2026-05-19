@@ -1155,7 +1155,7 @@ async function generate() {
             } else if (ext === 'docx') {
               var arrBuf = await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
               inputText = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res('__DOCX_B64__:'+e.target.result.split(',')[1]);};rd.onerror=rej;rd.readAsDataURL(file);});
-              var bodyXml = zipF.files['word/document.xml'] ? zipF.files['word/document.xml'].asText() : '';
+              var zipF = new JSZip(); await zipF.loadAsync(arrBuf);         var bodyXml = zipF.files['word/document.xml'] ? zipF.files['word/document.xml'].asText() : '';
               inputText = bodyXml.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().substring(0,50000);
             } else if (ext === 'pdf') {
               inputText = await (async function(){
