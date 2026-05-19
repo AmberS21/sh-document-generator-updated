@@ -1363,7 +1363,7 @@ var isCareerSummary = (tpl === 'global-career-summary');
 var isApac = (tpl === 'apac-profile');
 var isApacUpdated = (tpl === 'apac-profile');
 var isChineseApac = false;
-var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"projects":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"EDU_1_YEARS":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","EDU_3_YEARS":"","EDU_3_INSTITUTION":"","EDU_3_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","PROJECT_1_TITLE":"","PROJECT_1_CLIENT":"","PROJECT_1_DATE":"","PROJECT_1_DESCRIPTION":"","PROJECT_2_TITLE":"","PROJECT_2_CLIENT":"","PROJECT_2_DATE":"","PROJECT_2_DESCRIPTION":"","PROJECT_3_TITLE":"","PROJECT_3_CLIENT":"","PROJECT_3_DATE":"","PROJECT_3_DESCRIPTION":"","PROJECT_4_TITLE":"","PROJECT_4_CLIENT":"","PROJECT_4_DATE":"","PROJECT_4_DESCRIPTION":"","PROJECT_5_TITLE":"","PROJECT_5_CLIENT":"","PROJECT_5_DATE":"","PROJECT_5_DESCRIPTION":"","PROJECT_6_TITLE":"","PROJECT_6_CLIENT":"","PROJECT_6_DATE":"","PROJECT_6_DESCRIPTION":"","PROJECT_7_TITLE":"","PROJECT_7_CLIENT":"","PROJECT_7_DATE":"","PROJECT_7_DESCRIPTION":"","PROJECT_8_TITLE":"","PROJECT_8_CLIENT":"","PROJECT_8_DATE":"","PROJECT_8_DESCRIPTION":"","PROJECT_9_TITLE":"","PROJECT_9_CLIENT":"","PROJECT_9_DATE":"","PROJECT_9_DESCRIPTION":"","PROJECT_10_TITLE":"","PROJECT_10_CLIENT":"","PROJECT_10_DATE":"","PROJECT_10_DESCRIPTION":""}';
+var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"projects":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"EDU_1_YEARS":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","EDU_3_YEARS":"","EDU_3_INSTITUTION":"","EDU_3_DEGREE":"","qualifications":[],"NATIONALITY":"","LANGUAGES":"","INTERESTS":"","PROJECT_1_TITLE":"","PROJECT_1_CLIENT":"","PROJECT_1_DATE":"","PROJECT_1_DESCRIPTION":"","PROJECT_2_TITLE":"","PROJECT_2_CLIENT":"","PROJECT_2_DATE":"","PROJECT_2_DESCRIPTION":"","PROJECT_3_TITLE":"","PROJECT_3_CLIENT":"","PROJECT_3_DATE":"","PROJECT_3_DESCRIPTION":"","PROJECT_4_TITLE":"","PROJECT_4_CLIENT":"","PROJECT_4_DATE":"","PROJECT_4_DESCRIPTION":"","PROJECT_5_TITLE":"","PROJECT_5_CLIENT":"","PROJECT_5_DATE":"","PROJECT_5_DESCRIPTION":"","PROJECT_6_TITLE":"","PROJECT_6_CLIENT":"","PROJECT_6_DATE":"","PROJECT_6_DESCRIPTION":"","PROJECT_7_TITLE":"","PROJECT_7_CLIENT":"","PROJECT_7_DATE":"","PROJECT_7_DESCRIPTION":"","PROJECT_8_TITLE":"","PROJECT_8_CLIENT":"","PROJECT_8_DATE":"","PROJECT_8_DESCRIPTION":"","PROJECT_9_TITLE":"","PROJECT_9_CLIENT":"","PROJECT_9_DATE":"","PROJECT_9_DESCRIPTION":"","PROJECT_10_TITLE":"","PROJECT_10_CLIENT":"","PROJECT_10_DATE":"","PROJECT_10_DESCRIPTION":""}';
 var csJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","CAREER_SUMMARY":"","MOTIVATIONS":"","CLIENT_COVERAGE":"","STRATEGY_EXPERIENCE":"","FUNDRAISING_TRACK_RECORD":"","AREAS_OF_STRENGTH":"","AREAS_TO_EXPLORE":"","CLOSING_SUMMARY":"","EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_1_DETAILS":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_DETAILS":"","QUAL_ACCREDITATION":"","QUAL_TECHNICAL":"","AFFILIATIONS":"","MEDIA":"","PUBLICATIONS":"","NATIONALITY":"","LANGUAGES":"","LANGUAGES_LEVEL":"","INTERESTS":""}';
 var globalJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","SEARCH_TITLE":"","CLIENT_COMPANY":"","MONTH_YEAR":"","SUMMARY_BULLET_1":"","SUMMARY_BULLET_2":"","SUMMARY_BULLET_3":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","AFFILIATION_2":"","AFFILIATION_2_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var prompt = isApac
@@ -1398,7 +1398,7 @@ FIELD-BY-FIELD INSTRUCTIONS:
    - EDU_1_INSTITUTION...: Full institution name
    - EDU_1_DEGREE...: Degree or qualification name
 
-10. QUAL_1, QUAL_2, QUAL_3: Professional qualifications or certifications. First in QUAL_1, second in QUAL_2, third in QUAL_3. Leave empty if none.
+10. qualifications: Array of ALL professional qualifications/certifications found. Each item is an object with "year" (string, e.g. "2025") and "description" (string, full qualification text). Extract EVERY qualification listed - no limit. Leave as empty array [] if none.
 11. NATIONALITY: Exact nationality as stated; leave empty if not provided.
 12. LANGUAGES: Languages with proficiency levels as stated; leave empty if not provided.
 13. INTERESTS: As stated; leave empty if not provided.
@@ -1909,19 +1909,18 @@ function apacFillTemplate(xmlStr, cv) {
     }
   });
   (function(){
-    var quals=[cv.QUAL_1,cv.QUAL_2,cv.QUAL_3].filter(function(q){return q&&q.trim();});
-    var qualStr=quals.join(' | ');
+    var quals=Array.isArray(cv.qualifications)?cv.qualifications.filter(function(q){return q&&(q.description||'').trim();}):[];
+    if(!quals.length&&(cv.QUAL_1||cv.QUAL_2||cv.QUAL_3)){quals=[cv.QUAL_1,cv.QUAL_2,cv.QUAL_3].filter(function(q){return q&&q.trim();}).map(function(q){return{year:'',description:q};});}
     var _qp=s.indexOf('Qualification');
     while(_qp>-1){if(s.charAt(_qp+13)!=='s')break;_qp=s.indexOf('Qualification',_qp+1);}
-    if(_qp>-1){
+    if(_qp>-1&&quals.length){
       var _qPS=s.lastIndexOf('<w:p ',_qp), _qPE=s.indexOf('</w:p>',_qp)+6;
       if(_qPS>-1&&_qPE>5){
-        var qualPara='<w:p><w:pPr><w:pStyle w:val="SHBullets"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="5"/></w:numPr></w:pPr>' +
-          '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">Certifications: </w:t></w:r>' +
-          '<w:r><w:t>' + xmlEsc(qualStr) + '</w:t></w:r></w:p>';
-        s=s.substring(0,_qPS)+qualPara+s.substring(_qPE);
+        var qualParas=quals.map(function(q){var label=q.year?xmlEsc(q.year)+'\t'+xmlEsc(q.description||''):xmlEsc(q.description||'');return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="5"/></w:numPr></w:pPr><w:r><w:t xml:space="preserve">'+label+'</w:t></w:r></w:p>';}).join('');
+        s=s.substring(0,_qPS)+qualParas+s.substring(_qPE);
       }
     }
+  }
     // Remove empty para between "Professional Qualifications" heading and the Certifications bullet
     var _pqH=s.indexOf('Professional Qualifications');
     if(_pqH>-1){
