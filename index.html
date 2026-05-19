@@ -1963,7 +1963,7 @@ async function downloadHistory(index) {
         for (var _ci = 0; _ci < item.content.length; _ci++) {
           var _cvC = item.content[_ci];
           var _nameC = (_cvC && _cvC.CANDIDATE_NAME) ? _cvC.CANDIDATE_NAME : ('Profile_' + (_ci+1));
-          var _isApacC = (item.template === 'apac-profile' || false );
+          var _isApacC = false;
           var _outC;
           if (_isApacC) {
             var _azipC = await JSZip.loadAsync(_abC.slice(0));
