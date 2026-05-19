@@ -1213,7 +1213,7 @@ async function generate() {
   }
 
 
-if (activeType === 'file' && !_fromBatch) return;   showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn);
+if (activeType === 'file') return;   showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn);
   hideProgress('Done! Your profile is ready ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ check My History');
 }
 
