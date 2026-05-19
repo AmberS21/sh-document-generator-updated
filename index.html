@@ -1182,7 +1182,7 @@ async function generate() {
               var _cvOutput = await processOneCV(inputText, tpl, btn, true);
               if (_cvOutput) _combinedOutputs.push(_cvOutput);
             } else {
-              await processOneCV(inputText,tpl,btn);
+              await processOneCV(inputText,tpl,btn,false,true);
             }
           } else {
             notify('Could not extract text from: ' + file.name);
@@ -1213,7 +1213,7 @@ async function generate() {
   }
 
 
-if (activeType === 'file') return;   showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn);
+if (activeType === 'file' && !_fromBatch) return;   showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn);
   hideProgress('Done! Your profile is ready ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ check My History');
 }
 
@@ -1351,7 +1351,7 @@ async function convertPdfToWord() {
   }
 }
 
-async function processOneCV(inputText, tpl, btn, returnOnly) {
+async function processOneCV(inputText, tpl, btn, returnOnly, _fromBatch) {
   var selChip = document.querySelector('.fmt-chip.on-d,.fmt-chip.on-p,.fmt-chip.on-x,.fmt-chip.on-f');
   var fmt = selChip ? (selChip.className.match(/on-([dpxf])/) ? selChip.className.match(/on-([dpxf])/)[1] : 'd') : 'd';
   var claudeKey = (localStorage.getItem('sh_claudeKey') || '').trim();
