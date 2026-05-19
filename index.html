@@ -976,7 +976,7 @@ function csFillTemplate(xmlStr, cv) {
     rep('COMPANY_'+n+'_FUNCTION', cv['COMPANY_'+n+'_FUNCTION'] || '');
     rep('COMPANY_'+n+'_ROLE_START', cv['COMPANY_'+n+'_ROLE_START'] || '');
     rep('COMPANY_'+n+'_ROLE_END', cv['COMPANY_'+n+'_ROLE_END'] || '');
-    rep('COMPANY_'+n+'_BULLETS', cv['COMPANY_'+n+'_BULLETS'] || '');
+    rep('COMPANY_'+n+'_BULLETS', cv['COMPANY_'+n+'_BULLETS'] || '');         if(!cv['COMPANY_'+n+'_NAME']){var _ect=s.indexOf('COMPANY_'+n+'_NAME}}');if(_ect>-1){var _tblS=s.lastIndexOf('<w:tbl>',_ect);var _tblE=s.indexOf('</w:p>',s.indexOf('COMPANY_'+n+'_BULLET_3}}')+20)+6;if(_tblS>-1&&_tblE>-1)s=s.substring(0,_tblS)+s.substring(_tblE);}}
   });
   [1,2].forEach(function(n) {
     rep('EDU_'+n+'_START', cv['EDU_'+n+'_START'] || '');
@@ -1953,7 +1953,7 @@ async function downloadHistory(index) {
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
       if (item.type === 'combined' && Array.isArray(item.content)) {
-        var _tplUrlC = TEMPLATES[item.template] ? TEMPLATES[item.template].file : 'SH_Global_Candidate_Profile_No%20Scorecard.docx';
+        var _tplUrlC = TEMPLATES[item.template] ? TEMPLATES[item.template].file : 'Global_Candidate_Profile_No_Scorecard_New.docx';
         var _isDocm = _tplUrlC.endsWith('.docm');
         var _docExt = _isDocm ? 'docm' : 'docx';
         var _docMime = _isDocm ? 'application/vnd.ms-word.document.macroEnabled.12' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -2015,7 +2015,7 @@ async function downloadHistory(index) {
       var a = document.createElement('a'); a.href = URL.createObjectURL(out); a.download = baseName + '.' + _docExtSingle; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
     } else if (fmt === 'f') {
-      var tplUrl2 = item.template === 'global-with-scorecard' ? 'SH_Global_Candidate_Profile_With_Scorecard.docx' : 'SH_Global_Candidate_Profile_No Scorecard.docx';
+      var tplUrl2 = item.template === 'global-with-scorecard' ? 'Global_Candidate_Profile_With_Scorecard_New.docx' : 'Global_Candidate_Profile_No_Scorecard_New.docx';
       var resp2 = await fetch(tplUrl2);
       var ab2 = await resp2.arrayBuffer();
       var zip2 = new PizZip(ab2);
