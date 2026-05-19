@@ -1154,13 +1154,13 @@ async function generate() {
               inputText = await file.text();
             } else if (ext === 'docx') {
               var arrBuf = await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
-              var zipF = new PizZip(arrBuf);
+              inputText = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res('__DOCX_B64__:'+e.target.result.split(',')[1]);};rd.onerror=rej;rd.readAsDataURL(file);});
               var bodyXml = zipF.files['word/document.xml'] ? zipF.files['word/document.xml'].asText() : '';
               inputText = bodyXml.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().substring(0,50000);
             } else if (ext === 'pdf') {
               inputText = await (async function(){
                 var ab = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res(e.target.result);};rd.onerror=rej;rd.readAsArrayBuffer(file);});
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + pdfjsLib.version + '/pdf.worker.min.js';
+                return await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res('__PDF_B64__:'+e.target.result.split(',')[1]);};rd.onerror=rej;rd.readAsDataURL(file);});// = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + pdfjsLib.version + '/pdf.worker.min.js';
                 var pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
                 var txt='';
                 for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();txt+=tc.items.map(function(s){return s.str;}).join(' ')+' ';}
@@ -1271,7 +1271,7 @@ async function convertPdfToWord() {
       method: 'POST',
       headers: _fetchHeaders,
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: (tpl==='research-report'||tpl==='assignment-report') ? 'claude-opus-4-5' : 'claude-sonnet-4-6',
         max_tokens: 4000,
         system: 'You are a professional document formatter. Take raw text extracted from a PDF and reformat it into a clean well-structured document. Detect the document type automatically. Use clear section headings. Use bullet points for lists. Preserve ALL original content exactly. Fix broken line breaks from PDF extraction. Return ONLY the formatted text with no explanation or markdown backticks.',
         messages: [{ role: 'user', content: 'Reformat this document:\n\n' + extractedText }]
@@ -1529,7 +1529,7 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
     method: 'POST',
     headers: _hdrs,
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: (tpl==='research-report'||tpl==='assignment-report') ? 'claude-opus-4-5' : 'claude-sonnet-4-6',
       max_tokens: 6000,
 messages: [{
   role: 'user',
@@ -2192,7 +2192,7 @@ function testKey(which) {
         "anthropic-dangerous-direct-browser-access": "true"
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: (tpl==='research-report'||tpl==='assignment-report') ? 'claude-opus-4-5' : 'claude-sonnet-4-6',
         max_tokens: 10,
         messages: [{ role: 'user', content: 'Hi' }]
       })
