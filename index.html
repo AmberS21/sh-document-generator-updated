@@ -1155,8 +1155,7 @@ async function generate() {
             } else if (ext === 'docx') {
               var arrBuf = await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
               inputText = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res('__DOCX_B64__:'+e.target.result.split(',')[1]);};rd.onerror=rej;rd.readAsDataURL(file);});
-              var bodyXml = zipF.files['word/document.xml'] ? zipF.files['word/document.xml'].asText() : '';
-              inputText = bodyXml.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().substring(0,50000);
+
             } else if (ext === 'pdf') {
               inputText = await (async function(){
                 var ab = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res(e.target.result);};rd.onerror=rej;rd.readAsArrayBuffer(file);});
@@ -1533,7 +1532,7 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
       max_tokens: 6000,
 messages: [{
   role: 'user',
-  content: prompt
+  content: (function(){if(inputText&&inputText.startsWith('__PDF_B64__:')){var b64=inputText.replace('__PDF_B64__:','');return [{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},{type:'text',text:prompt.split('CANDIDATE SOURCE')[0]+'CANDIDATE SOURCE — extract ALL information from the attached PDF.'}];}if(inputText&&inputText.startsWith('__DOCX_B64__:')){var b64=inputText.replace('__DOCX_B64__:','');return [{type:'document',source:{type:'base64',media_type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',data:b64}},{type:'text',text:prompt.split('CANDIDATE SOURCE')[0]+'CANDIDATE SOURCE — extract ALL information from the attached Word document.'}];}return prompt;})()
 }],
 system: "Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text."
     })
