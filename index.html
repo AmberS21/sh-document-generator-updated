@@ -1179,7 +1179,7 @@ async function generate() {
             btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + '...';
             showProgress(fi+1, _totalFiles);
             if (_isCombined) {
-              var _cvOutput = await processOneCV(inputText, tpl, btn, true);
+              var _cvOutput = await processOneCV(inputText, tpl, btn, true, true);
               if (_cvOutput) _combinedOutputs.push(_cvOutput);
             } else {
               await processOneCV(inputText,tpl,btn,false,true);
