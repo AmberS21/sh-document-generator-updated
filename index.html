@@ -313,7 +313,7 @@ table.usage tr:last-child td{border-bottom:none;}
   <div class="two-col">
 
     <!-- STEP 1 -->
-    <div class="card">
+    <div class="card" style="display:flex;flex-direction:column;">
       <div class="card-title"><div class="step-dot">1</div> Input Source</div>
       <div class="inp-tabs">
   <div class="itab on" data-type="text" onclick="switchInp('text',this)">&#9999;&#65039; Paste Text</div>
@@ -342,9 +342,8 @@ table.usage tr:last-child td{border-bottom:none;}
     <div class="note" id="upLbl" style="margin-top:4px;"></div>
   </div>
 </div>
+      <button class="gen-btn" id="genBtn" style="width:100%;margin-top:4px;" onclick="generate()">&#9889; Generate Document</button>
     </div>
-
-    <button class="gen-btn" id="genBtn" style="width:100%;margin-top:12px;" onclick="generate()">&#9889; Generate Document</button>
 
     <div class="gen-right-col">
     <!-- STEP 2 -->
