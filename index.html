@@ -38,9 +38,6 @@ button,input,select,textarea{font-family:inherit;}
 }
 .nav-left{display:flex;align-items:center;gap:10px;}
 .nav-left img{height:32px;display:block;}
-.nav-left .brand-icon{width:34px;height:34px;display:flex;align-items:center;justify-content:center;}
-.nav-brand{font-size:16px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px;}
-.nav-brand .nav-tool{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.75);}
 .nav-divider{width:1px;height:28px;background:rgba(255,255,255,.2);}
 .nav-tool{font-size:13px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;color:rgba(255,255,255,.65);}
 .nav-right{display:flex;align-items:center;gap:7px;}
@@ -88,15 +85,14 @@ button,input,select,textarea{font-family:inherit;}
 .step-dot{width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--light));color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .two-col{display:block;}
 #sec-gen{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
-#sec-gen .two-col{grid-column:1;grid-row:1;display:flex;flex-direction:column;}
+#sec-gen .two-col{grid-column:1;grid-row:1;}
 #sec-gen .gen-right-col{grid-column:2;grid-row:1;}
 #sec-gen .gen-btn{margin-top:8px;}
 
 #sec-gen .footer{grid-column:1/-1;grid-row:3;} .footer{margin-top:auto;}
 .gen-right-col{display:flex;flex-direction:column;gap:16px;}
-#sec-gen .two-col>.card{height:100%;display:flex;flex-direction:column;}
-#sec-gen #inp-text{display:flex;flex-direction:column;flex:1;min-height:0;}
-#sec-gen #inp-text textarea{min-height:380px;resize:vertical;flex:1;}
+#sec-gen .two-col>.card{height:100%;}
+#sec-gen #inp-text textarea{min-height:380px;resize:vertical;}
 #sec-gen #inp-file .upload-zone{min-height:360px;display:flex;flex-direction:column;justify-content:center;}
 @media(max-width:720px){#sec-gen{grid-template-columns:1fr;}#sec-gen .two-col,#sec-gen .gen-right-col{grid-column:1;}}
 .divider{height:1px;background:var(--brd);margin:12px 0;}
@@ -285,15 +281,9 @@ table.usage tr:last-child td{border-bottom:none;}
 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ -->
 <div class="topnav">
   <div class="nav-left">
-    <div class="brand-icon">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="3" y="3" width="7" height="7" rx="2" fill="#fff" />
-        <rect x="14" y="3" width="7" height="7" rx="2" fill="#fff" />
-        <rect x="3" y="14" width="7" height="7" rx="2" fill="#fff" />
-        <rect x="14" y="14" width="7" height="7" rx="2" fill="#fff" />
-      </svg>
-    </div>
-    <div class="nav-brand">DocGen <span class="nav-tool">| DOCUMENT GENERATOR</span></div>
+    <img src="Updated Logo.png" style="height:48px;width:auto;" alt="DocGen"/>
+    <div class="nav-divider"></div>
+    <span class="nav-tool">Document Generator</span>
   </div>
   <div class="nav-right">
     <button class="nav-btn" onclick="toggleDark()" id="darkBtn" title="Dark mode">&#127769;</button>
@@ -352,9 +342,9 @@ table.usage tr:last-child td{border-bottom:none;}
     <div class="note" id="upLbl" style="margin-top:4px;"></div>
   </div>
 </div>
-      <button class="gen-btn" id="genBtn" onclick="generate()">&#9889; Generate Document</button>
     </div>
-    </div>
+
+    <button class="gen-btn" id="genBtn" style="width:100%;margin-top:0;" onclick="generate()">&#9889; Generate Document</button>
 
     <div class="gen-right-col">
     <!-- STEP 2 -->
@@ -432,9 +422,7 @@ table.usage tr:last-child td{border-bottom:none;}
     <div class="divider"></div>
     <div>
       <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Additional Feature</div>
-      <div style="display:flex;justify-content:flex-end;">
-        <button id="pdfConvertBtn" style="display:inline-flex;padding:10px 14px;background:#4FA3E3;color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:4px;transition:all .25s;white-space:nowrap;max-width:220px;width:auto;" onclick="convertPdfToWord()"><svg class="app-icon" viewBox="0 0 24 24" fill="none" style="margin-right:7px;"><rect width="24" height="24" rx="3" fill="#e02020"/><text x="3" y="16" font-family="Arial" font-size="8" font-weight="900" fill="white">PDF</text></svg> Convert PDF to Word</button>
-      </div>
+      <button id="pdfConvertBtn" style="display:flex;width:100%;padding:13px;background:#4FA3E3;color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:4px;transition:all .25s;" onclick="convertPdfToWord()"><svg class="app-icon" viewBox="0 0 24 24" fill="none" style="margin-right:7px;"><rect width="24" height="24" rx="3" fill="#e02020"/><text x="3" y="16" font-family="Arial" font-size="8" font-weight="900" fill="white">PDF</text></svg> Convert PDF to Word</button>
     </div>
   </div>
     </div>
