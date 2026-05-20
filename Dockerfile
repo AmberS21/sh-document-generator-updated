@@ -1,11 +1,34 @@
+# ── Stage 1: Build Node.js backend dependencies ──────────────────────────────
+FROM node:18-alpine AS backend-build
+WORKDIR /app/backend
+COPY backend/package.json ./
+RUN npm install --production
+
+# ── Stage 2: Final image — nginx (frontend) + Node.js (backend) ──────────────
 FROM nginx:1.27-alpine
 
-# Replace default Nginx site config with static-site settings for App Service.
+# Install Node.js and supervisord
+RUN apk add --no-cache nodejs npm supervisor
+
+# Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy everything in the build context except ignored files (see .dockerignore).
-COPY . /usr/share/nginx/html/
+# Copy frontend static files
+COPY index.html /usr/share/nginx/html/
+COPY templates/ /usr/share/nginx/html/templates/
+
+# Copy backend
+COPY backend/ /app/backend/
+COPY --from=backend-build /app/backend/node_modules /app/backend/node_modules
+
+# Copy supervisord config
+COPY supervisord.conf /etc/supervisord.conf
+
+# Environment variables — set these in Azure App Service / container settings
+# ANTHROPIC_API_KEY=sk-ant-...
+# EZEKIA_API_KEY=...
+# EZEKIA_BASE_URL=https://ezekia.com/api
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
