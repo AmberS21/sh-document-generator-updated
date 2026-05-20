@@ -665,7 +665,7 @@ table.usage tr:last-child td{border-bottom:none;}
 // ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ ADMIN GATE ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
 var ADMINS = ['a.shamim@sheffieldhaworth.com'];
 var isAdmin = false;
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_API_URL = '/api/claude';
 
 function adminClick() { if (isAdmin) { goTab('admin'); } else { var ov = document.getElementById('adminModalOv'); if(ov) ov.classList.add('show'); } }
 
@@ -1258,10 +1258,10 @@ async function convertPdfToWord() {
     }
     var proxy = localStorage.getItem('sh_proxy_url') || '';
     proxy = proxy.trim();
-    var fetchUrl = proxy.length > 0 ? proxy : 'https://api.anthropic.com/v1/messages';
+    var fetchUrl = '/api/claude';
     var _fetchHeaders = {};
     _fetchHeaders['Content-Type'] = 'application/json';
-    _fetchHeaders['x-api-key'] = claudeKey;
+    // x-api-key injected by backend
     _fetchHeaders['anthropic-version'] = '2023-06-01';
     if (proxy.length === 0) {
       _fetchHeaders['anthropic-dangerous-direct-browser-access'] = 'true';
@@ -1515,12 +1515,12 @@ CRITICAL RULES:
 
 Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ extract ALL information from this text:\n\n' + inputText;
 
-  var _proxyUrl = localStorage.getItem('sh_proxy_url') || '';
+  var _proxyUrl = '/api/proxy';
   _proxyUrl = _proxyUrl.trim();
   var _apiUrl = _proxyUrl.length > 0 ? _proxyUrl : ANTHROPIC_API_URL;
   var _hdrs = {};
   _hdrs['Content-Type'] = 'application/json';
-  _hdrs['x-api-key'] = claudeKey;
+  // x-api-key injected by backend
   _hdrs['anthropic-version'] = '2023-06-01';
   if (_proxyUrl.length === 0) {
     _hdrs['anthropic-dangerous-direct-browser-access'] = 'true';
@@ -2301,13 +2301,13 @@ function clearKey(which) {
 
 // Helper: get saved Claude key for API calls
 function getClaudeKey() {
-  return localStorage.getItem('sh_claudeKey') || '';
+  return 'backend'; // key handled server-side
 }
 function getEzekiaKey() {
-  return localStorage.getItem('sh_ezekiaKey') || '';
+  return 'backend'; // key handled server-side
 }
 function getEzekiaBaseUrl() {
-  return localStorage.getItem('sh_ezekiaBaseUrl') || 'https://ezekia.com/api';
+  return '/api/ezekia'; // routed via backend
 }
 
 // Load keys when page opens
@@ -2411,7 +2411,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 <script>
-const SH_LOGGER = 'https://ambers21--99a8a8be51da11f192efee650bb23af1.web.val.run';
+const SH_LOGGER = '/api/proxy';
 function initUserName(){var n=localStorage.getItem('sh_userName');if(!n){document.getElementById('namePromptOverlay').style.display='flex';}else{document.getElementById('userName').textContent=n;}}
 function saveUserName(){var inp=document.getElementById('namePromptInput');var name=inp.value.trim();if(!name){inp.style.border='1.5px solid #e74c3c';return;}localStorage.setItem('sh_userName',name);document.getElementById('userName').textContent=name;document.getElementById('namePromptOverlay').style.display='none';notify('Welcome, '+name+'!');}
 function logUsage(template,inputMethod,status){var name=localStorage.getItem('sh_userName')||'Unknown';fetch(SH_LOGGER+'/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userName:name,template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()})}).catch(function(){});}
