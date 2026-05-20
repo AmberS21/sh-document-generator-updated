@@ -1512,11 +1512,26 @@ system: "Return ONLY raw JSON. No markdown. No explanations. No code blocks. No 
 var output;
 
 try {
-        rawOutput = rawOutput.replace(/```json\n?/gi, '').replace(/```\n?/g, '').replace(/^[^{[]*/, '').replace(/[^}\]]*$/, '').trim();
+  // Clean up markdown code blocks
+  if (rawOutput.startsWith('```')) {
+    rawOutput = rawOutput.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '');
+  }
+  
+  // Remove leading/trailing non-JSON characters
+  rawOutput = rawOutput.replace(/^[^{[]*/, '').replace(/[^}\]]*$/, '');
+  
+  // Remove control characters that break JSON
+  rawOutput = rawOutput.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ');
+  
+  // Remove trailing commas before closing brackets/braces
+  rawOutput = rawOutput.replace(/,\s*([}\]])/g, '$1');
+  
+  rawOutput = rawOutput.trim();
   output = JSON.parse(rawOutput);
 } catch(e) {
-  console.error(e);
-  notify('Claude returned invalid JSON');
+  console.error('JSON Parse Error:', e);
+  console.error('Raw output (first 500 chars):', rawOutput.substring(0, 500));
+  notify('Claude returned invalid JSON: ' + e.message);
   return;
 }
 
