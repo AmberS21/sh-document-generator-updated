@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-node /app/backend/server.js &
+BACKEND_PORT=3000 node /app/backend/server.js &
 NODE_PID=$!
 
 nginx -g "daemon off;" &

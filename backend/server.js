@@ -168,5 +168,7 @@ app.get('/api/proxy', (req, res) => {
   proxyReq.end();
 });
 
-const PORT = process.env.PORT || 3000;
+// In the container, nginx owns public port 80 and proxies to Node on 3000.
+// Azure may inject PORT=80, so use a dedicated backend port variable.
+const PORT = Number(process.env.BACKEND_PORT || 3000);
 app.listen(PORT, () => console.log(`DocGen API running on port ${PORT}`));
