@@ -1,11 +1,11 @@
 # ── Stage 1: Build Node.js backend dependencies ──────────────────────────────
-FROM node:18-alpine AS backend-build
+FROM public.ecr.aws/docker/library/node:18-alpine AS backend-build
 WORKDIR /app/backend
 COPY backend/package.json ./
 RUN npm install --production
 
 # ── Stage 2: Final image — nginx (frontend) + Node.js (backend) ──────────────
-FROM nginx:1.27-alpine
+FROM public.ecr.aws/docker/library/nginx:1.27-alpine
 
 # Install Node.js and supervisord
 RUN apk add --no-cache nodejs npm supervisor
