@@ -1411,43 +1411,22 @@ JSON structure to use:
 CANDIDATE SOURCE:
 
 ` + inputText
-  : isCareerSummary
-    ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object for the Global Candidate Profile with Career Summary template.
+    : isCareerSummary
+    ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a single structured JSON object for the "Global Candidate Profile — Career Summary" template.
 
 ABSOLUTE RULES:
-- Copy ALL text VERBATIM. Never summarise, rephrase, or add content not in the source.
-- Never skip any work history entry. Use companies 1-6 for the 6 most recent roles.
-- CLIENT_COMPANY and SEARCH_TITLE must always be empty strings.
-- Return ONLY valid JSON. No markdown, no code blocks, no explanations.
+- Copy ALL text VERBATIM. Never summarise, rephrase, or add content not in the CV.
+- Extract ALL work history entries WITHOUT EXCEPTION.
+- CLIENT_COMPANY: always an empty string "".
+- SEARCH_TITLE: always an empty string "".
+- Return ONLY valid JSON. No markdown, no code blocks, no commentary, no extra fields.
 
-FIELD INSTRUCTIONS:
-- PROFILE_MONTH: Today's month and year in format "Month YYYY" e.g. "May 2026". Always populate this.
-- CAREER_SUMMARY: Copy the full text of the candidate's "Summary" or "Profile" section VERBATIM from the CV. Do not leave empty if the CV has a summary.
-- MOTIVATIONS, CLIENT_COVERAGE, STRATEGY_EXPERIENCE, FUNDRAISING_TRACK_RECORD, AREAS_OF_STRENGTH, AREAS_TO_EXPLORE, CLOSING_SUMMARY: leave empty string "" ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ these are filled in manually.
-- CURRENT_EMPLOYER: The candidate's current or most recent employer name.
+Return ONLY this JSON, nothing else:
 
-COMPANY FIELDS (repeat for each of the 6 most recent companies):
-- COMPANY_X_NAME: Full company name (e.g. "PIMCO")
-- COMPANY_X_LOCATION: City, Country/State (e.g. "New York, NY")
-- COMPANY_X_START: Year company was first joined (e.g. "2020")
-- COMPANY_X_END: Year left the company (e.g. "2022") ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ leave empty for current employer (COMPANY_1)
-- COMPANY_X_TITLE: Job title / role title verbatim (e.g. "Senior Vice President, Head of U.S. GWM Marketing")
-- COMPANY_X_FUNCTION: Department or function (e.g. "Marketing")
-- COMPANY_X_ROLE_START: Start year of this specific role
-- COMPANY_X_ROLE_END: End year of this specific role, or "Present" if current
-- COMPANY_1_BULLET_1, COMPANY_1_BULLET_2, COMPANY_1_BULLET_3: First 3 bullet points verbatim for company 1
-- COMPANY_X_BULLETS (X=2-6): ALL bullet points for that company joined with newlines
+{ "CANDIDATE_NAME":"", "CURRENT_EMPLOYER":"", "CLIENT_COMPANY":"", "SEARCH_TITLE":"", "MONTH_YEAR":"May 2026", "companies":[{ "name":"", "location":"", "dates":"", "roles":[{ "role":"", "function":"", "role_dates":"", "bullets":[""] } ] }], "education":[{ "dates":"", "institution":"", "location":"", "degree":"" }], "accreditations":[], "technical_skills":[], "affiliations":[], "media":[], "publications":[], "nationality":"", "languages":[], "interests":[] }
 
-EDUCATION FIELDS:
-- EDU_X_START, EDU_X_END: Start and end years
-- EDU_X_INSTITUTION: School/university name
-- EDU_X_LOCATION: City/country
-- EDU_X_DEGREE: Full degree and major verbatim
-
-OTHER: Extract QUAL_ACCREDITATION, QUAL_TECHNICAL, AFFILIATIONS, MEDIA, PUBLICATIONS, NATIONALITY, LANGUAGES, LANGUAGES_LEVEL, INTERESTS exactly as stated.
-
-Return ONLY valid JSON using this structure
-` + csJsonStr +'\n\nCANDIDATE SOURCE ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ extract ALL information from this text:\n\n' + inputText    : (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
+CANDIDATE SOURCE:\n\n` + inputText
+: (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
     `You are a Sheffield Haworth executive search document assistant. Your task is to extract information from the candidate source below and fill the APAC Candidate Profile template fields EXACTLY as described.
 
 CRITICAL RULES ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ READ CAREFULLY:
