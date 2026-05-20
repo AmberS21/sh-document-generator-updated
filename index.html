@@ -1249,23 +1249,11 @@ async function convertPdfToWord() {
     // STAGE 2: Reformat with Claude API
         btn.innerHTML = 'Converting...';
     btn.disabled = true;
-    var claudeKey = (localStorage.getItem('sh_claudeKey') || '').trim();
-    if (!claudeKey) {
-      alert('Please add your Claude API key in the Admin settings to use this feature.');
-      btn.innerHTML = origHTML;
-      btn.disabled = false;
-      return;
-    }
-    var proxy = localStorage.getItem('sh_proxy_url') || '';
-    proxy = proxy.trim();
-    var fetchUrl = '/api/claude';
+    var fetchUrl = ANTHROPIC_API_URL;
     var _fetchHeaders = {};
     _fetchHeaders['Content-Type'] = 'application/json';
     // x-api-key injected by backend
     _fetchHeaders['anthropic-version'] = '2023-06-01';
-    if (proxy.length === 0) {
-      _fetchHeaders['anthropic-dangerous-direct-browser-access'] = 'true';
-    }
     console.log('PDF converter using URL:', fetchUrl);
     var apiResp = await fetch(fetchUrl, {
       method: 'POST',
@@ -1279,7 +1267,7 @@ async function convertPdfToWord() {
     });
     if (!apiResp.ok) {
       var errData = await apiResp.json().catch(function(){ return {}; });
-      throw new Error((errData.error && errData.error.message) || ('API error ' + apiResp.status));h
+      throw new Error((errData.error && errData.error.message) || ('API error ' + apiResp.status));
     }
     var apiData = await apiResp.json();
     // Debug - log what we got
