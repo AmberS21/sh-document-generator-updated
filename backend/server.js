@@ -42,7 +42,7 @@ app.get('/api/config', (req, res) => {
 });
 
 // ── Anthropic proxy ───────────────────────────────────────────────────────────
-app.post('/api/claude', async (req, res) => {
+function handleAnthropicProxy(req, res) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured on server' });
@@ -78,10 +78,14 @@ app.post('/api/claude', async (req, res) => {
 
   proxyReq.write(body);
   proxyReq.end();
-});
+}
+
+app.post('/api/claude', handleAnthropicProxy);
+// Legacy route used by existing frontend code
+app.post('/api/proxy', handleAnthropicProxy);
 
 // ── Ezekia proxy ──────────────────────────────────────────────────────────────
-app.all('/api/ezekia/*', (req, res) => {
+app.all(['/api/ezekia', '/api/ezekia/*'], (req, res) => {
   const apiKey = process.env.EZEKIA_API_KEY;
   const baseUrl = process.env.EZEKIA_BASE_URL || 'https://ezekia.com/api';
 
@@ -89,9 +93,12 @@ app.all('/api/ezekia/*', (req, res) => {
     return res.status(500).json({ error: 'EZEKIA_API_KEY not configured on server' });
   }
 
-  // Strip /api/ezekia prefix and forward to Ezekia
-  const ezekiaPath = req.path.replace('/api/ezekia', '') || '/';
-  const targetUrl = new URL(ezekiaPath + (req.url.includes('?') ? '?' + req.url.split('?')[1] : ''), baseUrl);
+  // Strip /api/ezekia prefix and forward to Ezekia while preserving base path.
+  const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  const ezekiaPath = req.path.replace(/^\/api\/ezekia\/?/, '');
+  const qIndex = req.originalUrl.indexOf('?');
+  const queryString = qIndex >= 0 ? req.originalUrl.slice(qIndex) : '';
+  const targetUrl = new URL(ezekiaPath + queryString, normalizedBaseUrl);
 
   const isHttps = targetUrl.protocol === 'https:';
   const lib = isHttps ? https : http;

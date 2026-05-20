@@ -7,8 +7,8 @@ RUN npm install --production
 # ── Stage 2: Final image — nginx (frontend) + Node.js (backend) ──────────────
 FROM public.ecr.aws/docker/library/nginx:1.27-alpine
 
-# Install Node.js and supervisord
-RUN apk add --no-cache nodejs npm supervisor
+# Install Node.js runtime
+RUN apk add --no-cache nodejs npm
 
 # Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
@@ -21,8 +21,9 @@ COPY templates/ /usr/share/nginx/html/templates/
 COPY backend/ /app/backend/
 COPY --from=backend-build /app/backend/node_modules /app/backend/node_modules
 
-# Copy supervisord config
-COPY supervisord.conf /etc/supervisord.conf
+# Entrypoint script starts both backend and nginx
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
 # Environment variables — set these in Azure App Service / container settings
 # ANTHROPIC_API_KEY=sk-ant-...
@@ -31,4 +32,4 @@ COPY supervisord.conf /etc/supervisord.conf
 
 EXPOSE 80
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+CMD ["/start.sh"]

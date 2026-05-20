@@ -1018,13 +1018,13 @@ async function generate() {
       var ezMatch = urlVal.match(/(?:app\.)?ezekia\.com\/#?\/people\/(\d+)/i);
       if (ezMatch) {
         var personId = ezMatch[1];
-        var workerBase = localStorage.getItem('sh_ezekiaWorkerUrl') || 'https://damp-cake-fa1c.a-shamim.workers.dev';
-        var apiResp = await fetch(workerBase + '/v4/people/' + personId);
+        var ezekiaBase = getEzekiaBaseUrl();
+        var apiResp = await fetch(ezekiaBase + '/v4/people/' + personId);
         if (!apiResp.ok) throw new Error('Ezekia API error: ' + apiResp.status);
         var personData = await apiResp.json();
-        var posResp = await fetch(workerBase + '/v2/people/' + personId + '/positions');
+        var posResp = await fetch(ezekiaBase + '/v2/people/' + personId + '/positions');
         var posData = posResp.ok ? await posResp.json() : {data:[]};
-        var eduResp = await fetch(workerBase + '/people/' + personId + '/education');
+        var eduResp = await fetch(ezekiaBase + '/people/' + personId + '/education');
         var eduData = eduResp.ok ? await eduResp.json() : {data:[]};
         // Helper: format ISO date to "Mon YYYY", "9999-12-31" = Present
         function fmtDate(d) {
@@ -1078,14 +1078,14 @@ async function generate() {
         } else if (urlVal.match(/(?:app\.)?ezekia\.com\/#?\/(?:projects|assignments)\/([\w-]+)/)) {
           var projMatch2 = urlVal.match(/(?:app\.)?ezekia\.com\/#?\/(?:projects|assignments)\/([\w-]+)/);
           var projectId2 = projMatch2[1];
-          var workerBase2 = localStorage.getItem('sh_ezekiaWorkerUrl') || 'https://damp-cake-fa1c.a-shamim.workers.dev';
+          var ezekiaBase2 = getEzekiaBaseUrl();
           btn.innerHTML = 'Fetching project data&';
-          var projResp = await fetch(workerBase2 + '/projects/' + projectId2);
+          var projResp = await fetch(ezekiaBase2 + '/projects/' + projectId2);
           if (!projResp.ok) throw new Error('Ezekia project API error: ' + projResp.status);
           var projData = await projResp.json();
           var proj = projData.data || projData;
           btn.innerHTML = 'Fetching candidates&';
-          var candResp = await fetch(workerBase2 + '/projects/' + projectId2 + '/candidates');
+          var candResp = await fetch(ezekiaBase2 + '/projects/' + projectId2 + '/candidates');
           var candData = candResp.ok ? await candResp.json() : {data:[]};
           var candidates = candData.data || [];
           var projContent = {
@@ -2175,7 +2175,7 @@ function testKey(which) {
   var el     = document.getElementById(inputMap[which]);
   var status = document.getElementById(statusMap[which]);
   var btn    = document.getElementById(btnMap[which]);
-  if (!el || !el.value.trim()) { notify('Enter a key first'); return; }
+  if (which === 'claude' && (!el || !el.value.trim())) { notify('Enter a key first'); return; }
 
   btn.textContent = 'TestingÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¦';
   btn.style.opacity = '.6';
@@ -2227,16 +2227,21 @@ function testKey(which) {
     });
 
   } else if (which === 'ezekia') {
-    var baseUrl = localStorage.getItem('sh_ezekiaBaseUrl') || 'https://ezekia.com/api';
-    // Try a lightweight endpoint ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ /me or /ping or /users/me
-    fetch(baseUrl + '/api/users/me', {
+    // Use backend proxy so Test and Generate follow the same route.
+    var baseUrl = getEzekiaBaseUrl();
+    fetch(baseUrl + '/v4/people?limit=1', {
       method: 'GET',
       headers: {
-        'Authorization': 'Bearer ' + el.value.trim(),
         'Accept': 'application/json'
       }
     })
-    .then(function(r) { return r.json().then(function(d) { return {ok: r.ok, status: r.status, data: d}; }); })
+    .then(function(r) {
+      return r.text().then(function(t) {
+        var d = {};
+        try { d = JSON.parse(t); } catch (_) {}
+        return {ok: r.ok, status: r.status, data: d};
+      });
+    })
     .then(function(res) {
       btn.textContent = 'Test';
       btn.style.opacity = '1';
@@ -2245,24 +2250,29 @@ function testKey(which) {
         status.style.background = '#dcfce7';
         status.style.color = '#166534';
         status.style.display = 'inline-block';
-        notify('ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Ezekia API key is working!');
+        notify('ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Ezekia proxy is reachable and configured.');
+      } else if (res.status === 500 && res.data && res.data.error && String(res.data.error).indexOf('EZEKIA_API_KEY') !== -1) {
+        status.textContent = 'Server key missing';
+        status.style.background = '#fee2e2';
+        status.style.color = '#b91c1c';
+        status.style.display = 'inline-block';
+        notify('Set EZEKIA_API_KEY in the server environment.');
       } else {
         status.textContent = 'ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Auth failed (' + res.status + ')';
         status.style.background = '#fee2e2';
         status.style.color = '#b91c1c';
         status.style.display = 'inline-block';
-        notify('ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Ezekia: Authentication failed. Check key and base URL.');
+        notify('ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Ezekia proxy test failed (' + res.status + ').');
       }
     })
     .catch(function(err) {
       btn.textContent = 'Test';
       btn.style.opacity = '1';
-      // CORS error is actually expected from a local file ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ key may still be valid
-      status.textContent = 'ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ ÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¸ÃÂÃÂÃÂÃÂ CORS (expected from local file)';
+      status.textContent = 'Connection failed';
       status.style.background = '#fef3c7';
       status.style.color = '#92400e';
       status.style.display = 'inline-block';
-      notify('ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ ÃÂÃÂÃÂÃÂ¯ÃÂÃÂÃÂÃÂ¸ÃÂÃÂÃÂÃÂ CORS error ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ this is normal when running locally. Key saved, will work on SharePoint.');
+      notify('Could not reach Ezekia proxy through backend.');
     });
   }
 }
