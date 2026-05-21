@@ -723,7 +723,7 @@ const TEMPLATES = {
 
     label: 'Global Candidate Profile — with Career Summary',
 
-    file: 'templates/SH_Global_Career_Summary_v4.docx',
+    file: 'templates/SH_Global_Career_Summary_v5.docx',
     
     patchFiles: ['word/document.xml', 'word/header4.xml'],
 
@@ -952,66 +952,65 @@ function buildCareerSummaryBizExp(companies) {
     xml += '<w:p><w:pPr><w:pStyle w:val="14CV-BODY"/></w:pPr></w:p>';
     xml += '<w:p><w:pPr><w:pStyle w:val="14CV-BODY"/></w:pPr></w:p>';
 
-    // Company header: BOLD CAPS name+location  TAB  dates (right-aligned via 15CV-COMPANY tab stop)
+    // Company header: BOLD CAPS name + location, TAB, overall dates
     xml += '<w:p>'
-         + '<w:pPr><w:pStyle w:val="15CV-COMPANY"/>'
-         + '<w:rPr><w:rFonts w:ascii="Franklin Gothic Book" w:hAnsi="Franklin Gothic Book"/><w:b/></w:rPr>'
-         + '</w:pPr>'
-         + '<w:r><w:rPr><w:caps/></w:rPr>'
+         + '<w:pPr><w:pStyle w:val="15CV-COMPANY"/></w:pPr>'
+         + '<w:r><w:rPr><w:caps/><w:b/></w:rPr>'
          + '<w:t xml:space="preserve">' + csXmlEsc(company.name) + (company.location ? ', ' + csXmlEsc(company.location) : '') + '</w:t>'
          + '</w:r>'
-         + '<w:r><w:rPr><w:rFonts w:ascii="Franklin Gothic Book" w:hAnsi="Franklin Gothic Book"/><w:b/></w:rPr><w:tab/></w:r>'
-         + '<w:r><w:t>' + csXmlEsc(company.dates || '') + '</w:t></w:r>'
+         + '<w:r><w:rPr><w:b/></w:rPr><w:tab/></w:r>'
+         + '<w:r><w:rPr><w:b/></w:rPr><w:t>' + csXmlEsc(company.dates || '') + '</w:t></w:r>'
          + '</w:p>';
 
-    // Spacer after company header
     xml += '<w:p><w:pPr><w:pStyle w:val="14CV-BODY"/></w:pPr></w:p>';
 
-    // Role lines — only show role dates if company has MORE than one role
     var showRoleDates = roles.length > 1;
+
+    // ── For each role: title + dates, then its OWN bullets immediately below ──
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
       if (!role || !role.role) continue;
+
+      // Role title line
       xml += '<w:p><w:pPr><w:pStyle w:val="16CV-TITLE"/></w:pPr>'
            + '<w:r><w:t>' + csXmlEsc(role.role) + '</w:t>';
       if (showRoleDates && role.role_dates) {
         xml += '<w:tab/><w:t>' + csXmlEsc(role.role_dates) + '</w:t>';
       }
       xml += '</w:r></w:p>';
-      // Spacer between role lines
+
+      // Spacer after role title
       xml += '<w:p><w:pPr><w:pStyle w:val="16CV-TITLE"/></w:pPr></w:p>';
-    }
 
-    // Spacer before bullets
-    xml += '<w:p><w:pPr><w:pStyle w:val="14CV-BODY"/></w:pPr></w:p>';
+      // Bullets for THIS role only — immediately under its title
+      var bullets = role.bullets || [];
+      var inResults = false;
+      for (var bi = 0; bi < bullets.length; bi++) {
+        var bullet = (bullets[bi] || '').trim();
+        if (!bullet) continue;
+        var isResultsLabel = /^results\s*:/i.test(bullet);
 
-    // Collect bullets from ALL roles
-    var allBullets = [];
-    for (var ri2 = 0; ri2 < roles.length; ri2++) {
-      var rb = roles[ri2].bullets || [];
-      for (var bi = 0; bi < rb.length; bi++) {
-        if (rb[bi]) allBullets.push(rb[bi]);
+        if (isResultsLabel) {
+          inResults = true;
+          xml += '<w:p><w:pPr><w:pStyle w:val="2CV"/><w:ind w:left="450"/></w:pPr>'
+               + '<w:r><w:t>' + csXmlEsc(bullet) + '</w:t></w:r></w:p>';
+        } else if (inResults) {
+          xml += '<w:p><w:pPr><w:pStyle w:val="12CV"/>'
+               + '<w:tabs><w:tab w:val="num" w:pos="360"/></w:tabs>'
+               + '<w:ind w:left="810"/></w:pPr>'
+               + '<w:r><w:t>' + csXmlEsc(bullet) + '</w:t></w:r></w:p>';
+        } else {
+          xml += '<w:p><w:pPr><w:pStyle w:val="10CV"/></w:pPr>'
+               + '<w:r><w:t>' + csXmlEsc(bullet) + '</w:t></w:r></w:p>';
+        }
       }
-    }
 
-    // Render bullets — detect "Results:" label and switch to sub-bullet style
-    var inResults = false;
-    for (var bi2 = 0; bi2 < allBullets.length; bi2++) {
-      var bullet = allBullets[bi2];
-      var isResultsLabel = /^results\s*:/i.test(bullet.trim());
+      // Reset Results flag between roles
+      inResults = false;
 
-      if (isResultsLabel) {
-        inResults = true;
-        xml += '<w:p><w:pPr><w:pStyle w:val="2CV"/><w:ind w:left="450"/></w:pPr>'
-             + '<w:r><w:t>' + csXmlEsc(bullet) + '</w:t></w:r></w:p>';
-      } else if (inResults) {
-        xml += '<w:p><w:pPr><w:pStyle w:val="12CV"/>'
-             + '<w:tabs><w:tab w:val="num" w:pos="360"/></w:tabs>'
-             + '<w:ind w:left="810"/></w:pPr>'
-             + '<w:r><w:t>' + csXmlEsc(bullet) + '</w:t></w:r></w:p>';
-      } else {
-        xml += '<w:p><w:pPr><w:pStyle w:val="10CV"/></w:pPr>'
-             + '<w:r><w:t>' + csXmlEsc(bullet) + '</w:t></w:r></w:p>';
+      // Spacer between roles (only if not last role)
+      if (ri < roles.length - 1) {
+        xml += '<w:p><w:pPr><w:pStyle w:val="14CV-BODY"/></w:pPr></w:p>';
       }
     }
   }
@@ -1021,6 +1020,7 @@ function buildCareerSummaryBizExp(companies) {
   xml += '<w:p><w:pPr><w:pStyle w:val="14CV-BODY"/></w:pPr></w:p>';
   return xml;
 }
+
 
 function csFillTemplate(xmlStr, cv) {
   var s = xmlStr;
