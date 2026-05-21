@@ -1640,7 +1640,7 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
     headers: _hdrs,
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 6000,
+      max_tokens: 8000,
 messages: [{
   role: 'user',
   content: prompt
@@ -1682,6 +1682,11 @@ try {
           var _now = new Date();
           var _mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
           output.PROFILE_MONTH = _mNames[_now.getMonth()] + ' ' + _now.getFullYear();
+          // Safety check: if companies is empty, warn the user clearly
+          if (!output.companies || output.companies.length === 0) {
+            notify('Warning: No work history was extracted. Please try again — the CV may have been too long.');
+            console.warn('Career Summary: companies array is empty. Full output:', JSON.stringify(output));
+          }
         }
         if (returnOnly) { return output; }
         var item = {
