@@ -1022,7 +1022,7 @@ function buildCareerSummaryBizExp(companies) {
   return xml;
 }
 
-} function csFillTemplate(xmlStr, cv) {
+function csFillTemplate(xmlStr, cv) {
   var s = xmlStr;
   function xmlEsc(v) {
     return String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
