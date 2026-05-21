@@ -1955,7 +1955,7 @@ async function downloadHistory(index) {
           } else {
             var _zipI = new PizZip(_abC.slice(0));
             var _docC = new window.docxtemplater(_zipI, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
-            _docC.render(_cvC);
+            _cvC.SUMMARY_BULLET_1 = _cvC.SUMMARY || ''; _cvC.SUMMARY_BULLET_2 = ''; _cvC.SUMMARY_BULLET_3 = ''; _docC.render(_cvC);
             _outC = _docC.getZip().generate({type:'arraybuffer',mimeType:_docMime});
           }
           _zipC.file('Global - ' + _scorecardLabel + ' - ' + _nameC + '.' + _docExt, _outC);
