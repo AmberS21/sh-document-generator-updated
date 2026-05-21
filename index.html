@@ -1419,11 +1419,11 @@ ABSOLUTE RULES:
 - Extract ALL work history entries WITHOUT EXCEPTION.
 - CLIENT_COMPANY: always an empty string "".
 - SEARCH_TITLE: always an empty string "".
-- Return ONLY valid JSON. No markdown, no code blocks, no commentary, no extra fields.
+- Return ONLY valid JSON. No markdown, no code blocks, no commentary, no extra fields. CAREER SUMMARY: Do NOT fill any career summary sections. companies: group multiple roles at same company under ONE company object, each role has role (exact title), role_dates (dates for this role), bullets (ALL bullet points verbatim array, no limit). EDU_1_START/EDU_1_END: year only e.g. 2013, no extra fields.
 
 Return ONLY this JSON, nothing else:
 
-{ "CANDIDATE_NAME":"", "CURRENT_EMPLOYER":"", "CLIENT_COMPANY":"", "SEARCH_TITLE":"", "MONTH_YEAR":"May 2026", "companies":[{ "name":"", "location":"", "dates":"", "roles":[{ "role":"", "function":"", "role_dates":"", "bullets":[""] } ] }], "education":[{ "dates":"", "institution":"", "location":"", "degree":"" }], "accreditations":[], "technical_skills":[], "affiliations":[], "media":[], "publications":[], "nationality":"", "languages":[], "interests":[] }
+{ "CANDIDATE_NAME":"", "CURRENT_EMPLOYER":"", "CLIENT_COMPANY":"", "SEARCH_TITLE":"", "MONTH_YEAR":"", "companies":[{ "name":"", "location":"", "dates":"", "roles":[{ "role":"", "role_dates":"", "bullets":[""] }] }], "EDU_1_START":"", "EDU_1_END":"", "EDU_1_INSTITUTION":"", "EDU_1_LOCATION":"", "EDU_1_DEGREE":"", "EDU_2_START":"", "EDU_2_END":"", "EDU_2_INSTITUTION":"", "EDU_2_LOCATION":"", "EDU_2_DEGREE":"", "QUAL_1":"", "QUAL_2":"", "AFFILIATION_1":"", "AFFILIATION_1_DATES":"", "NATIONALITY":"", "LANGUAGES":"", "INTERESTS":"" }
 
 CANDIDATE SOURCE:\n\n` + inputText
 : (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
