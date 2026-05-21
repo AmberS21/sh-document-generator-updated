@@ -1442,58 +1442,45 @@ var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"
 var csJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var globalJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","SEARCH_TITLE":"","CLIENT_COMPANY":"","MONTH_YEAR":"","SUMMARY":"","COMPANY_1_NAME":"","COMPANY_1_LOCATION":"","COMPANY_1_ROLE":"","COMPANY_1_FUNCTION":"","COMPANY_1_DATES":"","COMPANY_1_BULLET_1":"","COMPANY_1_BULLET_2":"","COMPANY_1_BULLET_3":"","COMPANY_2_NAME":"","COMPANY_2_LOCATION":"","COMPANY_2_ROLE":"","COMPANY_2_FUNCTION":"","COMPANY_2_DATES":"","COMPANY_2_BULLET_1":"","COMPANY_2_BULLET_2":"","COMPANY_2_BULLET_3":"","COMPANY_3_NAME":"","COMPANY_3_LOCATION":"","COMPANY_3_ROLE":"","COMPANY_3_FUNCTION":"","COMPANY_3_DATES":"","COMPANY_3_BULLET_1":"","COMPANY_3_BULLET_2":"","COMPANY_3_BULLET_3":"","COMPANY_4_NAME":"","COMPANY_4_LOCATION":"","COMPANY_4_ROLE":"","COMPANY_4_FUNCTION":"","COMPANY_4_DATES":"","COMPANY_4_BULLET_1":"","COMPANY_4_BULLET_2":"","COMPANY_4_BULLET_3":"","COMPANY_5_NAME":"","COMPANY_5_LOCATION":"","COMPANY_5_ROLE":"","COMPANY_5_FUNCTION":"","COMPANY_5_DATES":"","COMPANY_5_BULLET_1":"","COMPANY_5_BULLET_2":"","COMPANY_5_BULLET_3":"","COMPANY_6_NAME":"","COMPANY_6_LOCATION":"","COMPANY_6_ROLE":"","COMPANY_6_FUNCTION":"","COMPANY_6_DATES":"","COMPANY_6_BULLET_1":"","COMPANY_6_BULLET_2":"","COMPANY_6_BULLET_3":"","COMPANY_7_NAME":"","COMPANY_7_LOCATION":"","COMPANY_7_ROLE":"","COMPANY_7_FUNCTION":"","COMPANY_7_DATES":"","COMPANY_7_BULLET_1":"","COMPANY_7_BULLET_2":"","COMPANY_7_BULLET_3":"","COMPANY_8_NAME":"","COMPANY_8_LOCATION":"","COMPANY_8_ROLE":"","COMPANY_8_FUNCTION":"","COMPANY_8_DATES":"","COMPANY_8_BULLET_1":"","COMPANY_8_BULLET_2":"","COMPANY_8_BULLET_3":"","COMPANY_9_NAME":"","COMPANY_9_LOCATION":"","COMPANY_9_ROLE":"","COMPANY_9_FUNCTION":"","COMPANY_9_DATES":"","COMPANY_9_BULLET_1":"","COMPANY_9_BULLET_2":"","COMPANY_9_BULLET_3":"","COMPANY_10_NAME":"","COMPANY_10_LOCATION":"","COMPANY_10_ROLE":"","COMPANY_10_FUNCTION":"","COMPANY_10_DATES":"","COMPANY_10_BULLET_1":"","COMPANY_10_BULLET_2":"","COMPANY_10_BULLET_3":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","AFFILIATION_2":"","AFFILIATION_2_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var prompt = isCareerSummary
-  ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a single structured JSON object.
+  ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
-- Copy ALL bullet points VERBATIM. Never summarise, rephrase, or skip any bullet.
-- Extract ALL work history entries WITHOUT EXCEPTION.
-- CLIENT_COMPANY: always empty string "".
-- SEARCH_TITLE: always empty string "".
-- CAREER SUMMARY FIELDS: Do NOT fill. Leave all career summary fields as empty strings.
 - Return ONLY raw JSON. No markdown, no code blocks, no commentary.
+- CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
+- CAREER SUMMARY fields: Do NOT fill — leave as empty strings.
+- Extract EVERY work history entry WITHOUT EXCEPTION.
+- CRITICAL — BULLETS PER ROLE: Each role's bullets array must contain ONLY the bullet points written directly under THAT specific role in the CV. NEVER mix bullets from different roles. If the CV lists 3 bullets under Role A and 5 bullets under Role B, Role A gets exactly those 3 bullets and Role B gets exactly those 5 bullets.
+- Copy ALL bullet points VERBATIM — word for word, no changes.
 
-FIELD INSTRUCTIONS:
-- CANDIDATE_NAME: Full name exactly as written.
-- CURRENT_EMPLOYER: Most recent company name only.
-- PROFILE_MONTH: Always use "` + (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})() + `".
-- companies array: Group ALL roles at the same company under ONE company entry:
-  {
-    "name": "Full Company Name",
-    "location": "City, State/Country",
-    "dates": "YYYY – Present",
-    "roles": [
-      {
-        "role": "Exact Job Title",
-        "role_dates": "YYYY – YYYY",
-        "bullets": ["bullet 1 verbatim", "bullet 2 verbatim", "Results:", "sub-result 1", "sub-result 2"]
-      }
-    ]
-  }
-  IMPORTANT: role_dates = leave as "" if company has only ONE role (dates already shown in company header).
-  Include "Results:" as its own bullet string when it appears. Sub-results follow as separate bullet strings.
-  Most recent company first. ALL roles included — no limit.
-- EDU_1_START / EDU_1_END: year only e.g. "2013", "2017".
-- EDU_1_INSTITUTION: institution name only (no location).
-- EDU_1_LOCATION: city, state/country of institution.
-- EDU_1_DEGREE: full degree description (can join multiple degrees with "; ").
-- QUAL_1: professional qualifications/certifications as a single string (e.g. "Series 7 complete & 63 in progress").
-- TECH_SKILLS: all technical skills as a single string.
-- NATIONALITY, LANGUAGES, INTERESTS: exact text as stated, or "" if not found.
+COMPANIES ARRAY RULES:
+- Group ALL roles held at the same company under ONE company entry.
+- Each role is a separate object in the roles array with its own bullets.
+- role_dates: always fill for EVERY role — e.g. "Mar 2019 – Nov 2025". Only leave "" if the company has exactly ONE role (dates already shown in company header).
+- "Results:" lines: include as their own bullet string. Sub-results follow as separate bullet strings immediately after.
+- Most recent company first.
 
-Return ONLY this JSON — no extra fields:
+JSON STRUCTURE — return exactly this, filled with real data:
 
 {
   "CANDIDATE_NAME": "",
   "CURRENT_EMPLOYER": "",
   "CLIENT_COMPANY": "",
   "SEARCH_TITLE": "",
-  "PROFILE_MONTH": "",
+  "PROFILE_MONTH": "` + (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})() + `",
   "companies": [
     {
-      "name": "",
-      "location": "",
-      "dates": "",
-      "roles": [{ "role": "", "role_dates": "", "bullets": [] }]
+      "name": "Full company legal name",
+      "location": "City, Country",
+      "dates": "YYYY – Present",
+      "roles": [
+        {
+          "role": "Exact job title as written in CV",
+          "role_dates": "Mon YYYY – Mon YYYY",
+          "bullets": [
+            "ONLY bullets written under THIS role in the CV — verbatim"
+          ]
+        }
+      ]
     }
   ],
   "EDU_1_START": "", "EDU_1_END": "", "EDU_1_INSTITUTION": "", "EDU_1_LOCATION": "", "EDU_1_DEGREE": "",
