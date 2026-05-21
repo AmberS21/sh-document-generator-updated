@@ -1991,7 +1991,7 @@ async function downloadHistory(index) {
       } else {
         var zip = new PizZip(ab);
         const doc = new window.docxtemplater(zip, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
-        doc.render(item.content);
+        item.content.SUMMARY_BULLET_1 = item.content.SUMMARY || ''; item.content.SUMMARY_BULLET_2 = ''; item.content.SUMMARY_BULLET_3 = ''; doc.render(item.content);
         out = doc.getZip().generate({type:'blob',mimeType:_docMimeSingle});
       }
       var a = document.createElement('a'); a.href = URL.createObjectURL(out); a.download = baseName + '.' + _docExtSingle; document.body.appendChild(a); a.click(); document.body.removeChild(a);
