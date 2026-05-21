@@ -1980,7 +1980,7 @@ async function downloadHistory(index) {
         _apacZip.file('word/document.xml', _apacFilled);
         out = await _apacZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       } else if (item.template === 'global-career-summary') {
-        var _csZip = await JSZip.loadAsync(ab);
+        var _csZip = new PizZip(ab);
         var _csDocXml = await _csZip.files['word/document.xml'].async('string');
         _csZip.file('word/document.xml', csFillTemplate(_csDocXml, item.content));
         if (_csZip.files['word/header4.xml']) {
