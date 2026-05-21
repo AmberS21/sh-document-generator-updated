@@ -1441,65 +1441,8 @@ var isChineseApac = false;
 var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"projects":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"EDU_1_YEARS":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","EDU_3_YEARS":"","EDU_3_INSTITUTION":"","EDU_3_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","PROJECT_1_TITLE":"","PROJECT_1_CLIENT":"","PROJECT_1_DATE":"","PROJECT_1_DESCRIPTION":"","PROJECT_2_TITLE":"","PROJECT_2_CLIENT":"","PROJECT_2_DATE":"","PROJECT_2_DESCRIPTION":"","PROJECT_3_TITLE":"","PROJECT_3_CLIENT":"","PROJECT_3_DATE":"","PROJECT_3_DESCRIPTION":"","PROJECT_4_TITLE":"","PROJECT_4_CLIENT":"","PROJECT_4_DATE":"","PROJECT_4_DESCRIPTION":"","PROJECT_5_TITLE":"","PROJECT_5_CLIENT":"","PROJECT_5_DATE":"","PROJECT_5_DESCRIPTION":"","PROJECT_6_TITLE":"","PROJECT_6_CLIENT":"","PROJECT_6_DATE":"","PROJECT_6_DESCRIPTION":"","PROJECT_7_TITLE":"","PROJECT_7_CLIENT":"","PROJECT_7_DATE":"","PROJECT_7_DESCRIPTION":"","PROJECT_8_TITLE":"","PROJECT_8_CLIENT":"","PROJECT_8_DATE":"","PROJECT_8_DESCRIPTION":"","PROJECT_9_TITLE":"","PROJECT_9_CLIENT":"","PROJECT_9_DATE":"","PROJECT_9_DESCRIPTION":"","PROJECT_10_TITLE":"","PROJECT_10_CLIENT":"","PROJECT_10_DATE":"","PROJECT_10_DESCRIPTION":""}';
 var csJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var globalJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","SEARCH_TITLE":"","CLIENT_COMPANY":"","MONTH_YEAR":"","SUMMARY":"","COMPANY_1_NAME":"","COMPANY_1_LOCATION":"","COMPANY_1_ROLE":"","COMPANY_1_FUNCTION":"","COMPANY_1_DATES":"","COMPANY_1_BULLET_1":"","COMPANY_1_BULLET_2":"","COMPANY_1_BULLET_3":"","COMPANY_2_NAME":"","COMPANY_2_LOCATION":"","COMPANY_2_ROLE":"","COMPANY_2_FUNCTION":"","COMPANY_2_DATES":"","COMPANY_2_BULLET_1":"","COMPANY_2_BULLET_2":"","COMPANY_2_BULLET_3":"","COMPANY_3_NAME":"","COMPANY_3_LOCATION":"","COMPANY_3_ROLE":"","COMPANY_3_FUNCTION":"","COMPANY_3_DATES":"","COMPANY_3_BULLET_1":"","COMPANY_3_BULLET_2":"","COMPANY_3_BULLET_3":"","COMPANY_4_NAME":"","COMPANY_4_LOCATION":"","COMPANY_4_ROLE":"","COMPANY_4_FUNCTION":"","COMPANY_4_DATES":"","COMPANY_4_BULLET_1":"","COMPANY_4_BULLET_2":"","COMPANY_4_BULLET_3":"","COMPANY_5_NAME":"","COMPANY_5_LOCATION":"","COMPANY_5_ROLE":"","COMPANY_5_FUNCTION":"","COMPANY_5_DATES":"","COMPANY_5_BULLET_1":"","COMPANY_5_BULLET_2":"","COMPANY_5_BULLET_3":"","COMPANY_6_NAME":"","COMPANY_6_LOCATION":"","COMPANY_6_ROLE":"","COMPANY_6_FUNCTION":"","COMPANY_6_DATES":"","COMPANY_6_BULLET_1":"","COMPANY_6_BULLET_2":"","COMPANY_6_BULLET_3":"","COMPANY_7_NAME":"","COMPANY_7_LOCATION":"","COMPANY_7_ROLE":"","COMPANY_7_FUNCTION":"","COMPANY_7_DATES":"","COMPANY_7_BULLET_1":"","COMPANY_7_BULLET_2":"","COMPANY_7_BULLET_3":"","COMPANY_8_NAME":"","COMPANY_8_LOCATION":"","COMPANY_8_ROLE":"","COMPANY_8_FUNCTION":"","COMPANY_8_DATES":"","COMPANY_8_BULLET_1":"","COMPANY_8_BULLET_2":"","COMPANY_8_BULLET_3":"","COMPANY_9_NAME":"","COMPANY_9_LOCATION":"","COMPANY_9_ROLE":"","COMPANY_9_FUNCTION":"","COMPANY_9_DATES":"","COMPANY_9_BULLET_1":"","COMPANY_9_BULLET_2":"","COMPANY_9_BULLET_3":"","COMPANY_10_NAME":"","COMPANY_10_LOCATION":"","COMPANY_10_ROLE":"","COMPANY_10_FUNCTION":"","COMPANY_10_DATES":"","COMPANY_10_BULLET_1":"","COMPANY_10_BULLET_2":"","COMPANY_10_BULLET_3":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","AFFILIATION_2":"","AFFILIATION_2_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
-var prompt = isApac
-  ? isApacUpdated
-    ? `You are a document-filling assistant for Sheffield Haworth. Your task is to read the candidate CV below and extract ALL information into a structured JSON object for the APAC Candidate Profile (Updated) template.
-
-FIELD-BY-FIELD INSTRUCTIONS:
-
-1. CANDIDATE_NAME: Full name of the candidate exactly as written.
-2. CURRENT_EMPLOYER: Current or most recent employer name only (e.g. "DuPont China"). Do not include location or role.
-3. CLIENT_COMPANY: Leave EMPTY ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ do not fill this field.
-4. SEARCH_TITLE: Leave EMPTY ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ do not fill this field.
-5. MONTH_YEAR: Today's month and year: "May 2026". Always use this exact value.
-6. SUMMARY: Copy the candidate summary/profile section VERBATIM ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ word for word, no changes. If the summary has bullet points, join them into one paragraph separated by spaces or newlines.
-7. SUMMARY_BULLETS: Leave EMPTY.
-
-8. BUSINESS EXPERIENCE ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ CRITICAL RULES:
-   - Extract EVERY work history entry WITHOUT EXCEPTION.
-   - Each COMPANY_N = ONE ROLE (not one company). If candidate held multiple roles at the same company, create a SEPARATE COMPANY_N entry for each role.
-   - For all roles at the same company, use the EXACT SAME company name string in COMPANY_N_NAME (this triggers automatic grouping in the template).
-   - COMPANY_N_NAME: Full legal company name. IDENTICAL string for all roles at same company.
-   - COMPANY_N_LOCATION: City, Country if provided; leave empty if not.
-   - COMPANY_N_DATES: Overall company tenure dates (e.g. "Mar 1996 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Present") for FIRST role at that company ONLY. Leave EMPTY for all subsequent roles at same company.
-   - COMPANY_N_ROLE: Exact job title as written.
-   - COMPANY_N_FUNCTION: Department or function if listed, else empty.
-   - COMPANY_N_ROLE_DATES: Dates for THIS specific role only (e.g. "Dec 2025 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Present").
-   - COMPANY_N_BULLETS: All bullet points / achievements for this role, joined with | (pipe character). Copy text VERBATIM. Do NOT summarise.
-   - companies array: Group all roles at the same company under ONE entry. Each company has: name (full legal name), location, dates (overall tenure), roles array with: role (exact title), function (dept), role_dates (dates for this specific role — leave EMPTY STRING if the company has only ONE role, since dates already show in the company header), bullets (ALL achievements verbatim array). 9. PROJECT EXPERIENCES: Use projects array, same structure as companies array. Leave as empty array [] if no project experience found in CV.
-
-9. EDUCATION:
-   - EDU_1_YEARS, EDU_2_YEARS...: Year range (e.g. "1988ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ1992")
-   - EDU_1_INSTITUTION...: Full institution name
-   - EDU_1_DEGREE...: Degree or qualification name
-
-10. QUAL_1, QUAL_2, QUAL_3: Professional qualifications or certifications. First in QUAL_1, second in QUAL_2, third in QUAL_3. Leave empty if none.
-11. NATIONALITY: Exact nationality as stated; leave empty if not provided.
-12. LANGUAGES: Languages with proficiency levels as stated; leave empty if not provided.
-13. INTERESTS: As stated; leave empty if not provided.
-14. PROJECT EXPERIENCES ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ fill only if the source contains project or assignment experience:
-   - PROJECT_N_TITLE: Project or assignment title
-   - PROJECT_N_CLIENT: Client name or industry sector (leave empty if not stated)
-   - PROJECT_N_DATE: Date range for the project (e.g. "Jan 2023 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Mar 2023")
-   - PROJECT_N_DESCRIPTION: Full description of project scope, responsibilities, and outcomes ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ copy VERBATIM
-   - Extract ALL projects found. Use PROJECT_1 for the first, PROJECT_2 for the second, etc. Up to PROJECT_10.
-   - Leave all unused PROJECT fields as empty strings.
-   - If the source has NO project experience section, leave ALL PROJECT fields as empty strings.
-
-ABSOLUTE RULES:
-- Copy ALL text VERBATIM. Never summarise, rephrase, or add content not in the source.
-- Never skip any work history entry.
-- CLIENT_COMPANY and SEARCH_TITLE must always be empty strings.
-- Return ONLY valid JSON. No markdown, no code blocks, no explanations.
-
-JSON structure to use:
-` + apacJsonStr + `
-
-CANDIDATE SOURCE:
-
-` + inputText
-    : isCareerSummary
-    ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a single structured JSON object.
+var prompt = isCareerSummary
+  ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a single structured JSON object.
 
 ABSOLUTE RULES:
 - Copy ALL bullet points VERBATIM. Never summarise, rephrase, or skip any bullet.
@@ -1565,6 +1508,63 @@ Return ONLY this JSON — no extra fields:
   "LANGUAGES_LEVEL": "",
   "INTERESTS": ""
 }
+
+CANDIDATE SOURCE:
+
+` + inputText
+: isApac
+  ? isApacUpdated
+    ? `You are a document-filling assistant for Sheffield Haworth. Your task is to read the candidate CV below and extract ALL information into a structured JSON object for the APAC Candidate Profile (Updated) template.
+
+FIELD-BY-FIELD INSTRUCTIONS:
+
+1. CANDIDATE_NAME: Full name of the candidate exactly as written.
+2. CURRENT_EMPLOYER: Current or most recent employer name only (e.g. "DuPont China"). Do not include location or role.
+3. CLIENT_COMPANY: Leave EMPTY ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ do not fill this field.
+4. SEARCH_TITLE: Leave EMPTY ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ do not fill this field.
+5. MONTH_YEAR: Today's month and year: "May 2026". Always use this exact value.
+6. SUMMARY: Copy the candidate summary/profile section VERBATIM ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ word for word, no changes. If the summary has bullet points, join them into one paragraph separated by spaces or newlines.
+7. SUMMARY_BULLETS: Leave EMPTY.
+
+8. BUSINESS EXPERIENCE ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ CRITICAL RULES:
+   - Extract EVERY work history entry WITHOUT EXCEPTION.
+   - Each COMPANY_N = ONE ROLE (not one company). If candidate held multiple roles at the same company, create a SEPARATE COMPANY_N entry for each role.
+   - For all roles at the same company, use the EXACT SAME company name string in COMPANY_N_NAME (this triggers automatic grouping in the template).
+   - COMPANY_N_NAME: Full legal company name. IDENTICAL string for all roles at same company.
+   - COMPANY_N_LOCATION: City, Country if provided; leave empty if not.
+   - COMPANY_N_DATES: Overall company tenure dates (e.g. "Mar 1996 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Present") for FIRST role at that company ONLY. Leave EMPTY for all subsequent roles at same company.
+   - COMPANY_N_ROLE: Exact job title as written.
+   - COMPANY_N_FUNCTION: Department or function if listed, else empty.
+   - COMPANY_N_ROLE_DATES: Dates for THIS specific role only (e.g. "Dec 2025 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Present").
+   - COMPANY_N_BULLETS: All bullet points / achievements for this role, joined with | (pipe character). Copy text VERBATIM. Do NOT summarise.
+   - companies array: Group all roles at the same company under ONE entry. Each company has: name (full legal name), location, dates (overall tenure), roles array with: role (exact title), function (dept), role_dates (dates for this specific role — leave EMPTY STRING if the company has only ONE role, since dates already show in the company header), bullets (ALL achievements verbatim array). 9. PROJECT EXPERIENCES: Use projects array, same structure as companies array. Leave as empty array [] if no project experience found in CV.
+
+9. EDUCATION:
+   - EDU_1_YEARS, EDU_2_YEARS...: Year range (e.g. "1988ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ1992")
+   - EDU_1_INSTITUTION...: Full institution name
+   - EDU_1_DEGREE...: Degree or qualification name
+
+10. QUAL_1, QUAL_2, QUAL_3: Professional qualifications or certifications. First in QUAL_1, second in QUAL_2, third in QUAL_3. Leave empty if none.
+11. NATIONALITY: Exact nationality as stated; leave empty if not provided.
+12. LANGUAGES: Languages with proficiency levels as stated; leave empty if not provided.
+13. INTERESTS: As stated; leave empty if not provided.
+14. PROJECT EXPERIENCES ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ fill only if the source contains project or assignment experience:
+   - PROJECT_N_TITLE: Project or assignment title
+   - PROJECT_N_CLIENT: Client name or industry sector (leave empty if not stated)
+   - PROJECT_N_DATE: Date range for the project (e.g. "Jan 2023 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Mar 2023")
+   - PROJECT_N_DESCRIPTION: Full description of project scope, responsibilities, and outcomes ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ copy VERBATIM
+   - Extract ALL projects found. Use PROJECT_1 for the first, PROJECT_2 for the second, etc. Up to PROJECT_10.
+   - Leave all unused PROJECT fields as empty strings.
+   - If the source has NO project experience section, leave ALL PROJECT fields as empty strings.
+
+ABSOLUTE RULES:
+- Copy ALL text VERBATIM. Never summarise, rephrase, or add content not in the source.
+- Never skip any work history entry.
+- CLIENT_COMPANY and SEARCH_TITLE must always be empty strings.
+- Return ONLY valid JSON. No markdown, no code blocks, no explanations.
+
+JSON structure to use:
+` + apacJsonStr + `
 
 CANDIDATE SOURCE:
 
@@ -2131,7 +2131,11 @@ async function downloadHistory(index) {
         var _csZip = new PizZip(ab);
 
         // Step 1 — Build Business Experience XML from companies array
+        console.log('[CS DEBUG] item.content keys:', Object.keys(item.content || {}));
+        console.log('[CS DEBUG] companies:', JSON.stringify(item.content.companies));
+        console.log('[CS DEBUG] CANDIDATE_NAME:', item.content.CANDIDATE_NAME);
         var _beXml = buildCareerSummaryBizExp(item.content.companies || []);
+        console.log('[CS DEBUG] _beXml length:', _beXml.length);
 
         // Step 2 — Inject into document.xml at the {{BUSINESS_EXPERIENCE_BLOCK}} token
         var _csDocXml = _csZip.files['word/document.xml'].asText();
