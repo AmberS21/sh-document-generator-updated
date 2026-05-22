@@ -767,21 +767,50 @@ const TEMPLATES = {
 
     promptType: 'global-standard'
 
+  },
+
+  'project-report': {
+
+    label: 'Project Report — Pipeline Dashboard',
+
+    file: 'templates/SH_Project_Report_Template_v3.xlsx',
+
+    isProjectReport: true,
+
+    promptType: 'none'
+
   }
 
 };
 
-// Populate dropdown from TEMPLATES registry
+// Populate dropdown from TEMPLATES registry with category headers
 (function() {
   var sel = document.getElementById('tplSel');
   if (!sel) return;
-  Object.keys(TEMPLATES).forEach(function(key) {
-    var t = TEMPLATES[key];
+  var profileKeys = ['global-no-scorecard','global-with-scorecard','global-career-summary','apac-profile','services-profile','gb-profile'];
+  var reportKeys  = ['project-report'];
+
+  var grp1 = document.createElement('optgroup');
+  grp1.label = '── PROFILES ──';
+  profileKeys.forEach(function(key) {
+    if (!TEMPLATES[key]) return;
     var opt = document.createElement('option');
     opt.value = key;
-    opt.textContent = t.label;
-    sel.appendChild(opt);
+    opt.textContent = TEMPLATES[key].label;
+    grp1.appendChild(opt);
   });
+  sel.appendChild(grp1);
+
+  var grp2 = document.createElement('optgroup');
+  grp2.label = '── PROJECT REPORTS ──';
+  reportKeys.forEach(function(key) {
+    if (!TEMPLATES[key]) return;
+    var opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = TEMPLATES[key].label;
+    grp2.appendChild(opt);
+  });
+  sel.appendChild(grp2);
 })();
 
 var TPL = {
@@ -883,6 +912,17 @@ function pickTpl(v) {
   var chips = document.querySelectorAll('.fmt-chip');
   var fi = FMT_ORD.indexOf(t.fmt);
   if (fi >= 0 && chips[fi]) chips[fi].classList.add(FMT_CLS[t.fmt]);
+
+  // Disable Paste Text tab for project reports
+  var _isProjRpt = (v === 'project-report');
+  document.querySelectorAll('.input-tab, [onclick*="setInput"]').forEach(function(el) {
+    if (el.textContent && el.textContent.trim().match(/Paste/i)) {
+      el.style.opacity = _isProjRpt ? '0.4' : '';
+      el.style.pointerEvents = _isProjRpt ? 'none' : '';
+      el.title = _isProjRpt ? 'Not available for Project Reports — use Ezekia URL or Upload File' : '';
+      if (_isProjRpt && typeof activeType !== 'undefined' && activeType === 'text') setInput('url');
+    }
+  });
 }
 
 function filterTpl(q) {
@@ -1290,7 +1330,7 @@ async function generate() {
                 location: (cand.location || ''),
                 pipelineTag: (cand.pipeline_tag || (cand.pipelineTags && cand.pipelineTags[0]) || ''),
                 gender: (cand.gender || ''),
-                notes: (cand.notes || '')
+                notes: (cand.custom_notes || cand.notes || (cand.custom && (cand.custom.progress_note || cand.custom.notes)) || '')
               };
             })
           };
@@ -1340,6 +1380,56 @@ async function generate() {
           var file = filesToProcess[fi];
           var ext = file.name.split('.').pop().toLowerCase();
           btn.innerHTML = 'Reading ' + file.name + '...';
+
+          // ── Project Report: parse xlsx/docx file directly into candidate rows ──
+          if (tpl === 'project-report' && (ext === 'xlsx' || ext === 'xls' || ext === 'docx')) {
+            try {
+              var _prAb = await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
+              var _prWb = XLSX.read(_prAb, {type:'array'});
+              // Read first sheet as array of arrays
+              var _prWs = _prWb.Sheets[_prWb.SheetNames[0]];
+              var _prRows = XLSX.utils.sheet_to_json(_prWs, {header:1, defval:''});
+              // Find header row (row with Name/Company etc) - skip rows 0-1 if they're API keys
+              var _hdIdx = 0;
+              for (var _ri = 0; _ri < Math.min(5, _prRows.length); _ri++) {
+                var _r = _prRows[_ri].map(function(c){ return String(c).toLowerCase(); });
+                if (_r.some(function(c){ return c.includes('name') || c.includes('company'); })) {
+                  _hdIdx = _ri; break;
+                }
+              }
+              var _headers = _prRows[_hdIdx].map(function(c){ return String(c).toLowerCase().trim(); });
+              var _candidates = [];
+              for (var _di = _hdIdx + 1; _di < _prRows.length; _di++) {
+                var _row = _prRows[_di];
+                if (!_row || !_row[0]) continue; // skip empty rows
+                var _cand = {};
+                _headers.forEach(function(h, hi) {
+                  var _val = String(_row[hi] || '').trim();
+                  if (h.includes('name') && !h.includes('company')) _cand.fullname = _val;
+                  else if (h.includes('company')) _cand.company = _val;
+                  else if (h.includes('role') || h.includes('title') || h.includes('position')) _cand.title = _val;
+                  else if (h.includes('location') || h.includes('city')) _cand.location = _val;
+                  else if (h.includes('pipeline') || h.includes('tag') || h.includes('stage')) _cand.pipelineTag = _val;
+                  else if (h.includes('gender')) _cand.gender = _val;
+                  else if (h.includes('note') || h.includes('progress')) _cand.notes = _val;
+                });
+                if (_cand.fullname || _cand.company) _candidates.push(_cand);
+              }
+              var _prContent = { projectName: file.name.replace(/\.xlsx?|.docx?/i,''), clientCompany: '', candidates: _candidates };
+              var _prItem = { name: _prContent.projectName, date: new Date().toLocaleString(), template: tpl, fmt: 'd', content: _prContent };
+              var _prHist = JSON.parse(localStorage.getItem('sh_history')||'[]');
+              _prHist.unshift(_prItem);
+              localStorage.setItem('sh_history', JSON.stringify(_prHist));
+              renderHistory();
+              btn.classList.remove('loading'); btn.innerHTML = '\u2705 Done \u2014 Check My History';
+              notify('Project data loaded from file (' + _candidates.length + ' candidates) — go to My History to download.');
+              setTimeout(function(){ btn.innerHTML = '\u26a1 Generate Document'; }, 3500);
+            } catch(_prErr) {
+              notify('Could not parse file: ' + _prErr.message);
+              btn.classList.remove('loading'); btn.innerHTML = '\u26a1 Generate Document';
+            }
+            continue; // skip to next file
+          }
           try {
             if (ext === 'txt') {
               inputText = await file.text();
@@ -2361,9 +2451,12 @@ async function downloadHistory(index) {
 
     } else if (fmt === 'x') {
       // --- Project Record: fill xlsx template from Ezekia data ---
-      if (item.template === 'services-profile') {
+      if (item.template === 'services-profile' || item.template === 'project-report') {
         var projData2 = item.content;
-        var tplResp = await fetch('Service%20Team%20-%20Project%20Report%20(with%20Notes).xlsx');
+        var _projTplFile = (item.template === 'project-report')
+          ? 'templates/SH_Project_Report_Template_v3.xlsx'
+          : 'Service%20Team%20-%20Project%20Report%20(with%20Notes).xlsx';
+        var tplResp = await fetch(_projTplFile.startsWith('http') ? _projTplFile : _ghBase + _projTplFile);
         if (!tplResp.ok) throw new Error('Could not load project report template');
         var tplAb = await tplResp.arrayBuffer();
         var projWb = XLSX.read(new Uint8Array(tplAb), {type:'array'});
