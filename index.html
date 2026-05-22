@@ -1770,7 +1770,7 @@ try {
   return;
 }
 
-        var _dn=new Date();var _dmo=['January','February','March','April','May','June','July','August','September','October','November','December'];if(output){output.MONTH_YEAR=_dmo[_dn.getMonth()]+' '+_dn.getFullYear();}  if (output && isCareerSummary) {
+        var _dn=new Date();var _dmo=['January','February','March','April','May','June','July','August','September','October','November','December'];if(output){output.MONTH_YEAR=_dmo[_dn.getMonth()]+' '+_dn.getFullYear();if(output&&output.QUAL_1){var _quals=(output.QUAL_1||'').replace(/^certifications?\s*:\s*/i,'').split(/[|;]/).map(function(q){return q.trim();}).filter(Boolean);output.QUAL_1=_quals[0]||'';if(!output.QUAL_2&&_quals[1])output.QUAL_2=_quals[1];if(!output.QUAL_3&&_quals[2])output.QUAL_3=_quals[2];}}  if (output && isCareerSummary) {
           var _now = new Date();
           var _mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
           output.PROFILE_MONTH = _mNames[_now.getMonth()] + ' ' + _now.getFullYear();
