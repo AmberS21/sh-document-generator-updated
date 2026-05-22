@@ -2239,8 +2239,21 @@ async function downloadHistory(index) {
 
         // Build dynamic Summary and Business Experience blocks
         var _docXml = zip.files['word/document.xml'].asText();
-        _docXml = _docXml.replace('{{SUMMARY_BLOCK}}', buildGlobalSummary(item.content.SUMMARY || ''));
-        _docXml = _docXml.replace('{{BUSINESS_EXPERIENCE_BLOCK}}', buildGlobalBizExp(item.content));
+
+        // Replace SUMMARY_BLOCK token (inside a <w:p>) with dynamic bullet paras
+        var _sumXml = buildGlobalSummary(item.content.SUMMARY || '');
+        _docXml = _docXml.replace(
+          /<w:p[^>]*>(?:<w:pPr>[\s\S]*?<\/w:pPr>)?<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:t>\{\{SUMMARY_BLOCK\}\}<\/w:t><\/w:r><\/w:p>/,
+          _sumXml
+        );
+
+        // Replace BUSINESS_EXPERIENCE_BLOCK token paragraph with dynamic company blocks
+        var _bizXml = buildGlobalBizExp(item.content);
+        _docXml = _docXml.replace(
+          /<w:p[^>]*>(?:<w:pPr>[\s\S]*?<\/w:pPr>)?<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:t>\{\{BUSINESS_EXPERIENCE_BLOCK\}\}<\/w:t><\/w:r><\/w:p>/,
+          _bizXml
+        );
+
         zip.file('word/document.xml', _docXml);
 
         // docxtemplater fills all remaining flat tokens
