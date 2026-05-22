@@ -1,6 +1,4 @@
 <!DOCTYPE html>
-
-  var _tplCache = {}; // Cache templates in memory to avoid repeated GitHub fetches
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -2712,6 +2710,8 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 <script>
+  var _tplCache = {};
+
 const SH_LOGGER = '/api/proxy';
 function initUserName(){var n=localStorage.getItem('sh_userName');if(!n){document.getElementById('namePromptOverlay').style.display='flex';}else{document.getElementById('userName').textContent=n;}}
 function saveUserName(){var inp=document.getElementById('namePromptInput');var name=inp.value.trim();if(!name){inp.style.border='1.5px solid #e74c3c';return;}localStorage.setItem('sh_userName',name);document.getElementById('userName').textContent=name;document.getElementById('namePromptOverlay').style.display='none';notify('Welcome, '+name+'!');}
