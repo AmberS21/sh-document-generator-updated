@@ -2292,6 +2292,8 @@ async function downloadHistory(index) {
   var item = history[index];
   if (!item) return;
   var fmt = item.fmt || 'd';
+  // Override: project-report always downloads as xlsx
+  if (item.template === 'project-report') fmt = 'x';
   var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : (item.template === 'apac-profile' ) ? 'English' : false ? 'Chinese' :item.template === 'global-career-summary' ? 'with Career Summary' :  'No Scorecard';
   var _profilePrefix = (item.template === 'apac-profile' || false ) ? 'APAC Profile' : 'Global';
   var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
