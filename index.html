@@ -1636,7 +1636,7 @@ FIELD-BY-FIELD INSTRUCTIONS:
    - EDU_1_INSTITUTION...: Full institution name
    - EDU_1_DEGREE...: Degree or qualification name
 
-10. QUAL_1, QUAL_2, QUAL_3: CRITICAL — one qualification per field. If the source has "CPIM | Six Sigma Black Belt", set QUAL_1="CPIM (Certified in Production and Inventory Management)" AND QUAL_2="Six Sigma Black Belt". NEVER put two qualifications in one field. Split on | or ; or newline. Strip any label like "Certifications:" first.
+10. QUAL_1: Put the ENTIRE qualifications string exactly as written (e.g. "CPIM (Certified in Production and Inventory Management) | Six Sigma Black Belt"). Do NOT split it. Do NOT strip the pipe. Copy the full string verbatim into QUAL_1. Leave QUAL_2 and QUAL_3 empty — the system will split automatically.
 11. NATIONALITY: Exact nationality as stated; leave empty if not provided.
 12. LANGUAGES: Languages with proficiency levels as stated; leave empty if not provided.
 13. INTERESTS: As stated; leave empty if not provided.
