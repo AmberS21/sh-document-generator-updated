@@ -799,6 +799,8 @@ function getTemplateFile(key) {
   return 'templates/SH_Global_Candidate_Profile_No_Scorecard_v2.docx'; // safe fallback
 }
 
+var _tplCache = {}; // Cache templates in memory to avoid repeated GitHub fetches
+
 // Populate dropdown from TEMPLATES registry with category headers
 (function() {
   var sel = document.getElementById('tplSel');
@@ -2839,8 +2841,6 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 <script>
-  var _tplCache = {};
-
 const SH_LOGGER = '/api/proxy';
 function initUserName(){var n=localStorage.getItem('sh_userName');if(!n){document.getElementById('namePromptOverlay').style.display='flex';}else{document.getElementById('userName').textContent=n;}}
 function saveUserName(){var inp=document.getElementById('namePromptInput');var name=inp.value.trim();if(!name){inp.style.border='1.5px solid #e74c3c';return;}localStorage.setItem('sh_userName',name);document.getElementById('userName').textContent=name;document.getElementById('namePromptOverlay').style.display='none';notify('Welcome, '+name+'!');}
