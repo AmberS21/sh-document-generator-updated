@@ -1636,7 +1636,7 @@ FIELD-BY-FIELD INSTRUCTIONS:
    - EDU_1_INSTITUTION...: Full institution name
    - EDU_1_DEGREE...: Degree or qualification name
 
-10. QUAL_1, QUAL_2, QUAL_3: Professional qualifications or certifications. First in QUAL_1, second in QUAL_2, third in QUAL_3. Leave empty if none.
+10. QUAL_1, QUAL_2, QUAL_3: Professional qualifications or certifications. If multiple qualifications are listed (separated by | or ; or comma or newline), split them: first into QUAL_1, second into QUAL_2, third into QUAL_3. Each field = one qualification only. Leave empty if none.
 11. NATIONALITY: Exact nationality as stated; leave empty if not provided.
 12. LANGUAGES: Languages with proficiency levels as stated; leave empty if not provided.
 13. INTERESTS: As stated; leave empty if not provided.
