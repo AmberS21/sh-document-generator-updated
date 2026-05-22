@@ -1247,10 +1247,20 @@ async function generate() {
         if (edus.length) {
           lines.push('\nEDUCATION:');
           edus.forEach(function(e) {
-            var yr = (e.startYear||e.start_year||'') + (e.endYear||e.end_year ? ' - '+(e.endYear||e.end_year) : '');
-            var inst = e.institution || (e.company && e.company.name) || '';
-            var deg = e.degree || e.title || '';
-            lines.push(yr + ' | ' + inst + ' | ' + deg);
+            // Try all possible field name variations from Ezekia API
+            var startYr = e.startYear || e.start_year || e.start_date || e.yearStart ||
+                          (e.start && (e.start.year || e.start.substring && e.start.substring(0,4))) || '';
+            var endYr   = e.endYear   || e.end_year   || e.end_date   || e.yearEnd   ||
+                          (e.end   && (e.end.year   || e.end.substring   && e.end.substring(0,4)))   || '';
+            // Format year only (strip month if full date)
+            if (startYr && startYr.length > 4) startYr = new Date(startYr).getFullYear() || startYr.substring(0,4);
+            if (endYr   && endYr.length   > 4) endYr   = new Date(endYr).getFullYear()   || endYr.substring(0,4);
+            var yr = startYr ? (endYr ? startYr + ' - ' + endYr : startYr) : '';
+            var inst = e.institution || e.school || e.schoolName || e.institutionName ||
+                       e.university || e.college ||
+                       (e.company && (e.company.name || e.company.displayName)) || '';
+            var deg = e.degree || e.title || e.qualification || e.fieldOfStudy || e.subject || '';
+            if (yr || inst || deg) lines.push('EDUCATION: ' + yr + ' | ' + inst + ' | ' + deg);
           });
         }
         inputText = lines.join('\n');
