@@ -783,6 +783,22 @@ const TEMPLATES = {
 
 };
 
+// Legacy template key mapping — handles history items from older versions
+var TEMPLATE_LEGACY = {
+  'global-no-scorecard':   'templates/SH_Global_Candidate_Profile_No_Scorecard_v2.docx',
+  'global-with-scorecard': 'templates/SH_Global_Candidate_Profile_With_Scorecard_v2.docx',
+  'global-career-summary': 'templates/SH_Global_Career_Summary_v5.docx',
+  'apac-profile':          'templates/APAC_Candidate_Profile_English.docx',
+  'services-profile':      'templates/Services_Profile.docx',
+  'gb-profile':            'templates/SH_GB_Profile.docx',
+  'project-report':        'templates/SH_Project_Report_Template_v3.xlsx'
+};
+function getTemplateFile(key) {
+  if (TEMPLATES[key]) return TEMPLATES[key].file;
+  if (TEMPLATE_LEGACY[key]) return TEMPLATE_LEGACY[key];
+  return 'templates/SH_Global_Candidate_Profile_No_Scorecard_v2.docx'; // safe fallback
+}
+
 // Populate dropdown from TEMPLATES registry with category headers
 (function() {
   var sel = document.getElementById('tplSel');
@@ -1338,7 +1354,7 @@ async function generate() {
             name: (proj.name || 'Project Report') + (proj.client && proj.client.name ? ' - ' + proj.client.name : ''),
             date: new Date().toLocaleString(),
             template: tpl,
-            fmt: 'd',
+            fmt: tpl === 'project-report' ? 'x' : 'd',
             content: projContent
           };
           var projHistory = JSON.parse(localStorage.getItem('sh_history') || '[]');
@@ -1416,7 +1432,7 @@ async function generate() {
                 if (_cand.fullname || _cand.company) _candidates.push(_cand);
               }
               var _prContent = { projectName: file.name.replace(/\.xlsx?|.docx?/i,''), clientCompany: '', candidates: _candidates };
-              var _prItem = { name: _prContent.projectName, date: new Date().toLocaleString(), template: tpl, fmt: 'd', content: _prContent };
+              var _prItem = { name: _prContent.projectName, date: new Date().toLocaleString(), template: tpl, fmt: 'x', content: _prContent };
               var _prHist = JSON.parse(localStorage.getItem('sh_history')||'[]');
               _prHist.unshift(_prItem);
               localStorage.setItem('sh_history', JSON.stringify(_prHist));
@@ -2280,7 +2296,7 @@ async function downloadHistory(index) {
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
       if (item.type === 'combined' && Array.isArray(item.content)) {
-        var _tplUrlC = TEMPLATES[item.template] ? TEMPLATES[item.template].file : 'Global_Candidate_Profile_No%20Scorecard_New.docx';
+        var _tplUrlC = getTemplateFile(item.template);
         var _isDocm = _tplUrlC.endsWith('.docm');
         var _docExt = _isDocm ? 'docm' : 'docx';
         var _docMime = _isDocm ? 'application/vnd.ms-word.document.macroEnabled.12' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -2310,7 +2326,7 @@ async function downloadHistory(index) {
         return;
       }
     if (fmt === 'd') {
-      var tplUrl = TEMPLATES[item.template] ? TEMPLATES[item.template].file : 'Global_Candidate_Profile_No%20Scorecard_New.docx';
+      var tplUrl = getTemplateFile(item.template);
       var _isDocmSingle = tplUrl.endsWith('.docm');
       var _docExtSingle = _isDocmSingle ? 'docm' : 'docx';
       var _docMimeSingle = _isDocmSingle ? 'application/vnd.ms-word.document.macroEnabled.12' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -2343,7 +2359,18 @@ async function downloadHistory(index) {
         _apacZip.file('word/document.xml', _apacFilled);
         out = await _apacZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       } else if (item.template === 'global-career-summary') {
-        var _csZip = new PizZip(ab);
+        var _csZip;
+        try {
+          _csZip = new PizZip(ab);
+          if (!_csZip.files['word/document.xml']) throw new Error('Invalid zip');
+        } catch(_zipErr) {
+          // Clear bad cache entry and retry once
+          delete _tplCache[_tplKey];
+          var _reResp = await fetch(tplUrl.startsWith('http') ? tplUrl : _ghBase + tplUrl);
+          if (!_reResp.ok) throw new Error('Template reload failed: HTTP ' + _reResp.status);
+          ab = await _reResp.arrayBuffer();
+          _csZip = new PizZip(ab);
+        }
 
         // Step 1 — Build Business Experience XML from companies array
         console.log('[CS DEBUG] item.content keys:', Object.keys(item.content || {}));
@@ -2353,14 +2380,17 @@ async function downloadHistory(index) {
         console.log('[CS DEBUG] _beXml length:', _beXml.length);
 
         // Step 2 — Inject into document.xml at the {{BUSINESS_EXPERIENCE_BLOCK}} token
+        if (!_csZip.files['word/document.xml']) throw new Error('Template missing document.xml — please try again.');
         var _csDocXml = _csZip.files['word/document.xml'].asText();
         _csDocXml = _csDocXml.replace('{{BUSINESS_EXPERIENCE_BLOCK}}', _beXml);
         _csZip.file('word/document.xml', _csDocXml);
 
-        // Step 3 — Fill header4.xml with candidate name
-        var _csHdr4 = _csZip.files['word/header4.xml'].asText();
-        _csHdr4 = _csHdr4.replace('{{CANDIDATE_NAME}}', csXmlEsc(item.content.CANDIDATE_NAME || ''));
-        _csZip.file('word/header4.xml', _csHdr4);
+        // Step 3 — Fill header4.xml with candidate name (if present)
+        if (_csZip.files['word/header4.xml']) {
+          var _csHdr4 = _csZip.files['word/header4.xml'].asText();
+          _csHdr4 = _csHdr4.replace('{{CANDIDATE_NAME}}', csXmlEsc(item.content.CANDIDATE_NAME || ''));
+          _csZip.file('word/header4.xml', _csHdr4);
+        }
 
         // Step 4 — docxtemplater fills all remaining flat {{tokens}}
         var _csDoc = new window.docxtemplater(_csZip, {
