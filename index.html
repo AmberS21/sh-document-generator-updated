@@ -281,7 +281,7 @@ table.usage tr:last-child td{border-bottom:none;}
 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ -->
 <div class="topnav">
   <div class="nav-left">
-    <img src="Updated Logo.png" style="height:48px;width:auto;" alt="DocGen"/>
+    <img src="Updated%20Logo.png" style="height:48px;width:auto;" alt="DocGen"/>
     <div class="nav-divider"></div>
     <span class="nav-tool">Document Generator</span>
   </div>
@@ -1353,7 +1353,11 @@ async function generate() {
                 var pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
                 var txt='';
                 for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();txt+=tc.items.map(function(s){return s.str;}).join(' ')+' ';}
-                return txt.trim();
+                var extracted = txt.trim();
+                if (!extracted || extracted.length < 50) {
+                  throw new Error('This PDF appears to be image-based (scanned). PDF.js cannot extract text from image PDFs.\n\nPlease either:\n• Copy and paste the CV text directly using the Paste Text tab\n• Convert the PDF to a text-based PDF first\n• Use a Word (.docx) version of the CV');
+                }
+                return extracted;
               })();
             } else if (ext === 'xlsx' || ext === 'xls') {
               inputText = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){var wb2=XLSX.read(e.target.result,{type:'array'});var txt2='';wb2.SheetNames.forEach(function(sn){var ws2=wb2.Sheets[sn];txt2+=XLSX.utils.sheet_to_csv(ws2)+' ';});res(txt2.trim());};rd.onerror=rej;rd.readAsArrayBuffer(file);});
