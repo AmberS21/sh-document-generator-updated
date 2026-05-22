@@ -1636,7 +1636,7 @@ FIELD-BY-FIELD INSTRUCTIONS:
    - EDU_1_INSTITUTION...: Full institution name
    - EDU_1_DEGREE...: Degree or qualification name
 
-10. QUAL_1, QUAL_2, QUAL_3: Professional qualifications or certifications. If multiple qualifications are listed (separated by | or ; or comma or newline), split them: first into QUAL_1, second into QUAL_2, third into QUAL_3. Each field = one qualification only. Leave empty if none.
+10. QUAL_1, QUAL_2, QUAL_3: Professional qualifications/certifications. CRITICAL: If the CV lists multiple qualifications separated by | or ; or newline, you MUST split them into separate fields. Example: "CPIM | Six Sigma Black Belt" → QUAL_1="CPIM (Certified in Production and Inventory Management)", QUAL_2="Six Sigma Black Belt". Each QUAL field = ONE qualification only. Strip any leading label like "Certifications:" before splitting.
 11. NATIONALITY: Exact nationality as stated; leave empty if not provided.
 12. LANGUAGES: Languages with proficiency levels as stated; leave empty if not provided.
 13. INTERESTS: As stated; leave empty if not provided.
