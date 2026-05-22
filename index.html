@@ -1719,7 +1719,7 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
     headers: _hdrs,
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 8000,
+      max_tokens: 12000,
 messages: [{
   role: 'user',
   content: prompt
@@ -2240,19 +2240,15 @@ async function downloadHistory(index) {
         // Build dynamic Summary and Business Experience blocks
         var _docXml = zip.files['word/document.xml'].asText();
 
-        // Replace SUMMARY_BLOCK token (inside a <w:p>) with dynamic bullet paras
-        var _sumXml = buildGlobalSummary(item.content.SUMMARY || '');
-        _docXml = _docXml.replace(
-          /<w:p[^>]*>(?:<w:pPr>[\s\S]*?<\/w:pPr>)?<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:t>\{\{SUMMARY_BLOCK\}\}<\/w:t><\/w:r><\/w:p>/,
-          _sumXml
-        );
+        // Exact string replacement — no regex to avoid greedy matching
+        var _SUMMARY_PARA = '<w:p><w:pPr><w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr><w:spacing w:after="40"/><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/><w:color w:val="002060"/></w:rPr><w:t>{{SUMMARY_BLOCK}}</w:t></w:r></w:p>';
+        var _BE_PARA = '<w:p><w:pPr><w:spacing w:after="0"/><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr><w:t>{{BUSINESS_EXPERIENCE_BLOCK}}</w:t></w:r></w:p>';
 
-        // Replace BUSINESS_EXPERIENCE_BLOCK token paragraph with dynamic company blocks
+        var _sumXml = buildGlobalSummary(item.content.SUMMARY || '');
+        _docXml = _docXml.replace(_SUMMARY_PARA, _sumXml);
+
         var _bizXml = buildGlobalBizExp(item.content);
-        _docXml = _docXml.replace(
-          /<w:p[^>]*>(?:<w:pPr>[\s\S]*?<\/w:pPr>)?<w:r[^>]*>(?:<w:rPr>[\s\S]*?<\/w:rPr>)?<w:t>\{\{BUSINESS_EXPERIENCE_BLOCK\}\}<\/w:t><\/w:r><\/w:p>/,
-          _bizXml
-        );
+        _docXml = _docXml.replace(_BE_PARA, _bizXml);
 
         zip.file('word/document.xml', _docXml);
 
