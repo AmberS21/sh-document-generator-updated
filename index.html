@@ -1345,20 +1345,39 @@ async function generate() {
           var candResp = await fetch(_candUrl);
           console.log('[EZEKIA] Candidates full URL:', _candUrl, 'status:', candResp.status);
           var _rawCandData = candResp.ok ? await candResp.json() : {data:[]};
-          var _fc = (_rawCandData.data||[])[0] || {};
-          console.log('[EZEKIA] Raw first candidate keys:', Object.keys(_fc));
-          console.log('[EZEKIA] owner.tags:', JSON.stringify(_fc.owner && _fc.owner.tags));
-          console.log('[EZEKIA] manager:', JSON.stringify(_fc.manager));
-          console.log('[EZEKIA] meta:', JSON.stringify(_fc.meta));
-          var candData = _rawCandData;
-          var candidates = candData.data || [];
-          console.log('[EZEKIA RAW] First candidate:', JSON.stringify(candidates[0]));
+          var _basicCandidates = _rawCandData.data || [];
 
+          // Enrich each candidate with full person data to get custom fields, gender, tags
+          btn.innerHTML = 'Fetching details for ' + _basicCandidates.length + ' candidates...';
+          var _enrichedCandidates = [];
+          for (var _ci = 0; _ci < _basicCandidates.length; _ci++) {
+            var _bc = _basicCandidates[_ci];
+            try {
+              var _pResp = await fetch(ezekiaBase2 + '/v4/people/' + _bc.id
+                + '?fieldsWithCandidate%5B%5D=manager.tags'
+                + '&fieldsWithCandidate%5B%5D=manager.customValues'
+                + '&fieldsWithCandidate%5B%5D=manager.researchNotes');
+              if (_pResp.ok) {
+                var _pJson = await _pResp.json();
+                var _fullCand = _pJson.data || _pJson;
+                if (_ci === 0) {
+                  console.log('[EZEKIA] Enriched person keys:', Object.keys(_fullCand));
+                  console.log('[EZEKIA] manager:', JSON.stringify(_fullCand.manager));
+                  console.log('[EZEKIA] owner.tags:', JSON.stringify(_fullCand.owner && _fullCand.owner.tags));
+                }
+                _enrichedCandidates.push(_fullCand);
+              } else {
+                _enrichedCandidates.push(_bc);
+              }
+            } catch(_pe) {
+              _enrichedCandidates.push(_bc);
+            }
+          }
 
           var projContent = {
             projectName: proj.name || '',
             clientCompany: (proj.client && proj.client.name) || '',
-            candidates: candidates.map(function(cand) {
+            candidates: _enrichedCandidates.map(function(cand) {
               // Extract from Ezekia v4 API response structure
               var _pos = (cand.profile && cand.profile.positions && cand.profile.positions[0]) || {};
               var _co  = _pos.company || {};
