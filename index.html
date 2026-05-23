@@ -1337,15 +1337,19 @@ async function generate() {
           console.log('[EZEKIA] Project data:', JSON.stringify(projData).substring(0, 300));
           var proj = projData.data || projData;
           btn.innerHTML = 'Fetching candidates&';
-          var candResp = await fetch(ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates?fieldsWithCandidate[]=manager.tags&fieldsWithCandidate[]=manager.customValues&fieldsWithCandidate[]=manager.researchNotes');
-          console.log('[EZEKIA] Candidates URL:', ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates', 'status:', candResp.status);
+          var _candUrl = ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates'
+            + '?fieldsWithCandidate%5B%5D=manager.tags'
+            + '&fieldsWithCandidate%5B%5D=manager.customValues'
+            + '&fieldsWithCandidate%5B%5D=manager.researchNotes'
+            + '&fieldsWithCandidate%5B%5D=meta.candidate';
+          var candResp = await fetch(_candUrl);
+          console.log('[EZEKIA] Candidates full URL:', _candUrl, 'status:', candResp.status);
           var _rawCandData = candResp.ok ? await candResp.json() : {data:[]};
           var _fc = (_rawCandData.data||[])[0] || {};
           console.log('[EZEKIA] Raw first candidate keys:', Object.keys(_fc));
-          console.log('[EZEKIA] pipelineTags:', JSON.stringify(_fc.pipelineTags));
-          console.log('[EZEKIA] gender:', _fc.gender);
-          console.log('[EZEKIA] custom:', JSON.stringify(_fc.custom));
-          console.log('[EZEKIA] pivot:', JSON.stringify(_fc.pivot));
+          console.log('[EZEKIA] owner.tags:', JSON.stringify(_fc.owner && _fc.owner.tags));
+          console.log('[EZEKIA] manager:', JSON.stringify(_fc.manager));
+          console.log('[EZEKIA] meta:', JSON.stringify(_fc.meta));
           var candData = _rawCandData;
           var candidates = candData.data || [];
           console.log('[EZEKIA RAW] First candidate:', JSON.stringify(candidates[0]));
