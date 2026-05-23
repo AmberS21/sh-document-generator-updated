@@ -2506,6 +2506,9 @@ async function downloadHistory(index) {
         var cols = ['fullname','company','title','location','pipelineTag','gender','notes'];
         var colLetters = ['A','B','C','D','E','F','G'];
         var candidates2 = (projData2 && projData2.candidates) ? projData2.candidates : [];
+        console.log('[PROJECT REPORT] projData2 keys:', projData2 ? Object.keys(projData2) : 'null');
+        console.log('[PROJECT REPORT] candidates count:', candidates2.length);
+        if (candidates2.length > 0) console.log('[PROJECT REPORT] first candidate:', JSON.stringify(candidates2[0]));
         candidates2.forEach(function(cand, ri) {
           var r = startRow + ri;
           colLetters.forEach(function(col, ci) {
@@ -2516,6 +2519,20 @@ async function downloadHistory(index) {
         // Update sheet range
         var lastRow = Math.max(startRow - 1 + candidates2.length, 2);
         projWs['!ref'] = 'A1:G' + lastRow;
+        // Fill Dashboard tokens
+        var _dashWs = projWb.Sheets['Dashboard'];
+        if (_dashWs) {
+          var _projName = projData2.projectName || projData2.name || '';
+          var _reportDate = new Date().toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
+          Object.keys(_dashWs).forEach(function(ref) {
+            if (ref[0] === '!') return;
+            var cell = _dashWs[ref];
+            if (cell && cell.v && typeof cell.v === 'string') {
+              cell.v = cell.v.replace('{{project_name}}', _projName).replace('{{report_date}}', _reportDate);
+              if (cell.w) cell.w = cell.w.replace('{{project_name}}', _projName).replace('{{report_date}}', _reportDate);
+            }
+          });
+        }
         var projBuf = XLSX.write(projWb, {type:'array', bookType:'xlsx'});
         var projBlob = new Blob([projBuf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
         var projA = document.createElement('a');
