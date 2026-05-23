@@ -1349,15 +1349,21 @@ async function generate() {
           var candData = _rawCandData;
           var candidates = candData.data || [];
           console.log('[EZEKIA RAW] First candidate:', JSON.stringify(candidates[0]));
-          // Fetch relationship data for first candidate to discover pipeline/custom fields
+          // Log all keys from first candidate to find pipeline/gender fields
+          if (candidates.length > 0) {
+            var _fc = candidates[0];
+            console.log('[EZEKIA] All 18 candidate keys:', JSON.stringify(Object.keys(_fc)));
+            console.log('[EZEKIA] Full candidate (no profile):', JSON.stringify(Object.assign({}, _fc, {profile: '...omitted...', addresses: '...', emails: '...', phones: '...', links: '...', owner: '...'})));
+          }
+          // Fetch custom fields (gender, progress notes) for first candidate
           if (candidates.length > 0) {
             try {
-              var _relResp = await fetch(ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates/' + candidates[0].id);
-              if (_relResp.ok) {
-                var _relData = await _relResp.json();
-                console.log('[EZEKIA] Candidate relationship data:', JSON.stringify(_relData).substring(0, 800));
+              var _custResp = await fetch(ezekiaBase2 + '/v4/people/' + candidates[0].id + '/custom');
+              if (_custResp.ok) {
+                var _custData = await _custResp.json();
+                console.log('[EZEKIA] Custom fields:', JSON.stringify(_custData).substring(0, 800));
               }
-            } catch(e) { console.log('[EZEKIA] Relationship fetch error:', e.message); }
+            } catch(e) { console.log('[EZEKIA] Custom fetch error:', e.message); }
           }
           var projContent = {
             projectName: proj.name || '',
