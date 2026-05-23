@@ -1360,10 +1360,22 @@ async function generate() {
               if (_pResp.ok) {
                 var _pJson = await _pResp.json();
                 var _fullCand = _pJson.data || _pJson;
+                // Try fetching research notes separately
+                try {
+                  var _notesResp = await fetch(ezekiaBase2 + '/v4/people/' + _bc.id + '/research-notes?count=1');
+                  if (_notesResp.ok) {
+                    var _notesJson = await _notesResp.json();
+                    if (_ci === 0) console.log('[EZEKIA] Research notes:', JSON.stringify(_notesJson).substring(0,300));
+                    _fullCand._researchNotes = (_notesJson.data || []);
+                  }
+                } catch(e) {}
                 if (_ci === 0) {
                   console.log('[EZEKIA] Enriched person keys:', Object.keys(_fullCand));
                   console.log('[EZEKIA] manager:', JSON.stringify(_fullCand.manager));
                   console.log('[EZEKIA] owner.tags:', JSON.stringify(_fullCand.owner && _fullCand.owner.tags));
+                  console.log('[EZEKIA] FULL PERSON (no profile):', JSON.stringify(
+                    Object.fromEntries(Object.entries(_fullCand).filter(function(e){ return e[0] !== 'profile'; }))
+                  ).substring(0, 1000));
                 }
                 _enrichedCandidates.push(_fullCand);
               } else {
