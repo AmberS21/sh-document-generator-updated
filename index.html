@@ -1346,6 +1346,10 @@ async function generate() {
           console.log('[EZEKIA] Candidates full URL:', _candUrl, 'status:', candResp.status);
           var _rawCandData = candResp.ok ? await candResp.json() : {data:[]};
           var _basicCandidates = _rawCandData.data || [];
+          // Log COMPLETE first candidate from candidates list to find pipeline tag
+          if (_basicCandidates.length > 0) {
+            console.log('[EZEKIA] COMPLETE raw candidate:', JSON.stringify(_basicCandidates[0]));
+          }
 
           // Enrich each candidate with full person data to get custom fields, gender, tags
           btn.innerHTML = 'Fetching details for ' + _basicCandidates.length + ' candidates...';
