@@ -1349,19 +1349,19 @@ async function generate() {
           var candData = _rawCandData;
           var candidates = candData.data || [];
           console.log('[EZEKIA RAW] First candidate:', JSON.stringify(candidates[0]));
+          // Fetch relationship data for first candidate to discover pipeline/custom fields
+          if (candidates.length > 0) {
+            try {
+              var _relResp = await fetch(ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates/' + candidates[0].id);
+              if (_relResp.ok) {
+                var _relData = await _relResp.json();
+                console.log('[EZEKIA] Candidate relationship data:', JSON.stringify(_relData).substring(0, 800));
+              }
+            } catch(e) { console.log('[EZEKIA] Relationship fetch error:', e.message); }
+          }
           var projContent = {
             projectName: proj.name || '',
             clientCompany: (proj.client && proj.client.name) || '',
-            // Fetch relationship data for first candidate to discover fields
-            if (candidates.length > 0) {
-              try {
-                var _relResp = await fetch(ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates/' + candidates[0].id);
-                if (_relResp.ok) {
-                  var _relData = await _relResp.json();
-                  console.log('[EZEKIA] Candidate relationship data:', JSON.stringify(_relData).substring(0, 800));
-                }
-              } catch(e) { console.log('[EZEKIA] Relationship fetch error:', e.message); }
-            }
             candidates: candidates.map(function(cand) {
               // Extract from Ezekia v4 API response structure
               var _pos = (cand.profile && cand.profile.positions && cand.profile.positions[0]) || {};
