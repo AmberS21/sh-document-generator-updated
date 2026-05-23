@@ -1360,15 +1360,15 @@ async function generate() {
               if (_pResp.ok) {
                 var _pJson = await _pResp.json();
                 var _fullCand = _pJson.data || _pJson;
-                // Try fetching research notes separately
+                // Fetch custom values (gender, progress notes) via additional-info endpoint
                 try {
-                  var _notesResp = await fetch(ezekiaBase2 + '/v4/people/' + _bc.id + '/research-notes?count=1');
-                  if (_notesResp.ok) {
-                    var _notesJson = await _notesResp.json();
-                    if (_ci === 0) console.log('[EZEKIA] Research notes:', JSON.stringify(_notesJson).substring(0,300));
-                    _fullCand._researchNotes = (_notesJson.data || []);
+                  var _addResp = await fetch(ezekiaBase2 + '/people/' + _bc.id + '/additional-info');
+                  if (_addResp.ok) {
+                    var _addJson = await _addResp.json();
+                    if (_ci === 0) console.log('[EZEKIA] Additional info:', JSON.stringify(_addJson).substring(0,500));
+                    _fullCand._additionalInfo = _addJson.data || _addJson;
                   }
-                } catch(e) {}
+                } catch(e) { if (_ci === 0) console.log('[EZEKIA] Additional info error:', e.message); }
                 if (_ci === 0) {
                   console.log('[EZEKIA] Enriched person keys:', Object.keys(_fullCand));
                   console.log('[EZEKIA] manager:', JSON.stringify(_fullCand.manager));
@@ -1403,31 +1403,37 @@ async function generate() {
                 var _tags = Array.isArray(cand.owner.tags) ? cand.owner.tags : [cand.owner.tags];
                 if (_tags.length > 0 && _tags[0].text) _tag = _tags[0].text;
               }
-              // Manager tags (from fieldsWithCandidate)
               if (!_tag && cand.manager && cand.manager.tags && cand.manager.tags.length) {
                 _tag = cand.manager.tags[0].text || '';
               }
 
-              // Gender + Notes — from manager.customValues (fieldsWithCandidate)
-              var _gender = '';
+              // Gender + Notes — from additional-info (custom values endpoint)
+              var _gender2 = '';
               var _notes = '';
-              if (cand.manager && cand.manager.customValues) {
-                cand.manager.customValues.forEach(function(cv) {
-                  var label = (cv.field && cv.field.label) ? cv.field.label.toLowerCase() : '';
-                  var hashId = (cv.field && cv.field.hashId) ? cv.field.hashId : '';
-                  if (label.includes('gender') || label.includes('sex')) {
-                    _gender = cv.value || '';
-                  }
-                  // boYK is the custom field hashId for progress notes
-                  if (hashId === 'boYK' || label.includes('progress') || label.includes('note')) {
-                    _notes = cv.value || '';
-                  }
+              if (cand._additionalInfo) {
+                var _addArr = Array.isArray(cand._additionalInfo) ? cand._additionalInfo : [cand._additionalInfo];
+                _addArr.forEach(function(item) {
+                  var _lbl = ((item.field && item.field.label) || item.label || '').toLowerCase();
+                  var _hid = (item.field && item.field.hashId) || item.hashId || '';
+                  var _val = item.value || '';
+                  if (_lbl.includes('gender') || _lbl.includes('sex')) _gender2 = _val;
+                  if (_hid === 'boYK' || _lbl.includes('progress') || _lbl.includes('note')) _notes = _val;
                 });
               }
-              // Fallback: research notes
-              if (!_notes && cand.manager && cand.manager.researchNotes && cand.manager.researchNotes.length) {
-                _notes = cand.manager.researchNotes[0].text || '';
+              // Fallback: manager.customValues
+              if (!_gender2 || !_notes) {
+                if (cand.manager && cand.manager.customValues) {
+                  cand.manager.customValues.forEach(function(cv) {
+                    var label = (cv.field && cv.field.label) ? cv.field.label.toLowerCase() : '';
+                    var hashId = (cv.field && cv.field.hashId) ? cv.field.hashId : '';
+                    if (!_gender2 && (label.includes('gender') || label.includes('sex'))) _gender2 = cv.value || '';
+                    if (!_notes && (hashId === 'boYK' || label.includes('progress') || label.includes('note'))) _notes = cv.value || '';
+                  });
+                }
               }
+              var _gender = _gender2 || cand.gender || (cand.profile && cand.profile.gender) || '';
+              if (!_notes && cand._researchNotes && cand._researchNotes.length) _notes = cand._researchNotes[0].text || '';
+
               return {
                 fullname: cand.fullName || cand.name || ((cand.firstName||'') + ' ' + (cand.lastName||'')).trim(),
                 company:  _co.name || cand.current_company || '',
