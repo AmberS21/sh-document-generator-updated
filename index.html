@@ -2492,8 +2492,11 @@ async function downloadHistory(index) {
         var _projTplFile = (item.template === 'project-report')
           ? 'templates/SH_Project_Report_Template_v3.xlsx'
           : 'Service%20Team%20-%20Project%20Report%20(with%20Notes).xlsx';
-        var tplResp = await fetch(_projTplFile.startsWith('http') ? _projTplFile : _ghBase + _projTplFile);
-        if (!tplResp.ok) throw new Error('Could not load project report template');
+        var _fullProjUrl = _projTplFile.startsWith('http') ? _projTplFile : _ghBase + _projTplFile;
+        console.log('[PROJECT REPORT] Fetching:', _fullProjUrl);
+        var tplResp = await fetch(_fullProjUrl);
+        console.log('[PROJECT REPORT] Response status:', tplResp.status);
+        if (!tplResp.ok) throw new Error('Could not load project report template: ' + tplResp.status + ' for ' + _fullProjUrl);
         var tplAb = await tplResp.arrayBuffer();
         var projWb = XLSX.read(new Uint8Array(tplAb), {type:'array'});
         var projWs = projWb.Sheets[projWb.SheetNames[0]];
