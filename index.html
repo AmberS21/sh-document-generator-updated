@@ -1356,18 +1356,30 @@ async function generate() {
               var _pResp = await fetch(ezekiaBase2 + '/v4/people/' + _bc.id
                 + '?fieldsWithCandidate%5B%5D=manager.tags'
                 + '&fieldsWithCandidate%5B%5D=manager.customValues'
-                + '&fieldsWithCandidate%5B%5D=manager.researchNotes');
+                + '&fieldsWithCandidate%5B%5D=manager.researchNotes'
+                + '&fieldsWithCandidate%5B%5D=meta.candidate');
               if (_pResp.ok) {
                 var _pJson = await _pResp.json();
                 var _fullCand = _pJson.data || _pJson;
                 // Pipeline tag from additional-info (will be extracted below)
                 // Fetch custom values (gender, progress notes) via additional-info endpoint
                 try {
+                  // Fetch general custom values (includes gender)
                   var _addResp = await fetch(ezekiaBase2 + '/people/' + _bc.id + '/additional-info');
                   if (_addResp.ok) {
                     var _addJson = await _addResp.json();
-                    if (_ci === 0) console.log('[EZEKIA] Additional info FULL:', JSON.stringify(_addJson));
                     _fullCand._additionalInfo = _addJson.data || _addJson;
+                  }
+                  // Fetch assignment-scoped custom values (includes progress notes + pipeline tag)
+                  var _addResp2 = await fetch(ezekiaBase2 + '/people/' + _bc.id + '/additional-info?scopedModel=assignment&modelId=' + projectId2);
+                  if (_addResp2.ok) {
+                    var _addJson2 = await _addResp2.json();
+                    if (_ci === 0) console.log('[EZEKIA] Scoped additional info:', JSON.stringify(_addJson2));
+                    var _scoped = _addJson2.data || _addJson2;
+                    // Merge scoped fields into additionalInfo
+                    if (Array.isArray(_scoped) && Array.isArray(_fullCand._additionalInfo)) {
+                      _fullCand._additionalInfo = _fullCand._additionalInfo.concat(_scoped);
+                    }
                   }
                 } catch(e) { if (_ci === 0) console.log('[EZEKIA] Additional info error:', e.message); }
                 if (_ci === 0) {
@@ -1398,15 +1410,19 @@ async function generate() {
               var _city = _addr.city || _addr.state || '';
               var _country = _addr.country || '';
               var _loc = [_city, _country].filter(Boolean).join(', ');
-              // Pipeline Tag — from assignment status or owner tags
+              // Pipeline Tag — from meta.candidate.pipelineTags (requires meta.candidate in fieldsWithCandidate)
               var _tag = cand._pipelineTag || '';
+              // Check meta.candidate.pipelineTags
+              if (!_tag && cand.meta && cand.meta.candidate && cand.meta.candidate.pipelineTags) {
+                var _ptags = cand.meta.candidate.pipelineTags;
+                if (Array.isArray(_ptags) && _ptags.length > 0) _tag = _ptags[0].text || '';
+              }
+              // Fallback: owner.tags
               if (!_tag && cand.owner && cand.owner.tags) {
                 var _tags = Array.isArray(cand.owner.tags) ? cand.owner.tags : [cand.owner.tags];
                 if (_tags.length > 0 && _tags[0].text) _tag = _tags[0].text;
               }
-              if (!_tag && cand.manager && cand.manager.tags && cand.manager.tags.length) {
-                _tag = cand.manager.tags[0].text || '';
-              }
+              
 
               // Gender + Notes — from additional-info (custom values endpoint)
               var _gender2 = '';
