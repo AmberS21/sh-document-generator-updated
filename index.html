@@ -1337,7 +1337,7 @@ async function generate() {
           console.log('[EZEKIA] Project data:', JSON.stringify(projData).substring(0, 300));
           var proj = projData.data || projData;
           btn.innerHTML = 'Fetching candidates&';
-          var candResp = await fetch(ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates?include=pipelineTags,custom,gender&with=pipelineTags,custom');
+          var candResp = await fetch(ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates?include=tags,custom,gender,pipelineTags&expand=tags,custom,pipelineTags');
           console.log('[EZEKIA] Candidates URL:', ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates', 'status:', candResp.status);
           var _rawCandData = candResp.ok ? await candResp.json() : {data:[]};
           var _fc = (_rawCandData.data||[])[0] || {};
@@ -1352,6 +1352,16 @@ async function generate() {
           var projContent = {
             projectName: proj.name || '',
             clientCompany: (proj.client && proj.client.name) || '',
+            // Fetch relationship data for first candidate to discover fields
+            if (candidates.length > 0) {
+              try {
+                var _relResp = await fetch(ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates/' + candidates[0].id);
+                if (_relResp.ok) {
+                  var _relData = await _relResp.json();
+                  console.log('[EZEKIA] Candidate relationship data:', JSON.stringify(_relData).substring(0, 800));
+                }
+              } catch(e) { console.log('[EZEKIA] Relationship fetch error:', e.message); }
+            }
             candidates: candidates.map(function(cand) {
               // Extract from Ezekia v4 API response structure
               var _pos = (cand.profile && cand.profile.positions && cand.profile.positions[0]) || {};
