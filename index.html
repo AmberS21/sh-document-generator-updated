@@ -1360,12 +1360,26 @@ async function generate() {
               if (_pResp.ok) {
                 var _pJson = await _pResp.json();
                 var _fullCand = _pJson.data || _pJson;
+                // Fetch pipeline status for this candidate in this assignment
+                try {
+                  var _statusResp = await fetch(ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates/' + _bc.id + '/statuses');
+                  if (_statusResp.ok) {
+                    var _statusJson = await _statusResp.json();
+                    if (_ci === 0) console.log('[EZEKIA] Candidate statuses:', JSON.stringify(_statusJson).substring(0,300));
+                    var _statuses = _statusJson.data || _statusJson;
+                    if (Array.isArray(_statuses) && _statuses.length > 0) {
+                      _fullCand._pipelineTag = (_statuses[0].text || _statuses[0].name || _statuses[0].tag || '');
+                    } else if (_statuses && _statuses.text) {
+                      _fullCand._pipelineTag = _statuses.text;
+                    }
+                  }
+                } catch(e) {}
                 // Fetch custom values (gender, progress notes) via additional-info endpoint
                 try {
                   var _addResp = await fetch(ezekiaBase2 + '/people/' + _bc.id + '/additional-info');
                   if (_addResp.ok) {
                     var _addJson = await _addResp.json();
-                    if (_ci === 0) console.log('[EZEKIA] Additional info:', JSON.stringify(_addJson).substring(0,500));
+                    if (_ci === 0) console.log('[EZEKIA] Additional info:', JSON.stringify(_addJson).substring(0,1000));
                     _fullCand._additionalInfo = _addJson.data || _addJson;
                   }
                 } catch(e) { if (_ci === 0) console.log('[EZEKIA] Additional info error:', e.message); }
@@ -1397,9 +1411,9 @@ async function generate() {
               var _city = _addr.city || _addr.state || '';
               var _country = _addr.country || '';
               var _loc = [_city, _country].filter(Boolean).join(', ');
-              // Pipeline Tag — from owner.tags (assignment status tags)
-              var _tag = '';
-              if (cand.owner && cand.owner.tags) {
+              // Pipeline Tag — from assignment status or owner tags
+              var _tag = cand._pipelineTag || '';
+              if (!_tag && cand.owner && cand.owner.tags) {
                 var _tags = Array.isArray(cand.owner.tags) ? cand.owner.tags : [cand.owner.tags];
                 if (_tags.length > 0 && _tags[0].text) _tag = _tags[0].text;
               }
@@ -1416,8 +1430,13 @@ async function generate() {
                   var _lbl = ((item.field && item.field.label) || item.label || '').toLowerCase();
                   var _hid = (item.field && item.field.hashId) || item.hashId || '';
                   var _val = item.value || '';
-                  if (_lbl.includes('gender') || _lbl.includes('sex')) _gender2 = _val;
-                  if (_hid === 'boYK' || _lbl.includes('progress') || _lbl.includes('note')) _notes = _val;
+                  // Strip HTML tags from value
+                  _val = _val.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+                  if (_lbl === 'gender' || _lbl === 'sex') {
+                    _gender2 = _val;
+                  } else if (_hid === 'boYK' || _lbl.includes('progress note') || _lbl === 'notes' || _lbl === 'note') {
+                    _notes = _val;
+                  }
                 });
               }
               // Fallback: manager.customValues
