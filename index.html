@@ -1360,26 +1360,13 @@ async function generate() {
               if (_pResp.ok) {
                 var _pJson = await _pResp.json();
                 var _fullCand = _pJson.data || _pJson;
-                // Fetch pipeline status for this candidate in this assignment
-                try {
-                  var _statusResp = await fetch(ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates/' + _bc.id + '/statuses');
-                  if (_statusResp.ok) {
-                    var _statusJson = await _statusResp.json();
-                    if (_ci === 0) console.log('[EZEKIA] Candidate statuses:', JSON.stringify(_statusJson).substring(0,300));
-                    var _statuses = _statusJson.data || _statusJson;
-                    if (Array.isArray(_statuses) && _statuses.length > 0) {
-                      _fullCand._pipelineTag = (_statuses[0].text || _statuses[0].name || _statuses[0].tag || '');
-                    } else if (_statuses && _statuses.text) {
-                      _fullCand._pipelineTag = _statuses.text;
-                    }
-                  }
-                } catch(e) {}
+                // Pipeline tag from additional-info (will be extracted below)
                 // Fetch custom values (gender, progress notes) via additional-info endpoint
                 try {
                   var _addResp = await fetch(ezekiaBase2 + '/people/' + _bc.id + '/additional-info');
                   if (_addResp.ok) {
                     var _addJson = await _addResp.json();
-                    if (_ci === 0) console.log('[EZEKIA] Additional info:', JSON.stringify(_addJson).substring(0,1000));
+                    if (_ci === 0) console.log('[EZEKIA] Additional info FULL:', JSON.stringify(_addJson));
                     _fullCand._additionalInfo = _addJson.data || _addJson;
                   }
                 } catch(e) { if (_ci === 0) console.log('[EZEKIA] Additional info error:', e.message); }
@@ -1436,6 +1423,8 @@ async function generate() {
                     _gender2 = _val;
                   } else if (_hid === 'boYK' || _lbl.includes('progress note') || _lbl === 'notes' || _lbl === 'note') {
                     _notes = _val;
+                  } else if (_lbl.includes('pipeline') || _lbl.includes('status') || _lbl.includes('stage')) {
+                    if (!_fullCand._pipelineTag) _fullCand._pipelineTag = _val;
                   }
                 });
               }
