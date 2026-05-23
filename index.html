@@ -1348,14 +1348,35 @@ async function generate() {
             projectName: proj.name || '',
             clientCompany: (proj.client && proj.client.name) || '',
             candidates: candidates.map(function(cand) {
+              // Extract from Ezekia v4 API response structure
+              var _pos = (cand.profile && cand.profile.positions && cand.profile.positions[0]) || {};
+              var _co  = _pos.company || {};
+              var _addr = (cand.addresses && cand.addresses[0]) || {};
+              var _city = _addr.city || _addr.state || '';
+              var _country = _addr.country || '';
+              var _loc = [_city, _country].filter(Boolean).join(', ');
+              // Pipeline tag from assignment relationship
+              var _tag = '';
+              if (cand.pipelineTags && cand.pipelineTags.length) _tag = cand.pipelineTags[0];
+              else if (cand.pivot && cand.pivot.pipeline_tag) _tag = cand.pivot.pipeline_tag;
+              else if (cand.tag) _tag = cand.tag;
+              else if (cand.stage) _tag = cand.stage;
+              // Gender
+              var _gender = cand.gender || (cand.profile && cand.profile.gender) || '';
+              // Notes — custom progress note field
+              var _notes = '';
+              if (cand.custom) {
+                _notes = cand.custom.progress_note || cand.custom.notes || cand.custom.boYK || '';
+              }
+              if (!_notes && cand.notes) _notes = typeof cand.notes === 'string' ? cand.notes : '';
               return {
-                fullname: ((cand.first_name||'') + ' ' + (cand.last_name||'')).trim(),
-                company: (cand.current_company || ''),
-                title: (cand.current_title || ''),
-                location: (cand.location || ''),
-                pipelineTag: (cand.pipeline_tag || (cand.pipelineTags && cand.pipelineTags[0]) || ''),
-                gender: (cand.gender || ''),
-                notes: (cand.custom_notes || cand.notes || (cand.custom && (cand.custom.progress_note || cand.custom.notes)) || '')
+                fullname: cand.fullName || cand.name || ((cand.firstName||'') + ' ' + (cand.lastName||'')).trim(),
+                company:  _co.name || cand.current_company || '',
+                title:    _pos.title || cand.current_title || '',
+                location: _loc,
+                pipelineTag: _tag,
+                gender:   _gender,
+                notes:    _notes
               };
             })
           };
