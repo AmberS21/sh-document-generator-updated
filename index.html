@@ -1262,9 +1262,9 @@ async function generate() {
         var apiResp = await fetch(ezekiaBase + '/v4/people/' + personId);
         if (!apiResp.ok) throw new Error('Ezekia API error: ' + apiResp.status);
         var personData = await apiResp.json();
-        var posResp = await fetch(ezekiaBase + '/v2/people/' + personId + '/positions');
+        var posResp = await fetch(ezekiaBase + '/v4/people/' + personId + '/positions');
         var posData = posResp.ok ? await posResp.json() : {data:[]};
-        var eduResp = await fetch(ezekiaBase + '/people/' + personId + '/education');
+        var eduResp = await fetch(ezekiaBase + '/v4/people/' + personId + '/education');
         var eduData = eduResp.ok ? await eduResp.json() : {data:[]};
         // Helper: format ISO date to "Mon YYYY", "9999-12-31" = Present
         function fmtDate(d) {
@@ -1330,18 +1330,18 @@ async function generate() {
           var projectId2 = projMatch2[1];
           var ezekiaBase2 = getEzekiaBaseUrl();
           btn.innerHTML = 'Fetching project data&';
-          // Use assignments endpoint if URL contains 'assignments', else projects
-          var _isAssignment = urlVal.includes('/assignments/');
-          var _projEndpoint = _isAssignment ? '/assignments/' : '/projects/';
-          var projResp = await fetch(ezekiaBase2 + _projEndpoint + projectId2);
+          var _projEndpoint = '/projects/';
+          var projResp = await fetch(ezekiaBase2 + '/v4' + _projEndpoint + projectId2);
           if (!projResp.ok) throw new Error('Ezekia project API error: ' + projResp.status);
           var projData = await projResp.json();
-          console.log('[EZEKIA] Project/Assignment raw:', JSON.stringify(projData).substring(0, 500));
+          console.log('[EZEKIA] Project data:', JSON.stringify(projData).substring(0, 300));
           var proj = projData.data || projData;
           btn.innerHTML = 'Fetching candidates&';
-          var candResp = await fetch(ezekiaBase2 + _projEndpoint + projectId2 + '/candidates');
-          console.log('[EZEKIA] Candidates URL:', ezekiaBase2 + _projEndpoint + projectId2 + '/candidates');
-          var candData = candResp.ok ? await candResp.json() : {data:[]};
+          var candResp = await fetch(ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates');
+          console.log('[EZEKIA] Candidates URL:', ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates', 'status:', candResp.status);
+          var _rawCandData = candResp.ok ? await candResp.json() : {data:[]};
+          console.log('[EZEKIA] Raw first candidate:', JSON.stringify((_rawCandData.data||[])[0]).substring(0,500));
+          var candData = _rawCandData;
           var candidates = candData.data || [];
           console.log('[EZEKIA RAW] First candidate:', JSON.stringify(candidates[0]));
           var projContent = {
