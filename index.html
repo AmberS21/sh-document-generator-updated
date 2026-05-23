@@ -1337,7 +1337,7 @@ async function generate() {
           console.log('[EZEKIA] Project data:', JSON.stringify(projData).substring(0, 300));
           var proj = projData.data || projData;
           btn.innerHTML = 'Fetching candidates&';
-          var candResp = await fetch(ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates?include=tags,custom,gender,pipelineTags&expand=tags,custom,pipelineTags');
+          var candResp = await fetch(ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates?fieldsWithCandidate[]=manager.tags&fieldsWithCandidate[]=manager.customValues&fieldsWithCandidate[]=manager.researchNotes');
           console.log('[EZEKIA] Candidates URL:', ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates', 'status:', candResp.status);
           var _rawCandData = candResp.ok ? await candResp.json() : {data:[]};
           var _fc = (_rawCandData.data||[])[0] || {};
@@ -1349,22 +1349,8 @@ async function generate() {
           var candData = _rawCandData;
           var candidates = candData.data || [];
           console.log('[EZEKIA RAW] First candidate:', JSON.stringify(candidates[0]));
-          // Log all keys from first candidate to find pipeline/gender fields
-          if (candidates.length > 0) {
-            var _fc = candidates[0];
-            console.log('[EZEKIA] All 18 candidate keys:', JSON.stringify(Object.keys(_fc)));
-            console.log('[EZEKIA] Full candidate (no profile):', JSON.stringify(Object.assign({}, _fc, {profile: '...omitted...', addresses: '...', emails: '...', phones: '...', links: '...', owner: '...'})));
-          }
-          // Fetch custom fields (gender, progress notes) for first candidate
-          if (candidates.length > 0) {
-            try {
-              var _custResp = await fetch(ezekiaBase2 + '/v4/people/' + candidates[0].id + '/custom');
-              if (_custResp.ok) {
-                var _custData = await _custResp.json();
-                console.log('[EZEKIA] Custom fields:', JSON.stringify(_custData).substring(0, 800));
-              }
-            } catch(e) { console.log('[EZEKIA] Custom fetch error:', e.message); }
-          }
+
+
           var projContent = {
             projectName: proj.name || '',
             clientCompany: (proj.client && proj.client.name) || '',
@@ -1376,20 +1362,37 @@ async function generate() {
               var _city = _addr.city || _addr.state || '';
               var _country = _addr.country || '';
               var _loc = [_city, _country].filter(Boolean).join(', ');
-              // Pipeline tag from assignment relationship
+              // Pipeline Tag — from owner.tags (assignment status tags)
               var _tag = '';
-              if (cand.pipelineTags && cand.pipelineTags.length) _tag = cand.pipelineTags[0];
-              else if (cand.pivot && cand.pivot.pipeline_tag) _tag = cand.pivot.pipeline_tag;
-              else if (cand.tag) _tag = cand.tag;
-              else if (cand.stage) _tag = cand.stage;
-              // Gender
-              var _gender = cand.gender || (cand.profile && cand.profile.gender) || '';
-              // Notes — custom progress note field
-              var _notes = '';
-              if (cand.custom) {
-                _notes = cand.custom.progress_note || cand.custom.notes || cand.custom.boYK || '';
+              if (cand.owner && cand.owner.tags) {
+                var _tags = Array.isArray(cand.owner.tags) ? cand.owner.tags : [cand.owner.tags];
+                if (_tags.length > 0 && _tags[0].text) _tag = _tags[0].text;
               }
-              if (!_notes && cand.notes) _notes = typeof cand.notes === 'string' ? cand.notes : '';
+              // Manager tags (from fieldsWithCandidate)
+              if (!_tag && cand.manager && cand.manager.tags && cand.manager.tags.length) {
+                _tag = cand.manager.tags[0].text || '';
+              }
+
+              // Gender + Notes — from manager.customValues (fieldsWithCandidate)
+              var _gender = '';
+              var _notes = '';
+              if (cand.manager && cand.manager.customValues) {
+                cand.manager.customValues.forEach(function(cv) {
+                  var label = (cv.field && cv.field.label) ? cv.field.label.toLowerCase() : '';
+                  var hashId = (cv.field && cv.field.hashId) ? cv.field.hashId : '';
+                  if (label.includes('gender') || label.includes('sex')) {
+                    _gender = cv.value || '';
+                  }
+                  // boYK is the custom field hashId for progress notes
+                  if (hashId === 'boYK' || label.includes('progress') || label.includes('note')) {
+                    _notes = cv.value || '';
+                  }
+                });
+              }
+              // Fallback: research notes
+              if (!_notes && cand.manager && cand.manager.researchNotes && cand.manager.researchNotes.length) {
+                _notes = cand.manager.researchNotes[0].text || '';
+              }
               return {
                 fullname: cand.fullName || cand.name || ((cand.firstName||'') + ' ' + (cand.lastName||'')).trim(),
                 company:  _co.name || cand.current_company || '',
