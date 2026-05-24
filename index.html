@@ -2716,7 +2716,7 @@ async function downloadHistory(index) {
           }
           var _gbBizXml = '';
           try {
-            _gbBizXml = buildCareerSummaryBizExp(_gbCvForBiz);
+            _gbBizXml = buildCareerSummaryBizExp(_gbCvForBiz.companies || []);
           } catch(_gbErr) {
             console.error('[GB] buildCareerSummaryBizExp error:', _gbErr.message, _gbErr.stack);
             _gbBizXml = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t>Business experience error</w:t></w:r></w:p>';
