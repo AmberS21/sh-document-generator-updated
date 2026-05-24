@@ -2135,11 +2135,6 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
   .then(function(data) {
     var rawOutput = (data.content && data.content[0] && data.content[0].text) ? data.content[0].text : '{}';
 
-// DEBUG: log raw output for GB profile
-if (isGbProfile) {
-  console.log('[GB DEBUG] Raw JSON:', rawOutput.substring(0, 2000));
-}
-
 var output;
 
 try {
@@ -2159,6 +2154,13 @@ try {
   
   rawOutput = rawOutput.trim();
   output = JSON.parse(rawOutput);
+  // DEBUG: log parsed output for GB profile
+  if (isGbProfile) {
+    console.log('[GB DEBUG] COMPANY_1:', output.COMPANY_1_NAME, output.COMPANY_1_ROLE, output.COMPANY_1_DATES);
+    console.log('[GB DEBUG] COMPANY_2:', output.COMPANY_2_NAME, output.COMPANY_2_ROLE, output.COMPANY_2_DATES);
+    console.log('[GB DEBUG] COMPANY_3:', output.COMPANY_3_NAME, output.COMPANY_3_ROLE, output.COMPANY_3_DATES);
+    console.log('[GB DEBUG] COMPANY_4:', output.COMPANY_4_NAME, output.COMPANY_4_ROLE, output.COMPANY_4_DATES);
+  }
 } catch(e) {
   console.error('JSON Parse Error:', e);
   console.error('Raw output (first 500 chars):', rawOutput.substring(0, 500));
@@ -2685,7 +2687,40 @@ async function downloadHistory(index) {
         if (item.template === 'gb-profile') {
           // GB Profile: use buildCareerSummaryBizExp for correct multi-role handling
           var _gbDocXml = _gbZip.files['word/document.xml'].asText();
-          var _gbBizXml = buildCareerSummaryBizExp(_cv);
+          // Convert flat COMPANY_N_* to companies[] for buildCareerSummaryBizExp
+          var _gbCvForBiz = _cv;
+          if (!_cv.companies && _cv.COMPANY_1_NAME) {
+            var _gbCos = [];
+            var _prevGbName = null;
+            for (var _gci = 1; _gci <= 15; _gci++) {
+              var _gcn = _cv['COMPANY_' + _gci + '_NAME'] || '';
+              if (!_gcn) break;
+              var _gbs = [];
+              for (var _gbi = 1; _gbi <= 10; _gbi++) {
+                var _gb = _cv['COMPANY_' + _gci + '_BULLET_' + _gbi] || '';
+                if (_gb) _gbs.push(_gb);
+              }
+              var _gRole = { role: _cv['COMPANY_' + _gci + '_ROLE']||'', role_dates: _cv['COMPANY_' + _gci + '_DATES']||'', bullets: _gbs };
+              // Group consecutive same-company entries
+              if (_gbCos.length > 0 && _gbCos[_gbCos.length-1].name === _gcn) {
+                _gbCos[_gbCos.length-1].roles.push(_gRole);
+                // Extend date span
+                var _oldDates = _gbCos[_gbCos.length-1].dates;
+                var _newStart = (_cv['COMPANY_' + _gci + '_DATES']||'').split(/[–-]/)[0].trim();
+                _gbCos[_gbCos.length-1].dates = _newStart + (_oldDates.indexOf('–') > -1 ? ' – ' + _oldDates.split(/[–-]/).pop().trim() : ' – ' + _oldDates.trim());
+              } else {
+                _gbCos.push({ name: _gcn, location: _cv['COMPANY_'+_gci+'_LOCATION']||'', dates: _cv['COMPANY_'+_gci+'_DATES']||'', roles: [_gRole] });
+              }
+            }
+            _gbCvForBiz = Object.assign({}, _cv, { companies: _gbCos });
+          }
+          var _gbBizXml = '';
+          try {
+            _gbBizXml = buildCareerSummaryBizExp(_gbCvForBiz);
+          } catch(_gbErr) {
+            console.error('[GB] buildCareerSummaryBizExp error:', _gbErr.message, _gbErr.stack);
+            _gbBizXml = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t>Business experience error</w:t></w:r></w:p>';
+          }
           _gbDocXml = _gbDocXml.split('{{BUSINESS_EXPERIENCE_BLOCK}}').join(_gbBizXml);
           _gbZip.file('word/document.xml', _gbDocXml);
 
