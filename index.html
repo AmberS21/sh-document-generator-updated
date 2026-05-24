@@ -492,16 +492,13 @@ table.usage tr:last-child td{border-bottom:none;}
     </div>
     <div class="row-between">
       <div class="note">Top: CV Profile (28) &middot; Assignment (11) &middot; Newsletter (8)</div>
-      <button onclick="notify('&#128202; Exporting&#8230;')" style="background:linear-gradient(135deg,#166534,#16a34a);color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;">&#11015; Export Excel</button>
+      <button onclick="exportUsageLogs()" style="background:linear-gradient(135deg,#166534,#16a34a);color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;">&#11015; Export Excel</button>
     </div>
   </div>
   <div class="card">
     <div class="card-title"><div class="step-dot">&#128202;</div> Usage by User</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;"></div><div style="display:flex;gap:8px;"><button onclick="loadUsageLogs()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x21BA; Refresh</button><button onclick="exportUsageLogs()" style="background:#C9A227;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">&#x2193; Export CSV</button></div></div><table class="usage"><thead><tr><th>User</th><th>Template</th><th>Input</th><th>Status</th><th>Date &amp; Time</th></tr></thead><tbody id="usageLogBody">
-        <tr><td>Amber Shamim</td><td>12</td><td>4</td><td>2</td><td style="font-weight:600;">18</td></tr>
-        <tr><td>Priya Mehta</td><td>8</td><td>3</td><td>1</td><td style="font-weight:600;">12</td></tr>
-        <tr><td>Tom Bradley</td><td>5</td><td>2</td><td>3</td><td style="font-weight:600;">10</td></tr>
-        <tr><td>Others (5)</td><td>3</td><td>2</td><td>2</td><td style="font-weight:600;">7</td></tr>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;"></div><div style="display:flex;gap:8px;"><button onclick="loadUsageLogs()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x21BA; Refresh</button><button onclick="exportUsageLogs()" style="background:#C9A227;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">&#x2193; Export CSV</button><button onclick="clearUsageLogs()" style="background:rgba(220,38,38,.7);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x1F5D1; Clear Local</button></div></div><table class="usage"><thead><tr><th>User</th><th>Template</th><th>Input</th><th>Status</th><th>Date &amp; Time</th></tr></thead><tbody id="usageLogBody">
+        <tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>
       </tbody>
     </table>
   </div>
@@ -672,15 +669,16 @@ const ANTHROPIC_API_URL = '/api/claude';
 function adminClick() { if (isAdmin) { goTab('admin'); } else { var ov = document.getElementById('adminModalOv'); if(ov) ov.classList.add('show'); } }
 
 // ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ TABS ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
-function goTab(t) { setTimeout(function(){var f=document.querySelector('.footer');var p=document.querySelector('.page:not(.hidden)');if(f&&p)p.appendChild(f);},50);
+function goTab(t) {
   ['gen','hist','how','admin'].forEach(function(id) {
     document.getElementById('sec-'+id).classList.toggle('hidden', id!==t);
     var tab = document.getElementById('tab-'+id);
     if (tab) tab.classList.toggle('active', id===t);
   });
-
+  setTimeout(function(){var f=document.querySelector('.footer');var p=document.querySelector('.page:not(.hidden)');if(f&&p)p.appendChild(f);},50);
   window.scrollTo(0, 0);
   if (t === 'hist') renderHistory();
+  if (t === 'admin') setTimeout(loadUsageLogs, 150);
 }
 
 // ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ INPUT SWITCH ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
@@ -3613,11 +3611,55 @@ document.addEventListener('DOMContentLoaded', function() {
 const SH_LOGGER = '/api/proxy';
 function initUserName(){var n=localStorage.getItem('sh_userName');if(!n){document.getElementById('namePromptOverlay').style.display='flex';}else{document.getElementById('userName').textContent=n;}}
 function saveUserName(){var inp=document.getElementById('namePromptInput');var name=inp.value.trim();if(!name){inp.style.border='1.5px solid #e74c3c';return;}localStorage.setItem('sh_userName',name);document.getElementById('userName').textContent=name;document.getElementById('namePromptOverlay').style.display='none';notify('Welcome, '+name+'!');}
-function logUsage(template,inputMethod,status){var name=localStorage.getItem('sh_userName')||'Unknown';fetch(SH_LOGGER+'/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userName:name,template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()})}).catch(function(){});}
-function loadUsageLogs(){var tbody=document.getElementById('usageLogBody');var summary=document.getElementById('usageSummary');if(!tbody)return;tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>';fetch(SH_LOGGER+'/logs').then(function(r){return r.json();}).then(function(rows){if(!rows.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">No usage data yet</td></tr>';return;}tbody.innerHTML=rows.map(function(r){var d=new Date(r[7]||r.created_at);var date=isNaN(d)?r[7]:d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});return'<tr><td>'+(r[1]||r.user_name||'')+'</td><td>'+(r[2]||r.template||'')+'</td><td>'+(r[3]||r.input_method||'')+'</td><td class="status-'+(r[4]||r.status||'')+'">'+(r[4]||r.status||'')+'</td><td>'+date+'</td></tr>';}).join('');var counts={};rows.forEach(function(r){var n=r[1]||r.user_name||'Unknown';counts[n]=(counts[n]||0)+1;});summary.innerHTML=Object.entries(counts).sort(function(a,b){return b[1]-a[1];}).map(function(e){return'<span class="usage-chip"><b>'+e[0]+'</b> '+e[1]+' docs</span>';}).join('');document.getElementById('usageTotalCount').textContent=rows.length;var today=rows.filter(function(r){return new Date(r[7]||r.created_at).toDateString()===new Date().toDateString();}).length;document.getElementById('usageTodayCount').textContent=today;}).catch(function(){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#e74c3c;padding:20px">Could not load logs</td></tr>';});}
-function exportUsageLogs(){fetch(SH_LOGGER+'/logs').then(function(r){return r.json();}).then(function(rows){var headers=['ID','User','Template','Input Method','Status','Timestamp'];var csv=[headers.join(',')].concat(rows.map(function(r){return[r[0],r[1],r[2],r[3],r[4],r[5]].map(function(v){return'"'+(v||'').toString().replace(/"/g,'""')+'"';}).join(',');})).join('\n');var blob=new Blob([csv],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='SH_Usage_Logs_'+new Date().toISOString().slice(0,10)+'.csv';a.click();notify('Exported '+rows.length+' records ✓');});}
-window.addEventListener('load',function(){if(typeof restoreAdminState==='function')restoreAdminState();if(typeof checkHash==='function')checkHash();initUserName();var f=document.querySelector('.footer');var p=document.querySelector('.page:not(.hidden)');if(f&&p)p.appendChild(f);});
-</script>
-<div class="notif" id="notif"></div> 
-</body>
-</html>
+function logUsage(template,inputMethod,status){
+  try {
+    var name = localStorage.getItem('sh_userName')||'Unknown';
+    var logs = JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');
+    var entry = {id:Date.now(),user:name,template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()};
+    logs.push(entry);
+    if (logs.length > 2000) logs = logs.slice(-2000);
+    localStorage.setItem('sh_usage_logs', JSON.stringify(logs));
+  } catch(e){}
+  fetch(SH_LOGGER+'/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userName:localStorage.getItem('sh_userName')||'Unknown',template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()})}).catch(function(){});
+}
+function loadUsageLogs(){
+  var tbody=document.getElementById('usageLogBody');
+  var summary=document.getElementById('usageSummary');
+  if(!tbody)return;
+  tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>';
+  fetch('/api/proxy/logs').then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
+  .then(function(logs){renderLogs(logs,tbody,summary);})
+  .catch(function(){
+    try{var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');renderLogs(logs,tbody,summary);}
+    catch(e){tbody.innerHTML='<tr><td colspan="5" style="color:#dc2626">Error: '+e.message+'</td></tr>';}
+  });
+}
+function renderLogs(logs,tbody,summary){
+  var totalEl=document.getElementById('usageTotalCount');
+  var todayEl=document.getElementById('usageTodayCount');
+  if(totalEl)totalEl.textContent=logs.length;
+  if(todayEl){var today=new Date().toDateString();todayEl.textContent=logs.filter(function(r){return new Date(r.timestamp||r[7]).toDateString()===today;}).length;}
+  if(!logs.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">No usage data yet</td></tr>';return;}
+  var sorted=logs.slice().reverse();
+  tbody.innerHTML=sorted.map(function(r){
+    var user=r.user||r[1]||'';var tpl=r.template||r[2]||'';var inp=r.inputMethod||r[3]||'';var st=r.status||r[4]||'';
+    var ts=r.timestamp||r[7]||'';var d=new Date(ts);var date=isNaN(d)?ts:d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    var tplLabel=(typeof TEMPLATES!=='undefined'&&TEMPLATES[tpl])?TEMPLATES[tpl].label:tpl;
+    return'<tr><td>'+user+'</td><td style="font-size:11px">'+tplLabel+'</td><td>'+inp+'</td><td class="status-'+st+'">'+st+'</td><td>'+date+'</td></tr>';
+  }).join('');
+  if(summary){var counts={};logs.forEach(function(r){var n=r.user||r[1]||'Unknown';counts[n]=(counts[n]||0)+1;});summary.innerHTML=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];}).map(function(n){return'<span style="background:rgba(255,255,255,.15);border-radius:12px;padding:3px 10px;font-size:11px;"><b>'+n+'</b> '+counts[n]+'</span>';}).join('');}
+}
+
+function exportUsageLogs(){
+  var a=document.createElement('a');
+  a.href='/api/proxy/logs/csv';
+  a.download='SH_DocGen_Usage_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  notify('⬇ Downloading usage report...');
+}
+function clearUsageLogs(){
+  if(!confirm('Clear all local log entries? Server logs are unaffected.'))return;
+  localStorage.removeItem('sh_usage_logs');
+  loadUsageLogs();
+  notify('✓ Local logs cleared');
+}
