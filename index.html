@@ -1329,7 +1329,7 @@ async function generate() {
           var projMatch2 = urlVal.match(/(?:app\.)?ezekia\.com\/#?\/(?:projects|assignments)\/([\w-]+)/);
           var projectId2 = projMatch2[1];
           var ezekiaBase2 = getEzekiaBaseUrl();
-          btn.innerHTML = 'Fetching project data&';
+          btn.innerHTML = 'Fetching project data...';
           var _projEndpoint = '/projects/';
           var projResp = await fetch(ezekiaBase2 + '/v4' + _projEndpoint + projectId2);
           if (!projResp.ok) throw new Error('Ezekia project API error: ' + projResp.status);
@@ -1417,7 +1417,7 @@ async function generate() {
             }
           } catch(e) { console.log('[EZEKIA] Project custom error:', e.message); }
 
-          btn.innerHTML = 'Fetching candidates&';
+          btn.innerHTML = 'Fetching candidates...';
           var _candUrl = ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates'
             + '?fieldsWithCandidate%5B%5D=manager.tags'
             + '&fieldsWithCandidate%5B%5D=manager.customValues'
@@ -1572,7 +1572,7 @@ async function generate() {
           localStorage.setItem('sh_history', JSON.stringify(projHistory));
           renderHistory();
           btn.classList.remove('loading'); btn.innerHTML = '\u2705 Document Ready \u2014 Check My History';
-          notify('Done! Project report saved  go to My History to download.');
+          notify('Done! Project report saved — go to My History to download.');
           setTimeout(function(){ btn.innerHTML = '\u26a1 Generate Document'; }, 3500);
           return;
           inputText = 'services-profile_direct';
@@ -2769,6 +2769,8 @@ async function downloadHistory(index) {
 
         _projZip.file('xl/worksheets/sheet1.xml', _sh1);
         _projZip.file('xl/sharedStrings.xml', _ssXml);
+        // Remove calcChain so Excel recalculates all formulas fresh
+        _projZip.remove('xl/calcChain.xml');
 
         var _projBuf = await _projZip.generateAsync({type:'arraybuffer', compression:'DEFLATE'});
         var projBlob = new Blob([_projBuf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
