@@ -2002,9 +2002,24 @@ COMPANIES GROUPING (CRITICAL):
 - List ALL roles under "roles[]", most recent FIRST — do NOT skip any roles.
 - Each role MUST have its own entry in roles[] even if they are at the same company.
 - Only add role-level "dates" if 2 or more roles at that company — leave empty string if only 1 role.
-- Place ALL bullet points under the MOST RECENT (first) role only. Other roles have empty bullets[].
+- Place ALL bullet points under the MOST RECENT (first in the array) role only. Other roles MUST have empty bullets array: [].
+- If bullets appear in the CV under the whole company section (not under individual roles), still put them ALL under the first/most recent role.
 - Extract ALL bullet points VERBATIM without skipping any — include every single bullet.
-- Example for 4 roles at Truist: roles[] has 4 entries: Director (with all bullets), VP (empty bullets), Associate (empty bullets), Senior Analyst (empty bullets).
+- CRITICAL EXAMPLE: If the CV shows:
+  Truist Securities
+  Director 2024-Present
+  Vice President 2020-2024
+  Associate 2016-2020
+  Senior Analyst 2015-2016
+  [bullets under the whole section]
+
+  Then roles[] MUST have 4 entries:
+  {"role":"Director – Investment Grade Debt Capital Markets","dates":"2024 – Present","bullets":["bullet1","bullet2",...all bullets here...]},
+  {"role":"Vice President – Investment Grade Debt Capital Markets","dates":"2020 – 2024","bullets":[]},
+  {"role":"Associate – Investment Grade Debt Capital Markets","dates":"2016 – 2020","bullets":[]},
+  {"role":"Senior Analyst – Investment Grade Debt Capital Markets","dates":"2015 – 2016","bullets":[]}
+
+  DO NOT put only 1 role. ALL positions listed under a company MUST appear as separate role entries.
 
 EDUCATION:
 - EDU_1_YEARS: graduation year or year range (e.g. "2013" or "2009 – 2013"). Add colon after year: "2013:".
