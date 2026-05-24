@@ -1986,32 +1986,63 @@ CANDIDATE SOURCE:
 
 ` + inputText
 : isGbProfile
-  ? ((isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. ' : '') + `You are a Sheffield Haworth executive search document assistant. Extract ALL information from the candidate CV into the JSON structure below.
+  ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
 
-RULES:
-- Return ONLY raw JSON. No markdown, no code blocks.
-- CLIENT_COMPANY and SEARCH_TITLE: always "".
-- Extract EVERY work history entry without exception.
-- Copy ALL bullet points VERBATIM.
+ABSOLUTE RULES:
+- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
+- CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
+- CAREER SUMMARY fields: Do NOT fill — leave as empty strings.
+- Extract EVERY work history entry WITHOUT EXCEPTION.
+- CRITICAL — BULLETS PER ROLE: Each role's bullets array must contain ONLY the bullet points written directly under THAT specific role in the CV. NEVER mix bullets from different roles. If the CV lists 3 bullets under Role A and 5 bullets under Role B, Role A gets exactly those 3 bullets and Role B gets exactly those 5 bullets.
+- Copy ALL bullet points VERBATIM — word for word, no changes.
 
-MULTIPLE ROLES AT SAME COMPANY — CRITICAL:
-- Each role at a company gets its OWN COMPANY_N entry, even if same company name.
-- Example: Director 2024-Present, VP 2020-2024, Associate 2016-2020, Senior Analyst 2015-2016 at Truist:
-  COMPANY_1: name=Truist, ROLE=Director, DATES=2024 – Present, all bullets here
-  COMPANY_2: name=Truist, ROLE=Vice President, DATES=2020 – 2024, no bullets
-  COMPANY_3: name=Truist, ROLE=Associate, DATES=2016 – 2020, no bullets
-  COMPANY_4: name=Truist, ROLE=Senior Analyst, DATES=2015 – 2016, no bullets
-- COMPANY_N_DATES = that specific role dates only.
-- Put ALL bullets under COMPANY_1 (most recent role) only.
+COMPANIES ARRAY RULES:
+- Group ALL roles held at the same company under ONE company entry.
+- Each role is a separate object in the roles array with its own bullets.
+- role_dates: always fill for EVERY role — e.g. "Mar 2019 – Nov 2025". Only leave "" if the company has exactly ONE role (dates already shown in company header).
+- "Results:" lines: include as their own bullet string. Sub-results follow as separate bullet strings immediately after.
+- Most recent company first.
 
-EDUCATION — EDU_1_DEGREE must abbreviate degree name:
-- Bachelor of Science Business Administration → BSBA
-- Bachelor of Science → BS, Bachelor of Arts → BA, Bachelor Business Admin → BBA
-- Master of Business Administration → MBA, Master of Science → MS, Master of Arts → MA
-- Doctor of Philosophy → PhD, Juris Doctor → JD
-- Keep rest verbatim: e.g. BSBA, Concentration in Finance & Minor in Leadership Studies
+JSON STRUCTURE — return exactly this, filled with real data:
 
-Return ONLY valid JSON using this structure:\n` + globalJsonStr + `\n\nCANDIDATE SOURCE:\n\n` + inputText)
+{
+  "CANDIDATE_NAME": "",
+  "CURRENT_EMPLOYER": "",
+  "CLIENT_COMPANY": "",
+  "SEARCH_TITLE": "",
+  "PROFILE_MONTH": "` + (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})() + `",
+  "companies": [
+    {
+      "name": "Full company legal name",
+      "location": "City, Country",
+      "dates": "YYYY – Present",
+      "roles": [
+        {
+          "role": "Exact job title as written in CV",
+          "role_dates": "Mon YYYY – Mon YYYY",
+          "bullets": [
+            "ONLY bullets written under THIS role in the CV — verbatim"
+          ]
+        }
+      ]
+    }
+  ],
+  "EDU_1_START": "", "EDU_1_END": "", "EDU_1_INSTITUTION": "", "EDU_1_LOCATION": "", "EDU_1_DEGREE": "",
+  "EDU_2_START": "", "EDU_2_END": "", "EDU_2_INSTITUTION": "", "EDU_2_LOCATION": "", "EDU_2_DEGREE": "",
+  "QUAL_1": "",
+  "TECH_SKILLS": "",
+  "AFFILIATION_1": "",
+  "MEDIA_1": "",
+  "PUBLICATIONS": "",
+  "NATIONALITY": "",
+  "LANGUAGES": "",
+  "LANGUAGES_LEVEL": "",
+  "INTERESTS": ""
+}
+
+CANDIDATE SOURCE:
+
+` + inputText
 : (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
     `You are a Sheffield Haworth executive search document assistant. Your task is to extract information from the candidate source below and fill the APAC Candidate Profile template fields EXACTLY as described.
 
@@ -2087,7 +2118,7 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
           model: 'claude-sonnet-4-6',
           max_tokens: 12000,
           messages: [{ role: 'user', content: prompt }],
-          system: 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.'
+          system: (isGbProfile ? 'Return ONLY raw JSON. CRITICAL: For candidates with multiple roles at same company, create a SEPARATE COMPANY_N entry for EACH role. Example: Director 2024-Present = COMPANY_1, VP 2020-2024 = COMPANY_2, Associate 2016-2020 = COMPANY_3, Senior Analyst 2015-2016 = COMPANY_4 — ALL with same company name. No markdown. No explanations.' : 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.')
         })
       });
       if (_r.status === 429) {
@@ -2648,99 +2679,86 @@ async function downloadHistory(index) {
         _csDoc.render(item.content);
         out = _csDoc.getZip().generate({type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       } else if (item.template === 'gb-profile' || item.template === 'services-profile') {
-        // GB and Services: use companies[] array directly from JSON (new GB prompt)
-        // or convert from flat keys (old history items)
-        var _loopZip = new PizZip(ab);
+        var _gbZip = new PizZip(ab);
         var _cv = item.content;
 
-        // Convert flat COMPANY_N_* to companies[] grouping consecutive same-company entries
-        var _companies = [];
-        // First build flat list
-        var _flatCo = [];
-        for (var _ci2 = 1; _ci2 <= 15; _ci2++) {
-          var _cname = _cv['COMPANY_' + _ci2 + '_NAME'] || '';
-          if (!_cname) break;
-          var _bullets = [];
-          for (var _bi = 1; _bi <= 10; _bi++) {
-            var _b = _cv['COMPANY_' + _ci2 + '_BULLET_' + _bi] || '';
-            if (_b) _bullets.push(_b);
+        if (item.template === 'gb-profile') {
+          // GB Profile: use buildCareerSummaryBizExp for correct multi-role handling
+          var _gbDocXml = _gbZip.files['word/document.xml'].asText();
+          var _gbBizXml = buildCareerSummaryBizExp(_cv);
+          _gbDocXml = _gbDocXml.split('{{BUSINESS_EXPERIENCE_BLOCK}}').join(_gbBizXml);
+          _gbZip.file('word/document.xml', _gbDocXml);
+
+          // Patch header2 with candidate name
+          if (_gbZip.files['word/header2.xml']) {
+            var _h2x = _gbZip.files['word/header2.xml'].asText();
+            _h2x = _h2x.split('{{CANDIDATE_NAME}}').join(_cv.CANDIDATE_NAME || '');
+            _gbZip.file('word/header2.xml', _h2x);
           }
-          _flatCo.push({
-            name: _cname,
-            location: _cv['COMPANY_' + _ci2 + '_LOCATION'] || '',
-            role: _cv['COMPANY_' + _ci2 + '_ROLE'] || '',
-            dates: _cv['COMPANY_' + _ci2 + '_DATES'] || '',
-            bullets: _bullets
+
+          // Abbreviate degree
+          function _abbrevDeg(d) {
+            if (!d) return '';
+            return d.replace(/^Bachelor of Science,?\s*Business Administration/i,'BSBA')
+                    .replace(/^Bachelor of Business Administration/i,'BBA')
+                    .replace(/^Bachelor of Science/i,'BS').replace(/^Bachelor of Arts/i,'BA')
+                    .replace(/^Master of Business Administration/i,'MBA')
+                    .replace(/^Master of Science/i,'MS').replace(/^Master of Arts/i,'MA')
+                    .replace(/^Doctor of Philosophy/i,'PhD').replace(/^Juris Doctor/i,'JD');
+          }
+          var _gbEdu1Yrs = _cv.EDU_1_END ? (_cv.EDU_1_START||'') + ' – ' + _cv.EDU_1_END : (_cv.EDU_1_START||'');
+          var _gbEdu2Yrs = _cv.EDU_2_END ? (_cv.EDU_2_START||'') + ' – ' + _cv.EDU_2_END : (_cv.EDU_2_START||'');
+          var _curTitle = (_cv.companies && _cv.companies[0] && _cv.companies[0].roles && _cv.companies[0].roles[0]) ? _cv.companies[0].roles[0].role : (_cv.CURRENT_TITLE || '');
+          var _gbRender = Object.assign({}, _cv, {
+            CURRENT_TITLE: _curTitle,
+            EDU_1_YEARS: _gbEdu1Yrs, EDU_1_INSTITUTION: _cv.EDU_1_INSTITUTION||'',
+            EDU_1_DEGREE: _abbrevDeg(_cv.EDU_1_DEGREE),
+            EDU_2_YEARS: _gbEdu2Yrs, EDU_2_INSTITUTION: _cv.EDU_2_INSTITUTION||'',
+            EDU_2_DEGREE: _abbrevDeg(_cv.EDU_2_DEGREE),
+            QUAL_1: _cv.QUAL_1||'', NATIONALITY: _cv.NATIONALITY||'',
+            LANGUAGES: _cv.LANGUAGES||'', INTERESTS: _cv.INTERESTS||''
           });
-        }
-        // Group consecutive same-company entries
-        for (var _fi = 0; _fi < _flatCo.length; _fi++) {
-          var _fc2 = _flatCo[_fi];
-          var _prevCo = _companies.length > 0 ? _companies[_companies.length - 1] : null;
-          if (_prevCo && _prevCo.name === _fc2.name) {
-            // Same company as previous - add as new role, update overall dates
-            _prevCo.roles.push({ role: _fc2.role, dates: _fc2.dates, bullets: _fc2.bullets });
-            // Update overall company dates to span from earliest to latest
-            var _earlierDate = _fc2.dates.split(/[–-]/)[0].trim();
-            var _latestDate = _prevCo.dates.split(/[–-]/).pop().trim();
-            _prevCo.dates = _earlierDate + ' – ' + _latestDate;
-          } else {
-            // New company
-            _companies.push({
-              name: _fc2.name,
-              location: _fc2.location,
-              dates: _fc2.dates,
-              roles: [{ role: _fc2.role, dates: _fc2.dates, bullets: _fc2.bullets }]
+          var _gbDoc = new window.docxtemplater(_gbZip, {
+            paragraphLoop: true, linebreaks: true,
+            delimiters: {start: '{{', end: '}}'},
+            nullGetter: function() { return ''; }
+          });
+          _gbDoc.render(_gbRender);
+          out = _gbDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+
+        } else {
+          // Services Profile
+          var _svcCos = [];
+          for (var _ci2 = 1; _ci2 <= 15; _ci2++) {
+            var _scn = _cv['COMPANY_' + _ci2 + '_NAME'] || '';
+            if (!_scn) break;
+            var _sbs = [];
+            for (var _bi = 1; _bi <= 10; _bi++) {
+              var _sb = _cv['COMPANY_' + _ci2 + '_BULLET_' + _bi] || '';
+              if (_sb) _sbs.push(_sb);
+            }
+            _svcCos.push({ name: _scn, location: _cv['COMPANY_'+_ci2+'_LOCATION']||'',
+              dates: _cv['COMPANY_'+_ci2+'_DATES']||'',
+              roles: [{role: _cv['COMPANY_'+_ci2+'_ROLE']||'', dates: '', bullets: _sbs}]
             });
           }
+          var _svcRender = Object.assign({}, _cv, {
+            companies: _svcCos,
+            EDU_INSTITUTION: _cv.EDU_1_INSTITUTION||'',
+            EDU_1_START: _cv.EDU_1_START||'', EDU_1_END: _cv.EDU_1_END||'',
+            EDU_1_DEGREE: _cv.EDU_1_DEGREE||'',
+            QUAL_1: _cv.QUAL_1||'', QUAL_1_START:'', QUAL_1_END:'', QUAL_1_DETAILS:'',
+            QUAL_2: _cv.QUAL_2||'', QUAL_2_START:'', QUAL_2_END:'', QUAL_2_DETAILS:'',
+            LANG_LEVEL: _cv.LANGUAGES_LEVEL||_cv.LANG_LEVEL||''
+          });
+          var _svcDoc = new window.docxtemplater(_gbZip, {
+            paragraphLoop: true, linebreaks: true,
+            delimiters: {start: '{{', end: '}}'},
+            nullGetter: function() { return ''; }
+          });
+          _svcDoc.render(_svcRender);
+          out = _svcDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
         }
-        // If company has only 1 role, clear that role's dates (shown on company line instead)
-        _companies.forEach(function(co) {
-          if (co.roles.length === 1) {
-            co.roles[0].dates = '';
-          }
-        });
-
-        // Build render data
-        var _renderData = Object.assign({}, _cv, {
-          companies: _companies,
-          CURRENT_TITLE: _cv.CURRENT_TITLE || _cv.CURRENT_EMPLOYER || '',
-          EDU_INSTITUTION: _cv.EDU_1_INSTITUTION || '',
-          EDU_1_YEARS: _cv.EDU_1_YEARS || (_cv.EDU_1_START ? (_cv.EDU_1_START + (_cv.EDU_1_END ? ' – ' + _cv.EDU_1_END : '')) : ''),
-          EDU_1_DEGREE: _cv.EDU_1_DEGREE || '',
-          EDU_2_YEARS: _cv.EDU_2_YEARS || '',
-          EDU_2_INSTITUTION: _cv.EDU_2_INSTITUTION || '',
-          EDU_2_DEGREE: _cv.EDU_2_DEGREE || '',
-          QUAL_1: _cv.QUAL_1 || '',
-          LANG_LEVEL: _cv.LANGUAGES_LEVEL || _cv.LANG_LEVEL || '',
-          EDU_1_DEGREE: (function(d) {
-            if (!d) return '';
-            return d.replace(/^Bachelor of Science in Business Administration/i,'BSBA')
-                    .replace(/^Bachelor of Science,?\s*Business Administration/i,'BSBA')
-                    .replace(/^Bachelor of Business Administration/i,'BBA')
-                    .replace(/^Bachelor of Science/i,'BS')
-                    .replace(/^Bachelor of Arts/i,'BA')
-                    .replace(/^Master of Business Administration/i,'MBA')
-                    .replace(/^Master of Science/i,'MS')
-                    .replace(/^Master of Arts/i,'MA')
-                    .replace(/^Doctor of Philosophy/i,'PhD')
-                    .replace(/^Juris Doctor/i,'JD');
-          })(_cv.EDU_1_DEGREE || '')
-        });
-
-        // Also patch header2.xml with CANDIDATE_NAME if it exists
-        if (_loopZip.files['word/header2.xml']) {
-          var _h2 = _loopZip.files['word/header2.xml'].asText();
-          _h2 = _h2.replace(/\{\{CANDIDATE_NAME\}\}/g, (_renderData.CANDIDATE_NAME || ''));
-          _loopZip.file('word/header2.xml', _h2);
-        }
-        var _loopDoc = new window.docxtemplater(_loopZip, {
-          paragraphLoop: true, linebreaks: true,
-          delimiters: {start: '{{', end: '}}'},
-          nullGetter: function() { return ''; }
-        });
-        _loopDoc.render(_renderData);
-        out = _loopDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
 
       } else {
         var zip = new PizZip(ab);
