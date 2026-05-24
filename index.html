@@ -1068,11 +1068,10 @@ function buildSvcBizExp(companies) {
   var SPACING = '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>';
   var IND = '<w:ind w:right="26"/>';
   var JC = '<w:jc w:val="both"/>';
-  
-  function para(content, bold) {
-    var rpr = '<w:rPr>' + FONT + (bold ? '<w:b/>' : '') + COLOR + '</w:rPr>';
-    return '<w:p><w:pPr>' + TAB + SPACING + IND + JC + '<w:rPr>' + FONT + COLOR + '</w:rPr></w:pPr>' + content + '</w:p>';
-  }
+  var PPR = TAB+SPACING+IND+JC;
+  var RPR = '<w:rPr>'+FONT+COLOR+'</w:rPr>';
+  var RPR_B = '<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr>';
+  var BULLET_PPR = '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr>'+SPACING+IND+JC;
 
   for (var ci = 0; ci < companies.length; ci++) {
     var co = companies[ci];
@@ -1080,13 +1079,13 @@ function buildSvcBizExp(companies) {
     var roles = co.roles || [];
     var multiRole = roles.length > 1;
 
-    // Spacer
-    if (ci > 0) xml += '<w:p><w:pPr>' + SPACING + '</w:pPr></w:p>';
+    // Spacer before each company
+    xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
 
-    // Company line: bold name, tab, bold overall dates
-    xml += '<w:p><w:pPr>' + TAB + SPACING + IND + JC + '<w:rPr>' + FONT + '<w:b/>' + COLOR + '</w:rPr></w:pPr>'
-        + '<w:r><w:rPr>' + FONT + '<w:b/>' + COLOR + '</w:rPr><w:t xml:space="preserve">' + xe(co.name) + '</w:t></w:r>'
-        + '<w:r><w:rPr>' + FONT + '<w:b/>' + COLOR + '</w:rPr><w:tab/><w:t>' + xe(co.dates||'') + '</w:t></w:r>'
+    // Company line: BOLD name, TAB, BOLD overall dates (only if multi-role — single role shows dates on role line)
+    xml += '<w:p><w:pPr>'+PPR+'<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr></w:pPr>'
+        + '<w:r>'+RPR_B+'<w:t xml:space="preserve">'+xe(co.name)+'</w:t></w:r>'
+        + (multiRole ? '<w:r>'+RPR_B+'<w:tab/><w:t>'+xe(co.dates||'')+'</w:t></w:r>' : '')
         + '</w:p>';
 
     for (var ri = 0; ri < roles.length; ri++) {
@@ -1094,18 +1093,26 @@ function buildSvcBizExp(companies) {
       if (!role || !role.role) continue;
       var roleDates = role.role_dates || role.dates || '';
 
-      // Role line: role title, tab, role dates (always shown)
-      xml += '<w:p><w:pPr>' + TAB + SPACING + IND + JC + '<w:rPr>' + FONT + COLOR + '</w:rPr></w:pPr>'
-          + '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
-          + (roleDates ? '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:tab/><w:t>' + xe(roleDates) + '</w:t></w:r>' : '')
+      // Line space before role
+      xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
+
+      // Role line: role title + TAB + dates
+      // Single role: show dates on role line; Multi-role: show role-specific dates
+      xml += '<w:p><w:pPr>'+PPR+RPR+'</w:pPr>'
+          + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(role.role)+'</w:t></w:r>'
+          + (roleDates ? '<w:r>'+RPR+'<w:tab/><w:t>'+xe(roleDates)+'</w:t></w:r>' : '')
           + '</w:p>';
 
-      // Bullets
+      // Line space before bullets
       var bullets = role.bullets || [];
-      for (var bi = 0; bi < bullets.length; bi++) {
-        if (!bullets[bi] || !bullets[bi].trim()) continue;
-        xml += '<w:p><w:pPr>' + SPACING + IND + JC + '<w:rPr>' + FONT + COLOR + '</w:rPr></w:pPr>'
-            + '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:t xml:space="preserve">' + xe(bullets[bi]) + '</w:t></w:r></w:p>';
+      if (bullets.length > 0) {
+        xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
+        for (var bi = 0; bi < bullets.length; bi++) {
+          if (!bullets[bi] || !bullets[bi].trim()) continue;
+          // Bullet with numPr
+          xml += '<w:p><w:pPr>'+BULLET_PPR+'<w:rPr>'+FONT+COLOR+'</w:rPr></w:pPr>'
+              + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(bullets[bi])+'</w:t></w:r></w:p>';
+        }
       }
     }
   }
@@ -2987,6 +2994,28 @@ async function downloadHistory(index) {
               _svcCos[_svcCos.length-1].dates = _sNewStart + ' – ' + _sOldDates.split(/[–-]/).pop().trim();
             } else {
               _svcCos.push({ name: _scn, location: _cv['COMPANY_'+_ci2+'_LOCATION']||'', dates: _cv['COMPANY_'+_ci2+'_DATES']||'', roles: [_sRole] });
+            }
+          }
+
+          // Inject summary
+          var _svcSummary = _cv.SUMMARY || '';
+          if (_svcSummary) {
+            var _svcSumXml = '<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:right="26"/><w:jc w:val="both"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium" w:cs="Times New Roman"/><w:color w:val="222229"/></w:rPr><w:t xml:space="preserve">' + _svcSummary.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</w:t></w:r></w:p>';
+            var _svcSumIdx = _svcDocXml.indexOf('{{SUMMARY_BLOCK}}');
+            if (_svcSumIdx !== -1) {
+              var _svcSPS = _svcSumIdx, _svcSSF = _svcSumIdx;
+              while (_svcSSF > 0) { var _svcSC = _svcDocXml.lastIndexOf('<w:p', _svcSSF-1); if (_svcSC<0) break; if (_svcDocXml.charAt(_svcSC+4)==='>'||_svcDocXml.charAt(_svcSC+4)===' '){_svcSPS=_svcSC;break;} _svcSSF=_svcSC; }
+              var _svcSPE = _svcDocXml.indexOf('</w:p>', _svcSumIdx) + 6;
+              _svcDocXml = _svcDocXml.substring(0, _svcSPS) + _svcSumXml + _svcDocXml.substring(_svcSPE);
+            }
+          } else {
+            // Remove SUMMARY_BLOCK paragraph if no summary
+            var _svcSumIdx2 = _svcDocXml.indexOf('{{SUMMARY_BLOCK}}');
+            if (_svcSumIdx2 !== -1) {
+              var _svcSPS2 = _svcSumIdx2, _svcSSF2 = _svcSumIdx2;
+              while (_svcSSF2 > 0) { var _svcSC2 = _svcDocXml.lastIndexOf('<w:p', _svcSSF2-1); if (_svcSC2<0) break; if (_svcDocXml.charAt(_svcSC2+4)==='>'||_svcDocXml.charAt(_svcSC2+4)===' '){_svcSPS2=_svcSC2;break;} _svcSSF2=_svcSC2; }
+              var _svcSPE2 = _svcDocXml.indexOf('</w:p>', _svcSumIdx2) + 6;
+              _svcDocXml = _svcDocXml.substring(0, _svcSPS2) + _svcDocXml.substring(_svcSPE2);
             }
           }
 
