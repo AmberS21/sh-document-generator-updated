@@ -1071,7 +1071,7 @@ function buildSvcBizExp(companies) {
   var PPR = TAB+SPACING+IND+JC;
   var RPR = '<w:rPr>'+FONT+COLOR+'</w:rPr>';
   var RPR_B = '<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr>';
-  var BULLET_PPR = '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr>'+SPACING+IND+JC;
+  var BULLET_PPR = '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr><w:ind w:left="360" w:hanging="360"/>'+SPACING+IND+JC;
 
   for (var ci = 0; ci < companies.length; ci++) {
     var co = companies[ci];
@@ -1082,26 +1082,29 @@ function buildSvcBizExp(companies) {
     // Spacer before each company
     xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
 
-    // Company line: BOLD name, TAB, BOLD overall dates (only if multi-role — single role shows dates on role line)
+    // Company line: BOLD name, TAB, BOLD overall dates (ALWAYS on company line)
     xml += '<w:p><w:pPr>'+PPR+'<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr></w:pPr>'
         + '<w:r>'+RPR_B+'<w:t xml:space="preserve">'+xe(co.name)+'</w:t></w:r>'
-        + (multiRole ? '<w:r>'+RPR_B+'<w:tab/><w:t>'+xe(co.dates||'')+'</w:t></w:r>' : '')
+        + (co.dates ? '<w:r>'+RPR_B+'<w:tab/><w:t>'+xe(co.dates)+'</w:t></w:r>' : '')
         + '</w:p>';
 
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
-      if (!role || !role.role) continue;
+      if (!role) continue;
       var roleDates = role.role_dates || role.dates || '';
+      // For single-role companies, don't show dates on role line (already on company)
+      if (!multiRole) roleDates = '';
 
       // Line space before role
       xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
 
-      // Role line: role title + TAB + dates
-      // Single role: show dates on role line; Multi-role: show role-specific dates
-      xml += '<w:p><w:pPr>'+PPR+RPR+'</w:pPr>'
-          + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(role.role)+'</w:t></w:r>'
-          + (roleDates ? '<w:r>'+RPR+'<w:tab/><w:t>'+xe(roleDates)+'</w:t></w:r>' : '')
-          + '</w:p>';
+      // Role line only if there's a role title
+      if (role.role) {
+        xml += '<w:p><w:pPr>'+PPR+RPR+'</w:pPr>'
+            + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(role.role)+'</w:t></w:r>'
+            + (roleDates ? '<w:r>'+RPR+'<w:tab/><w:t>'+xe(roleDates)+'</w:t></w:r>' : '')
+            + '</w:p>';
+      }
 
       // Line space before bullets
       var bullets = role.bullets || [];
@@ -2298,7 +2301,7 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
           model: 'claude-sonnet-4-6',
           max_tokens: 12000,
           messages: [{ role: 'user', content: prompt }],
-          system: (isGbProfile || isServicesProfile ? 'Return ONLY raw JSON. CRITICAL: For candidates with multiple roles at same company, create a SEPARATE COMPANY_N entry for EACH role. Example: Director 2024-Present = COMPANY_1, VP 2020-2024 = COMPANY_2, Associate 2016-2020 = COMPANY_3, Senior Analyst 2015-2016 = COMPANY_4 — ALL with same company name. No markdown. No explanations.' : 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.')
+          system: (isGbProfile || isServicesProfile ? 'Return ONLY raw JSON. CRITICAL RULES: (1) Each role at same company = SEPARATE COMPANY_N entry. (2) If a company has NO explicit role title (only bullets/description), use empty string for COMPANY_N_ROLE and put ALL bullets under COMPANY_N_BULLET_1 etc. (3) ALWAYS capture COMPANY_N_DATES from the CV. (4) Capture ALL companies and ALL bullets - do not skip any. No markdown.' : 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.')
         })
       });
       if (_r.status === 429) {
