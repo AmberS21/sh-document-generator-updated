@@ -763,7 +763,7 @@ const TEMPLATES = {
 
     file: 'templates/SH_GB_Profile.docx',
 
-    patchFiles: ['word/document.xml'],
+    patchFiles: ['word/document.xml', 'word/header2.xml'],
 
     promptType: 'global-standard'
 
@@ -2693,9 +2693,28 @@ async function downloadHistory(index) {
           EDU_2_INSTITUTION: _cv.EDU_2_INSTITUTION || '',
           EDU_2_DEGREE: _cv.EDU_2_DEGREE || '',
           QUAL_1: _cv.QUAL_1 || '',
-          LANG_LEVEL: _cv.LANGUAGES_LEVEL || _cv.LANG_LEVEL || ''
+          LANG_LEVEL: _cv.LANGUAGES_LEVEL || _cv.LANG_LEVEL || '',
+          EDU_1_DEGREE: (function(d) {
+            if (!d) return '';
+            return d.replace(/^Bachelor of Science in Business Administration/i,'BSBA')
+                    .replace(/^Bachelor of Science,?\s*Business Administration/i,'BSBA')
+                    .replace(/^Bachelor of Business Administration/i,'BBA')
+                    .replace(/^Bachelor of Science/i,'BS')
+                    .replace(/^Bachelor of Arts/i,'BA')
+                    .replace(/^Master of Business Administration/i,'MBA')
+                    .replace(/^Master of Science/i,'MS')
+                    .replace(/^Master of Arts/i,'MA')
+                    .replace(/^Doctor of Philosophy/i,'PhD')
+                    .replace(/^Juris Doctor/i,'JD');
+          })(_cv.EDU_1_DEGREE || '')
         });
 
+        // Also patch header2.xml with CANDIDATE_NAME if it exists
+        if (_loopZip.files['word/header2.xml']) {
+          var _h2 = _loopZip.files['word/header2.xml'].asText();
+          _h2 = _h2.replace(/\{\{CANDIDATE_NAME\}\}/g, (_renderData.CANDIDATE_NAME || ''));
+          _loopZip.file('word/header2.xml', _h2);
+        }
         var _loopDoc = new window.docxtemplater(_loopZip, {
           paragraphLoop: true, linebreaks: true,
           delimiters: {start: '{{', end: '}}'},
