@@ -2770,24 +2770,32 @@ async function downloadHistory(index) {
         _projZip.file('xl/worksheets/sheet1.xml', _sh1);
         _projZip.file('xl/sharedStrings.xml', _ssXml);
 
-        // Force Excel to recalculate all formulas on open
+        // Write actual counts directly into Dashboard cells (bypasses Excel recalc issues)
+        var _sh3Xml = await _projZip.files['xl/worksheets/sheet3.xml'].async('string');
+        var _totalCands = _cands.length;
+        var _maleCount   = _cands.filter(function(c){ return (c.gender||'').toLowerCase() === 'male'; }).length;
+        var _femaleCount = _cands.filter(function(c){ return (c.gender||'').toLowerCase() === 'female'; }).length;
+        var _nonBinary   = _cands.filter(function(c){ var g=(c.gender||'').toLowerCase(); return g && g!=='male' && g!=='female'; }).length;
+
+        // Total Candidates: A6 and B43
+        _sh3Xml = _sh3Xml.replace(/<c r="A6" s="7"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
+          '<c r="A6" s="7" t="n"><v>' + _totalCands + '<\/v><\/c>');
+        _sh3Xml = _sh3Xml.replace(/<c r="B43" s="[^"]*"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
+          '<c r="B43" s="24" t="n"><v>' + _totalCands + '<\/v><\/c>');
+        // Gender counts: B47=Male, B48=Female, B49=Other
+        _sh3Xml = _sh3Xml.replace(/<c r="B47" s="[^"]*"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
+          '<c r="B47" s="16" t="n"><v>' + _maleCount + '<\/v><\/c>');
+        _sh3Xml = _sh3Xml.replace(/<c r="B48" s="[^"]*"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
+          '<c r="B48" s="20" t="n"><v>' + _femaleCount + '<\/v><\/c>');
+        _sh3Xml = _sh3Xml.replace(/<c r="B49" s="[^"]*"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
+          '<c r="B49" s="20" t="n"><v>' + _nonBinary + '<\/v><\/c>');
+        _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
+
+        // Force Excel to recalculate remaining formulas on open
         var _wbXml = await _projZip.files['xl/workbook.xml'].async('string');
         _wbXml = _wbXml.replace(/<calcPr[^/]*\/>/,
           '<calcPr calcId="0" fullCalcOnLoad="1"/>');
         _projZip.file('xl/workbook.xml', _wbXml);
-
-        // Clear cached formula values in Dashboard and Pivot sheets
-        for (var _si2 = 2; _si2 <= 3; _si2++) {
-          var _shf = 'xl/worksheets/sheet' + _si2 + '.xml';
-          if (_projZip.files[_shf]) {
-            var _shXml = await _projZip.files[_shf].async('string');
-            _shXml = _shXml.replace(/(<c [^>]*>)(<f>[^<]+<\/f>)<v>[^<]*<\/v>(<\/c>)/g,
-              '$1$2<v/>$3');
-            _projZip.file(_shf, _shXml);
-          }
-        }
-
-        // Remove calcChain so Excel recalculates all formulas fresh
         _projZip.remove('xl/calcChain.xml');
 
         var _projBuf = await _projZip.generateAsync({type:'arraybuffer', compression:'DEFLATE'});
