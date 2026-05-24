@@ -3595,11 +3595,32 @@ function renderLogs(logs,tbody,summary){
   if(summary){var c={};logs.forEach(function(r){var n=r.user||r[1]||'Unknown';c[n]=(c[n]||0)+1;});summary.innerHTML=Object.keys(c).sort(function(a,b){return c[b]-c[a];}).map(function(n){return'<span style="background:rgba(255,255,255,.15);border-radius:12px;padding:3px 10px;font-size:11px;"><b>'+n+'</b> '+c[n]+'</span>';}).join('');}
 }
 function exportUsageLogs(){
-  var a=document.createElement('a');
-  a.href='/api/proxy/logs/csv';
-  a.download='SH_DocGen_Usage_'+new Date().toISOString().slice(0,10)+'.csv';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  notify('⬇ Downloading usage report...');
+  // Try server CSV, fall back to localStorage
+  fetch('/api/proxy/logs/csv').then(function(r){
+    if(!r.ok) throw new Error('Server unavailable');
+    return r.blob();
+  }).then(function(blob){
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='SH_DocGen_Usage_'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    notify('⬇ Usage report downloaded from server');
+  }).catch(function(){
+    // Fallback: export from localStorage
+    var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');
+    if(!logs.length){notify('No usage data yet');return;}
+    var headers=['ID','User','Template','Input Method','Status','Timestamp'];
+    var _nl='\n';var csv=[headers.join(',')].concat(logs.map(function(r,i){
+      var lbl=(typeof TEMPLATES!=='undefined'&&TEMPLATES[r.template])?TEMPLATES[r.template].label:(r.template||'');
+      return[i+1,r.user||'',lbl,r.inputMethod||'',r.status||'',r.timestamp||''].map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');
+    })).join(_nl);
+    var blob=new Blob([csv],{type:'text/csv'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='SH_DocGen_Usage_'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    notify('⬇ Exported '+logs.length+' local log entries');
+  });
 }
 function clearUsageLogs(){
   if(!confirm('Clear all local log entries? Server logs are unaffected.'))return;
