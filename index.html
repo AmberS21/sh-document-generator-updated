@@ -1334,7 +1334,7 @@ async function generate() {
           var projResp = await fetch(ezekiaBase2 + '/v4' + _projEndpoint + projectId2);
           if (!projResp.ok) throw new Error('Ezekia project API error: ' + projResp.status);
           var projData = await projResp.json();
-          console.log('[EZEKIA] Project data FULL:', JSON.stringify(projData).substring(0, 1500));
+          
           var proj = projData.data || projData;
 
           // Fetch consultants
@@ -1359,7 +1359,7 @@ async function generate() {
                 var _po = proj.owner && proj.owner.model && proj.owner.model.fullName || '';
                 if (_po) _consultants.push(_po);
               }
-              console.log('[EZEKIA] Consultants:', _consultants, 'Researchers:', _researchers);
+              
             }
           } catch(e) { console.log('[EZEKIA] Consultants error:', e.message); }
 
@@ -1369,7 +1369,7 @@ async function generate() {
             var _ogResp = await fetch(ezekiaBase2 + '/v3/projects/' + projectId2 + '/office-groups');
             if (_ogResp.ok) {
               var _ogData = await _ogResp.json();
-              console.log('[EZEKIA] Office groups:', JSON.stringify(_ogData).substring(0,300));
+              
               var _ogArr = _ogData.data || _ogData || [];
               if (!Array.isArray(_ogArr)) _ogArr = [_ogArr];
               _ogArr.forEach(function(og) {
@@ -1385,7 +1385,7 @@ async function generate() {
             var _regResp = await fetch(ezekiaBase2 + '/v3/projects/' + projectId2 + '/regions');
             if (_regResp.ok) {
               var _regData = await _regResp.json();
-              console.log('[EZEKIA] Regions:', JSON.stringify(_regData).substring(0,300));
+              
               var _regArr = _regData.data || _regData || [];
               if (!Array.isArray(_regArr)) _regArr = [_regArr];
               _regArr.forEach(function(r) {
@@ -1401,7 +1401,7 @@ async function generate() {
             var _projAddResp = await fetch(ezekiaBase2 + '/projects/' + projectId2 + '/additional-info');
             if (_projAddResp.ok) {
               var _projAddData = await _projAddResp.json();
-              console.log('[EZEKIA] Project additional-info:', JSON.stringify(_projAddData).substring(0, 500));
+              
               (_projAddData.data || []).forEach(function(item) {
                 var _lbl = ((item.field && item.field.label) || '').toLowerCase();
                 var _rawVal = item.value;
@@ -1424,12 +1424,12 @@ async function generate() {
             + '&fieldsWithCandidate%5B%5D=manager.researchNotes'
             + '&fieldsWithCandidate%5B%5D=meta.candidate';
           var candResp = await fetch(_candUrl);
-          console.log('[EZEKIA] Candidates full URL:', _candUrl, 'status:', candResp.status);
+          
           var _rawCandData = candResp.ok ? await candResp.json() : {data:[]};
           var _basicCandidates = _rawCandData.data || [];
           // Log COMPLETE first candidate from candidates list to find pipeline tag
           if (_basicCandidates.length > 0) {
-            console.log('[EZEKIA] COMPLETE raw candidate:', JSON.stringify(_basicCandidates[0]));
+            
           }
 
           // Enrich each candidate with full person data to get custom fields, gender, tags
@@ -1459,7 +1459,7 @@ async function generate() {
                   var _addResp2 = await fetch(ezekiaBase2 + '/people/' + _bc.id + '/additional-info?scopedModel=assignment&modelId=' + projectId2);
                   if (_addResp2.ok) {
                     var _addJson2 = await _addResp2.json();
-                    if (_ci === 0) console.log('[EZEKIA] Scoped additional info:', JSON.stringify(_addJson2));
+                    if (_ci === 0) 
                     var _scoped = _addJson2.data || _addJson2;
                     // Merge scoped fields into additionalInfo
                     if (Array.isArray(_scoped) && Array.isArray(_fullCand._additionalInfo)) {
@@ -1468,12 +1468,10 @@ async function generate() {
                   }
                 } catch(e) { if (_ci === 0) console.log('[EZEKIA] Additional info error:', e.message); }
                 if (_ci === 0) {
-                  console.log('[EZEKIA] Enriched person keys:', Object.keys(_fullCand));
-                  console.log('[EZEKIA] manager:', JSON.stringify(_fullCand.manager));
-                  console.log('[EZEKIA] owner.tags:', JSON.stringify(_fullCand.owner && _fullCand.owner.tags));
-                  console.log('[EZEKIA] FULL PERSON (no profile):', JSON.stringify(
-                    Object.fromEntries(Object.entries(_fullCand).filter(function(e){ return e[0] !== 'profile'; }))
-                  ).substring(0, 1000));
+                  
+                  
+                  
+                  
                 }
                 _enrichedCandidates.push(_fullCand);
               } else {
@@ -2695,74 +2693,82 @@ async function downloadHistory(index) {
       await pptx.writeFile({fileName: baseName + '.pptx'});
 
     } else if (fmt === 'x') {
-      // --- Project Record: fill xlsx template from Ezekia data ---
+      // --- Project Report: fill xlsx template preserving ALL styles/images ---
       if (item.template === 'services-profile' || item.template === 'project-report') {
         var projData2 = item.content;
-        var _projTplFile = (item.template === 'project-report')
-          ? 'templates/SH_Project_Report_Template_v3.xlsx'
-          : 'Service%20Team%20-%20Project%20Report%20(with%20Notes).xlsx';
         var _RAW_BASE = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
-        var _fullProjUrl = _RAW_BASE + _projTplFile;
-        console.log('[PROJECT REPORT] Fetching:', _fullProjUrl);
-        var tplResp = await fetch(_fullProjUrl);
-        console.log('[PROJECT REPORT] Response status:', tplResp.status, 'size:', tplResp.headers.get('content-length'));
-        if (!tplResp.ok) throw new Error('Could not load project report template: ' + tplResp.status);
+        var tplResp = await fetch(_RAW_BASE + _projTplFile);
+        if (!tplResp.ok) throw new Error('Could not load project report template');
         var tplAb = await tplResp.arrayBuffer();
-        var projWb = XLSX.read(new Uint8Array(tplAb), {type:'array', cellStyles:true, cellHTML:false});
-        var projWs = projWb.Sheets[projWb.SheetNames[0]];
-        // Row 1 = Ezekia field mappings (keep), Row 2 = headers (keep), data from row 3
-        var startRow = 3;
-        var cols = ['fullname','company','title','location','pipelineTag','gender','notes'];
-        var colLetters = ['A','B','C','D','E','F','G'];
-        var candidates2 = (projData2 && projData2.candidates) ? projData2.candidates : [];
-        console.log('[PROJECT REPORT] projData2 keys:', projData2 ? Object.keys(projData2) : 'null');
-        console.log('[PROJECT REPORT] candidates count:', candidates2.length);
-        if (candidates2.length > 0) console.log('[PROJECT REPORT] first candidate:', JSON.stringify(candidates2[0]));
-        candidates2.forEach(function(cand, ri) {
-          var r = startRow + ri;
-          colLetters.forEach(function(col, ci) {
-            var cellRef = col + r;
-            projWs[cellRef] = {t:'s', v: String(cand[cols[ci]] || '')};
-          });
+
+        // Work directly with ZIP to preserve ALL styles, images, formulas
+        var _projZip = await JSZip.loadAsync(tplAb);
+        var _ssXml = await _projZip.files['xl/sharedStrings.xml'].async('string');
+        var _sh1 = await _projZip.files['xl/worksheets/sheet1.xml'].async('string');
+
+        function _xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        var _d = projData2;
+        var _now2 = new Date();
+        var _rptDate = _now2.getDate() + ' ' + ['January','February','March','April','May','June','July','August','September','October','November','December'][_now2.getMonth()] + ' ' + _now2.getFullYear();
+        var _tokMap = {
+          '{{project_name}}':    _xe(_d.projectName || ''),
+          '{{report_date}}':     _xe(_rptDate),
+          '{{client_name}}':     _xe(_d.clientCompany || ''),
+          '{{assignment_type}}': _xe(_d.assignmentType || ''),
+          '{{lead_consultant}}': _xe(_d.leadConsultant || ''),
+          '{{consultant}}':      _xe(_d.leadConsultant || ''),
+          '{{researcher_name}}': _xe(_d.researcher || ''),
+          '{{date_created}}':    _xe(_d.startDate || ''),
+          '{{project_status}}':  _xe(_d.status || ''),
+          '{{practice_area}}':   _xe(_d.practice || ''),
+          '{{geography}}':       _xe(_d.geography || ''),
+          '{{top_location_1}}':  '', '{{top_location_2}}':  '',
+          '{{top_location_3}}':  '', '{{top_location_4}}':  '',
+          '{{top_location_5}}':  '', '{{top_location_6}}':  '',
+          '{{top_location_7}}':  '', '{{top_location_8}}':  ''
+        };
+
+        // Replace tokens in shared strings
+        Object.keys(_tokMap).forEach(function(tok) {
+          _ssXml = _ssXml.split(tok).join(_tokMap[tok]);
         });
-        // Update sheet range
-        var lastRow = Math.max(startRow - 1 + candidates2.length, 2);
-        projWs['!ref'] = 'A1:G' + lastRow;
-        // Fill Dashboard tokens
-        var _dashWs = projWb.Sheets['Dashboard'];
-        if (_dashWs) {
-          var _d = projData2;
-          var _now = new Date();
-          var _reportDate = _now.getDate() + ' ' + ['January','February','March','April','May','June','July','August','September','October','November','December'][_now.getMonth()] + ' ' + _now.getFullYear();
-          var _tokens = {
-            '{{project_name}}':     _d.projectName || '',
-            '{{report_date}}':      _reportDate,
-            '{{client_name}}':      _d.clientCompany || '',
-            '{{assignment_type}}':  _d.assignmentType || 'Assignment',
-            '{{lead_consultant}}':  _d.leadConsultant || '',
-            '{{consultant}}':      _d.leadConsultant || '',
-            '{{researcher_name}}':  _d.researcher || '',
-            '{{date_created}}':     _d.startDate || '',
-            '{{project_status}}':   _d.status || '',
-            '{{practice_area}}':    _d.practice || '',
-            '{{geography}}':        _d.geography || '',
-            '{{project_status}}':   _d.status || ''
-          };
-          Object.keys(_dashWs).forEach(function(ref) {
-            if (ref[0] === '!') return;
-            var cell = _dashWs[ref];
-            if (cell && cell.v && typeof cell.v === 'string') {
-              var _val = cell.v;
-              Object.keys(_tokens).forEach(function(tok) {
-                _val = _val.split(tok).join(_tokens[tok]);
-              });
-              cell.v = _val;
-              if (cell.w) cell.w = _val;
-            }
+
+        // Count existing shared strings
+        var _ssCount = (_ssXml.match(/<si>/g) || []).length;
+
+        // Build candidate rows + new shared strings
+        var _cands = (_d.candidates || []);
+        var _newSS = '';
+        var _newRows = '';
+        _cands.forEach(function(cand, ri) {
+          var _r = 3 + ri;
+          var _vals = [cand.fullname||'', cand.company||'', cand.title||'', cand.location||'', cand.pipelineTag||'', cand.gender||'', cand.notes||''];
+          var _cols = ['A','B','C','D','E','F','G'];
+          var _cells = '';
+          _vals.forEach(function(v, ci) {
+            var _si = _ssCount + (ri * 7) + ci;
+            _newSS += '<si><t xml:space="preserve">' + _xe(v) + '</t></si>';
+            _cells += '<c r="' + _cols[ci] + _r + '" s="11" t="s"><v>' + _si + '</v></c>';
           });
-        }
-        var projBuf = XLSX.write(projWb, {type:'array', bookType:'xlsx', bookSST:true, cellStyles:true});
-        var projBlob = new Blob([projBuf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+          _newRows += '<row r="' + _r + '" spans="1:7" ht="15.75" customHeight="1">' + _cells + '</row>';
+        });
+
+        // Remove old data rows and insert new ones
+        _sh1 = _sh1.replace(/<row r="[3-9][0-9]*"[^/]*\/>/g, '');
+        _sh1 = _sh1.replace(/<row r="[3-9][0-9]*"[^>]*>[\s\S]*?<\/row>/g, '');
+        _sh1 = _sh1.replace('</sheetData>', _newRows + '</sheetData>');
+
+        // Update shared strings count
+        var _totalSS = _ssCount + (_cands.length * 7);
+        _ssXml = _ssXml.replace(/count="[^"]*"/, 'count="' + _totalSS + '"').replace(/uniqueCount="[^"]*"/, 'uniqueCount="' + _totalSS + '"');
+        _ssXml = _ssXml.replace('</sst>', _newSS + '</sst>');
+
+        _projZip.file('xl/worksheets/sheet1.xml', _sh1);
+        _projZip.file('xl/sharedStrings.xml', _ssXml);
+
+        var _projBuf = await _projZip.generateAsync({type:'arraybuffer', compression:'DEFLATE'});
+        var projBlob = new Blob([_projBuf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
         var projA = document.createElement('a');
         projA.href = URL.createObjectURL(projBlob);
         projA.download = baseName + '.xlsx';
