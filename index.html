@@ -1000,6 +1000,64 @@ function csXmlEsc(s) {
   return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function buildGbBizExp(companies) {
+  if (!companies || companies.length === 0) return '';
+  var xml = '';
+  function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var TAB_STOP = '<w:tabs><w:tab w:val="right" w:pos="9072"/></w:tabs>';
+  var DASH = ' – ';
+
+  for (var ci = 0; ci < companies.length; ci++) {
+    var co = companies[ci];
+    if (!co || !co.name) continue;
+    var roles = co.roles || [];
+    var multiRole = roles.length > 1;
+
+    // Spacer before company (except first)
+    if (ci > 0) {
+      xml += '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:spacing w:before="120" w:after="0"/></w:pPr></w:p>';
+    }
+
+    // Company line: BOLD name+location, TAB, BOLD overall dates
+    xml += '<w:p><w:pPr><w:pStyle w:val="SHText"/>' + TAB_STOP
+        + '<w:spacing w:before="0" w:after="0"/></w:pPr>'
+        + '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">' + xe(co.name)
+        + (co.location ? ', ' + xe(co.location) : '') + '</w:t></w:r>'
+        + '<w:r><w:tab/></w:r>'
+        + '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>' + xe(co.dates||'') + '</w:t></w:r>'
+        + '</w:p>';
+
+    // Roles
+    for (var ri = 0; ri < roles.length; ri++) {
+      var role = roles[ri];
+      if (!role || !role.role) continue;
+      var roleDates = role.role_dates || role.dates || '';
+
+      // Role line: role title, TAB, role dates (only if multi-role)
+      xml += '<w:p><w:pPr><w:pStyle w:val="SHText"/>' + TAB_STOP
+          + '<w:spacing w:before="0" w:after="0"/></w:pPr>'
+          + '<w:r><w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
+          + (multiRole && roleDates ? '<w:r><w:tab/></w:r><w:r><w:t>' + xe(roleDates) + '</w:t></w:r>' : '')
+          + '</w:p>';
+
+      // Bullets (only under first/most recent role)
+      var bullets = role.bullets || [];
+      if (bullets.length > 0) {
+        // Spacer after role line before bullets
+        xml += '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>';
+        for (var bi = 0; bi < bullets.length; bi++) {
+          var b = bullets[bi];
+          if (!b || !b.trim()) continue;
+          xml += '<w:p><w:pPr><w:pStyle w:val="SHBullets"/><w:spacing w:before="0" w:after="0"/></w:pPr>'
+              + '<w:r><w:t xml:space="preserve">' + xe(b) + '</w:t></w:r></w:p>';
+        }
+      }
+    }
+  }
+  return xml;
+}
+
+
 function buildCareerSummaryBizExp(companies) {
   if (!companies || companies.length === 0) return '';
   var xml = '';
@@ -2716,7 +2774,7 @@ async function downloadHistory(index) {
           }
           var _gbBizXml = '';
           try {
-            _gbBizXml = buildCareerSummaryBizExp(_gbCvForBiz.companies || []);
+            _gbBizXml = buildGbBizExp(_gbCvForBiz.companies || []);
           } catch(_gbErr) {
             console.error('[GB] buildCareerSummaryBizExp error:', _gbErr.message, _gbErr.stack);
             _gbBizXml = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t>Business experience error</w:t></w:r></w:p>';
