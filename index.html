@@ -1337,7 +1337,7 @@ async function generate() {
           console.log('[EZEKIA] Project data FULL:', JSON.stringify(projData).substring(0, 1500));
           var proj = projData.data || projData;
 
-          // Fetch consultants - endpoint returns user objects, get names from owners
+          // Fetch consultants
           var _consultants = [], _researchers = [];
           try {
             var _conResp = await fetch(ezekiaBase2 + '/v3/projects/' + projectId2 + '/consultants');
@@ -1345,13 +1345,55 @@ async function generate() {
               var _conData = await _conResp.json();
               var _conArr = _conData.data || _conData || [];
               if (!Array.isArray(_conArr)) _conArr = [_conArr];
-              // Need to match consultant IDs to names via a user lookup
-              // For now use primary owner as lead consultant
-              var _primaryOwner = proj.owner && proj.owner.model && proj.owner.model.fullName || '';
-              if (_primaryOwner) _consultants.push(_primaryOwner);
-              console.log('[EZEKIA] Consultants count:', _conArr.length, 'Primary owner:', _primaryOwner);
+              _conArr.forEach(function(c) {
+                var _role = (c.role || c.userRole || c.type || '').toLowerCase();
+                var _name = c.fullName || c.name || (c.model && c.model.fullName) || '';
+                if (!_name && c.firstName) _name = (c.firstName + ' ' + (c.lastName||'')).trim();
+                if (_name) {
+                  if (_role.includes('research') || _role.includes('associate')) _researchers.push(_name);
+                  else _consultants.push(_name);
+                }
+              });
+              // Fallback: use primary owner
+              if (_consultants.length === 0) {
+                var _po = proj.owner && proj.owner.model && proj.owner.model.fullName || '';
+                if (_po) _consultants.push(_po);
+              }
+              console.log('[EZEKIA] Consultants:', _consultants, 'Researchers:', _researchers);
             }
           } catch(e) { console.log('[EZEKIA] Consultants error:', e.message); }
+
+          // Fetch office groups (practice/business group)
+          var _officeGroups = [];
+          try {
+            var _ogResp = await fetch(ezekiaBase2 + '/v3/projects/' + projectId2 + '/office-groups');
+            if (_ogResp.ok) {
+              var _ogData = await _ogResp.json();
+              console.log('[EZEKIA] Office groups:', JSON.stringify(_ogData).substring(0,300));
+              var _ogArr = _ogData.data || _ogData || [];
+              if (!Array.isArray(_ogArr)) _ogArr = [_ogArr];
+              _ogArr.forEach(function(og) {
+                var _n = og.name || og.description || '';
+                if (_n) _officeGroups.push(_n);
+              });
+            }
+          } catch(e) { console.log('[EZEKIA] Office groups error:', e.message); }
+
+          // Fetch regions (geography)
+          var _regions = [];
+          try {
+            var _regResp = await fetch(ezekiaBase2 + '/v3/projects/' + projectId2 + '/regions');
+            if (_regResp.ok) {
+              var _regData = await _regResp.json();
+              console.log('[EZEKIA] Regions:', JSON.stringify(_regData).substring(0,300));
+              var _regArr = _regData.data || _regData || [];
+              if (!Array.isArray(_regArr)) _regArr = [_regArr];
+              _regArr.forEach(function(r) {
+                var _n = r.name || r.region || '';
+                if (_n) _regions.push(_n);
+              });
+            }
+          } catch(e) { console.log('[EZEKIA] Regions error:', e.message); }
 
           // Fetch project additional-info (engagement type, status)
           var _projCustom = {};
@@ -1449,10 +1491,10 @@ async function generate() {
             assignmentType: _projCustom.engagementType || '',
             startDate: proj.createdAt ? proj.createdAt.substring(0, 10) : (proj.startDate || ''),
             status: (proj.manager && proj.manager.status && proj.manager.status.text) || _projCustom.status || '',
-            practice: _projCustom.practice || (proj.industries && proj.industries.map(function(i){return i.name;}).join(', ')) || '',
+            practice: _officeGroups.join(', ') || _projCustom.practice || (proj.industries && proj.industries.map(function(i){return i.name;}).join(', ')) || '',
             leadConsultant: _consultants.join(', '),
             researcher: _researchers.join(', '),
-            geography: _projCustom.geography || '',
+            geography: _regions.join(', ') || _projCustom.geography || '',
             candidates: _enrichedCandidates.map(function(cand) {
               // Extract from Ezekia v4 API response structure
               var _pos = (cand.profile && cand.profile.positions && cand.profile.positions[0]) || {};
