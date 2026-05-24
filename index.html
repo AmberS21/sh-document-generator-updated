@@ -1058,6 +1058,128 @@ function buildGbBizExp(companies) {
 }
 
 
+function buildSvcBizExp(companies) {
+  if (!companies || companies.length === 0) return '';
+  var xml = '';
+  function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var FONT = '<w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium" w:cs="Times New Roman"/>';
+  var COLOR = '<w:color w:val="222229"/>';
+  var TAB = '<w:tabs><w:tab w:val="right" w:pos="9720"/></w:tabs>';
+  var SPACING = '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>';
+  var IND = '<w:ind w:right="26"/>';
+  var JC = '<w:jc w:val="both"/>';
+  
+  function para(content, bold) {
+    var rpr = '<w:rPr>' + FONT + (bold ? '<w:b/>' : '') + COLOR + '</w:rPr>';
+    return '<w:p><w:pPr>' + TAB + SPACING + IND + JC + '<w:rPr>' + FONT + COLOR + '</w:rPr></w:pPr>' + content + '</w:p>';
+  }
+
+  for (var ci = 0; ci < companies.length; ci++) {
+    var co = companies[ci];
+    if (!co || !co.name) continue;
+    var roles = co.roles || [];
+    var multiRole = roles.length > 1;
+
+    // Spacer
+    if (ci > 0) xml += '<w:p><w:pPr>' + SPACING + '</w:pPr></w:p>';
+
+    // Company line: bold name, tab, bold overall dates
+    xml += '<w:p><w:pPr>' + TAB + SPACING + IND + JC + '<w:rPr>' + FONT + '<w:b/>' + COLOR + '</w:rPr></w:pPr>'
+        + '<w:r><w:rPr>' + FONT + '<w:b/>' + COLOR + '</w:rPr><w:t xml:space="preserve">' + xe(co.name) + '</w:t></w:r>'
+        + '<w:r><w:rPr>' + FONT + '<w:b/>' + COLOR + '</w:rPr><w:tab/><w:t>' + xe(co.dates||'') + '</w:t></w:r>'
+        + '</w:p>';
+
+    for (var ri = 0; ri < roles.length; ri++) {
+      var role = roles[ri];
+      if (!role || !role.role) continue;
+      var roleDates = role.role_dates || role.dates || '';
+
+      // Location line (only on first role if present)
+      if (ri === 0 && co.location) {
+        xml += '<w:p><w:pPr>' + SPACING + IND + JC + '<w:rPr>' + FONT + COLOR + '</w:rPr></w:pPr>'
+            + '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:t>' + xe(co.location) + '</w:t></w:r></w:p>';
+      }
+
+      // Role line: role title, tab, role dates
+      xml += '<w:p><w:pPr>' + TAB + SPACING + IND + JC + '<w:rPr>' + FONT + COLOR + '</w:rPr></w:pPr>'
+          + '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
+          + (roleDates ? '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:tab/><w:t>' + xe(roleDates) + '</w:t></w:r>' : '')
+          + '</w:p>';
+
+      // Bullets
+      var bullets = role.bullets || [];
+      for (var bi = 0; bi < bullets.length; bi++) {
+        if (!bullets[bi] || !bullets[bi].trim()) continue;
+        xml += '<w:p><w:pPr>' + SPACING + IND + JC + '<w:rPr>' + FONT + COLOR + '</w:rPr></w:pPr>'
+            + '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:t xml:space="preserve">' + xe(bullets[bi]) + '</w:t></w:r></w:p>';
+      }
+    }
+  }
+  return xml;
+}
+
+function buildSvcEducation(cv) {
+  var xml = '';
+  function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var FONT = '<w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium" w:cs="Times New Roman"/>';
+  var COLOR = '<w:color w:val="222229"/>';
+  var SPACING = '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>';
+  var IND = '<w:ind w:right="26"/>';
+  var BFONT = FONT + '<w:b/>';
+  
+  // Education can be in education[] array (CS JSON) or flat EDU_N_* keys
+  var edus = [];
+  if (cv.education && cv.education.length) {
+    cv.education.forEach(function(e) {
+      if (e.institution || e.degree) edus.push({
+        inst: e.institution || '', degree: e.degree || '',
+        years: e.years || (e.startDate ? e.startDate + (e.endDate ? ' – ' + e.endDate : '') : '')
+      });
+    });
+  } else {
+    for (var i = 1; i <= 5; i++) {
+      var inst = cv['EDU_' + i + '_INSTITUTION'] || cv['EDU_INSTITUTION'] || '';
+      var deg = cv['EDU_' + i + '_DEGREE'] || '';
+      var yr = cv['EDU_' + i + '_YEARS'] || '';
+      if (!yr && cv['EDU_' + i + '_START']) yr = cv['EDU_' + i + '_START'] + (cv['EDU_' + i + '_END'] ? ' – ' + cv['EDU_' + i + '_END'] : '');
+      if (!inst && !deg) break;
+      edus.push({ inst: inst, degree: deg, years: yr });
+      if (i === 1 && !cv['EDU_2_INSTITUTION'] && !cv.education) break;
+    }
+  }
+  
+  edus.forEach(function(e, i) {
+    if (i > 0) xml += '<w:p><w:pPr>' + SPACING + '</w:pPr></w:p>';
+    // Institution line: bold institution + years right-aligned
+    xml += '<w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="9720"/></w:tabs>' + SPACING + IND + '<w:rPr>' + FONT + COLOR + '</w:rPr></w:pPr>'
+        + '<w:r><w:rPr>' + BFONT + COLOR + '</w:rPr><w:t xml:space="preserve">' + xe(e.inst) + '</w:t></w:r>'
+        + (e.years ? '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:tab/><w:t>' + xe(e.years) + '</w:t></w:r>' : '')
+        + '</w:p>';
+    // Degree line
+    if (e.degree) {
+      xml += '<w:p><w:pPr>' + SPACING + IND + '<w:rPr>' + FONT + COLOR + '</w:rPr></w:pPr>'
+          + '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:t>' + xe(e.degree) + '</w:t></w:r></w:p>';
+    }
+  });
+  return xml;
+}
+
+function buildSvcQuals(cv) {
+  var xml = '';
+  function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var FONT = '<w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium" w:cs="Times New Roman"/>';
+  var COLOR = '<w:color w:val="222229"/>';
+  var SPACING = '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>';
+  var IND = '<w:ind w:right="26"/>';
+  var quals = [cv.QUAL_1, cv.QUAL_2, cv.QUAL_3].filter(Boolean);
+  quals.forEach(function(q) {
+    xml += '<w:p><w:pPr>' + SPACING + IND + '</w:pPr>'
+        + '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:t>' + xe(q) + '</w:t></w:r></w:p>';
+  });
+  return xml;
+}
+
+
 function buildCareerSummaryBizExp(companies) {
   if (!companies || companies.length === 0) return '';
   var xml = '';
@@ -2850,7 +2972,10 @@ async function downloadHistory(index) {
           }
 
         } else {
-          // Services Profile
+          // Services Profile: use block injection same as GB
+          var _svcDocXml = _gbZip.files['word/document.xml'].asText();
+
+          // Build companies array from flat keys (grouping consecutive same-company)
           var _svcCos = [];
           for (var _ci2 = 1; _ci2 <= 15; _ci2++) {
             var _scn = _cv['COMPANY_' + _ci2 + '_NAME'] || '';
@@ -2860,27 +2985,86 @@ async function downloadHistory(index) {
               var _sb = _cv['COMPANY_' + _ci2 + '_BULLET_' + _bi] || '';
               if (_sb) _sbs.push(_sb);
             }
-            _svcCos.push({ name: _scn, location: _cv['COMPANY_'+_ci2+'_LOCATION']||'',
-              dates: _cv['COMPANY_'+_ci2+'_DATES']||'',
-              roles: [{role: _cv['COMPANY_'+_ci2+'_ROLE']||'', dates: '', bullets: _sbs}]
-            });
+            var _sRole = { role: _cv['COMPANY_'+_ci2+'_ROLE']||'', role_dates: _cv['COMPANY_'+_ci2+'_DATES']||'', bullets: _sbs };
+            if (_svcCos.length > 0 && _svcCos[_svcCos.length-1].name === _scn) {
+              var _sRoleNoBullets = Object.assign({}, _sRole, {bullets: []});
+              _svcCos[_svcCos.length-1].roles.push(_sRoleNoBullets);
+              var _sOldDates = _svcCos[_svcCos.length-1].dates;
+              var _sNewStart = (_cv['COMPANY_'+_ci2+'_DATES']||'').split(/[–-]/)[0].trim();
+              _svcCos[_svcCos.length-1].dates = _sNewStart + ' – ' + _sOldDates.split(/[–-]/).pop().trim();
+            } else {
+              _svcCos.push({ name: _scn, location: _cv['COMPANY_'+_ci2+'_LOCATION']||'', dates: _cv['COMPANY_'+_ci2+'_DATES']||'', roles: [_sRole] });
+            }
           }
+
+          // Inject business experience
+          var _svcBizXml = buildSvcBizExp(_svcCos);
+          var _svcBeIdx = _svcDocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
+          if (_svcBeIdx !== -1) {
+            var _svcPStart = _svcBeIdx, _svcSearchFrom = _svcBeIdx;
+            while (_svcSearchFrom > 0) {
+              var _svcCand = _svcDocXml.lastIndexOf('<w:p', _svcSearchFrom-1);
+              if (_svcCand < 0) break;
+              if (_svcDocXml.charAt(_svcCand+4) === '>' || _svcDocXml.charAt(_svcCand+4) === ' ') { _svcPStart = _svcCand; break; }
+              _svcSearchFrom = _svcCand;
+            }
+            var _svcPEnd = _svcDocXml.indexOf('</w:p>', _svcBeIdx) + 6;
+            _svcDocXml = _svcDocXml.substring(0, _svcPStart) + _svcBizXml + _svcDocXml.substring(_svcPEnd);
+          }
+
+          // Inject education block
+          var _svcEduXml = buildSvcEducation(_cv);
+          var _svcEduIdx = _svcDocXml.indexOf('{{EDUCATION_BLOCK}}');
+          if (_svcEduIdx !== -1) {
+            var _svcEPS = _svcEduIdx, _svcESearch = _svcEduIdx;
+            while (_svcESearch > 0) {
+              var _svcEC = _svcDocXml.lastIndexOf('<w:p', _svcESearch-1);
+              if (_svcEC < 0) break;
+              if (_svcDocXml.charAt(_svcEC+4) === '>' || _svcDocXml.charAt(_svcEC+4) === ' ') { _svcEPS = _svcEC; break; }
+              _svcESearch = _svcEC;
+            }
+            var _svcEPE = _svcDocXml.indexOf('</w:p>', _svcEduIdx) + 6;
+            _svcDocXml = _svcDocXml.substring(0, _svcEPS) + _svcEduXml + _svcDocXml.substring(_svcEPE);
+          }
+
+          // Inject qualifications block
+          var _svcQualXml = buildSvcQuals(_cv);
+          var _svcQIdx = _svcDocXml.indexOf('{{QUALIFICATIONS_BLOCK}}');
+          if (_svcQIdx !== -1) {
+            var _svcQPS = _svcQIdx, _svcQSearch = _svcQIdx;
+            while (_svcQSearch > 0) {
+              var _svcQC = _svcDocXml.lastIndexOf('<w:p', _svcQSearch-1);
+              if (_svcQC < 0) break;
+              if (_svcDocXml.charAt(_svcQC+4) === '>' || _svcDocXml.charAt(_svcQC+4) === ' ') { _svcQPS = _svcQC; break; }
+              _svcQSearch = _svcQC;
+            }
+            var _svcQPE = _svcDocXml.indexOf('</w:p>', _svcQIdx) + 6;
+            _svcDocXml = _svcDocXml.substring(0, _svcQPS) + _svcQualXml + _svcDocXml.substring(_svcQPE);
+          }
+
+          _gbZip.file('word/document.xml', _svcDocXml);
+
+          // Simple token replacement for remaining fields
           var _svcRender = Object.assign({}, _cv, {
-            companies: _svcCos,
-            EDU_INSTITUTION: _cv.EDU_1_INSTITUTION||'',
-            EDU_1_START: _cv.EDU_1_START||'', EDU_1_END: _cv.EDU_1_END||'',
-            EDU_1_DEGREE: _cv.EDU_1_DEGREE||'',
-            QUAL_1: _cv.QUAL_1||'', QUAL_1_START:'', QUAL_1_END:'', QUAL_1_DETAILS:'',
-            QUAL_2: _cv.QUAL_2||'', QUAL_2_START:'', QUAL_2_END:'', QUAL_2_DETAILS:'',
-            LANG_LEVEL: _cv.LANGUAGES_LEVEL||_cv.LANG_LEVEL||''
+            CANDIDATE_NAME: _cv.CANDIDATE_NAME||'',
+            NATIONALITY: _cv.NATIONALITY||'',
+            LANGUAGES: _cv.LANGUAGES||'',
+            LANG_LEVEL: _cv.LANGUAGES_LEVEL||_cv.LANG_LEVEL||'',
+            INTERESTS: _cv.INTERESTS||'',
+            CERTIFICATIONS: (_cv.CERTIFICATIONS||[_cv.QUAL_1||'', _cv.QUAL_2||'', _cv.QUAL_3||''].filter(Boolean).join(', '))||''
           });
-          var _svcDoc = new window.docxtemplater(_gbZip, {
-            paragraphLoop: true, linebreaks: true,
-            delimiters: {start: '{{', end: '}}'},
-            nullGetter: function() { return ''; }
-          });
-          _svcDoc.render(_svcRender);
-          out = _svcDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+          try {
+            var _svcDoc = new window.docxtemplater(_gbZip, {
+              paragraphLoop: true, linebreaks: true,
+              delimiters: {start: '{{', end: '}}'},
+              nullGetter: function() { return ''; }
+            });
+            _svcDoc.render(_svcRender);
+            out = _svcDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+          } catch(_svcErr) {
+            console.error('[SVC] docxtemplater error:', _svcErr.message);
+            out = _gbZip.generate({type: 'blob', mimeType: _docMimeSingle});
+          }
         }
 
       } else {
