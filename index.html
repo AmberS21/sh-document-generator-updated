@@ -2817,13 +2817,21 @@ async function downloadHistory(index) {
             QUAL_1: _cv.QUAL_1||'', NATIONALITY: _cv.NATIONALITY||'',
             LANGUAGES: _cv.LANGUAGES||'', INTERESTS: _cv.INTERESTS||''
           });
-          var _gbDoc = new window.docxtemplater(_gbZip, {
-            paragraphLoop: true, linebreaks: true,
-            delimiters: {start: '{{', end: '}}'},
-            nullGetter: function() { return ''; }
-          });
-          _gbDoc.render(_gbRender);
-          out = _gbDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+          // Log before docxtemplater for debugging
+          console.log('[GB] docXml snippet:', _gbDocXml.substring(_gbDocXml.indexOf('Business Experience') || 0, (_gbDocXml.indexOf('Business Experience') || 0) + 500));
+          try {
+            var _gbDoc = new window.docxtemplater(_gbZip, {
+              paragraphLoop: true, linebreaks: true,
+              delimiters: {start: '{{', end: '}}'},
+              nullGetter: function() { return ''; }
+            });
+            _gbDoc.render(_gbRender);
+            out = _gbDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+          } catch(_dtErr) {
+            console.error('[GB] docxtemplater error:', JSON.stringify(_dtErr, null, 2));
+            // Try generating without render as fallback
+            out = _gbZip.generate({type: 'blob', mimeType: _docMimeSingle});
+          }
 
         } else {
           // Services Profile
