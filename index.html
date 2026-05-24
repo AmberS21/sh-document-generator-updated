@@ -1862,6 +1862,8 @@ var isCareerSummary = (tpl === 'global-career-summary');
 var isApac = (tpl === 'apac-profile');
 var isApacUpdated = (tpl === 'apac-profile');
 var isChineseApac = false;
+var isGbProfile = (tpl === 'gb-profile');
+var isServicesProfile = (tpl === 'services-profile');
 var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"projects":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_1":"","QUAL_2":"","QUAL_3":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","PROJECT_1_TITLE":"","PROJECT_1_CLIENT":"","PROJECT_1_DATE":"","PROJECT_1_DESCRIPTION":"","PROJECT_2_TITLE":"","PROJECT_2_CLIENT":"","PROJECT_2_DATE":"","PROJECT_2_DESCRIPTION":"","PROJECT_3_TITLE":"","PROJECT_3_CLIENT":"","PROJECT_3_DATE":"","PROJECT_3_DESCRIPTION":"","PROJECT_4_TITLE":"","PROJECT_4_CLIENT":"","PROJECT_4_DATE":"","PROJECT_4_DESCRIPTION":"","PROJECT_5_TITLE":"","PROJECT_5_CLIENT":"","PROJECT_5_DATE":"","PROJECT_5_DESCRIPTION":"","PROJECT_6_TITLE":"","PROJECT_6_CLIENT":"","PROJECT_6_DATE":"","PROJECT_6_DESCRIPTION":"","PROJECT_7_TITLE":"","PROJECT_7_CLIENT":"","PROJECT_7_DATE":"","PROJECT_7_DESCRIPTION":"","PROJECT_8_TITLE":"","PROJECT_8_CLIENT":"","PROJECT_8_DATE":"","PROJECT_8_DESCRIPTION":"","PROJECT_9_TITLE":"","PROJECT_9_CLIENT":"","PROJECT_9_DATE":"","PROJECT_9_DESCRIPTION":"","PROJECT_10_TITLE":"","PROJECT_10_CLIENT":"","PROJECT_10_DATE":"","PROJECT_10_DESCRIPTION":""}';
 var csJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var globalJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CURRENT_TITLE":"","SEARCH_TITLE":"","CLIENT_COMPANY":"","MONTH_YEAR":"","SUMMARY":"","COMPANY_1_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_1_BULLET_1":"","COMPANY_1_BULLET_2":"","COMPANY_1_BULLET_3":"","COMPANY_1_BULLET_4":"","COMPANY_1_BULLET_5":"","COMPANY_1_BULLET_6":"","COMPANY_1_BULLET_7":"","COMPANY_1_BULLET_8":"","COMPANY_1_BULLET_9":"","COMPANY_1_BULLET_10":"","COMPANY_2_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_2_BULLET_1":"","COMPANY_2_BULLET_2":"","COMPANY_2_BULLET_3":"","COMPANY_2_BULLET_4":"","COMPANY_2_BULLET_5":"","COMPANY_2_BULLET_6":"","COMPANY_2_BULLET_7":"","COMPANY_2_BULLET_8":"","COMPANY_2_BULLET_9":"","COMPANY_2_BULLET_10":"","COMPANY_3_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_3_BULLET_1":"","COMPANY_3_BULLET_2":"","COMPANY_3_BULLET_3":"","COMPANY_3_BULLET_4":"","COMPANY_3_BULLET_5":"","COMPANY_3_BULLET_6":"","COMPANY_3_BULLET_7":"","COMPANY_3_BULLET_8":"","COMPANY_3_BULLET_9":"","COMPANY_3_BULLET_10":"","COMPANY_4_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_4_BULLET_1":"","COMPANY_4_BULLET_2":"","COMPANY_4_BULLET_3":"","COMPANY_4_BULLET_4":"","COMPANY_4_BULLET_5":"","COMPANY_4_BULLET_6":"","COMPANY_4_BULLET_7":"","COMPANY_4_BULLET_8":"","COMPANY_4_BULLET_9":"","COMPANY_4_BULLET_10":"","COMPANY_5_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_5_BULLET_1":"","COMPANY_5_BULLET_2":"","COMPANY_5_BULLET_3":"","COMPANY_5_BULLET_4":"","COMPANY_5_BULLET_5":"","COMPANY_5_BULLET_6":"","COMPANY_5_BULLET_7":"","COMPANY_5_BULLET_8":"","COMPANY_5_BULLET_9":"","COMPANY_5_BULLET_10":"","COMPANY_6_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_6_BULLET_1":"","COMPANY_6_BULLET_2":"","COMPANY_6_BULLET_3":"","COMPANY_6_BULLET_4":"","COMPANY_6_BULLET_5":"","COMPANY_6_BULLET_6":"","COMPANY_6_BULLET_7":"","COMPANY_6_BULLET_8":"","COMPANY_6_BULLET_9":"","COMPANY_6_BULLET_10":"","COMPANY_7_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_7_BULLET_1":"","COMPANY_7_BULLET_2":"","COMPANY_7_BULLET_3":"","COMPANY_7_BULLET_4":"","COMPANY_7_BULLET_5":"","COMPANY_7_BULLET_6":"","COMPANY_7_BULLET_7":"","COMPANY_7_BULLET_8":"","COMPANY_7_BULLET_9":"","COMPANY_7_BULLET_10":"","COMPANY_8_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_8_BULLET_1":"","COMPANY_8_BULLET_2":"","COMPANY_8_BULLET_3":"","COMPANY_8_BULLET_4":"","COMPANY_8_BULLET_5":"","COMPANY_8_BULLET_6":"","COMPANY_8_BULLET_7":"","COMPANY_8_BULLET_8":"","COMPANY_8_BULLET_9":"","COMPANY_8_BULLET_10":"","COMPANY_9_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_9_BULLET_1":"","COMPANY_9_BULLET_2":"","COMPANY_9_BULLET_3":"","COMPANY_9_BULLET_4":"","COMPANY_9_BULLET_5":"","COMPANY_9_BULLET_6":"","COMPANY_9_BULLET_7":"","COMPANY_9_BULLET_8":"","COMPANY_9_BULLET_9":"","COMPANY_9_BULLET_10":"","COMPANY_10_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_10_BULLET_1":"","COMPANY_10_BULLET_2":"","COMPANY_10_BULLET_3":"","COMPANY_10_BULLET_4":"","COMPANY_10_BULLET_5":"","COMPANY_10_BULLET_6":"","COMPANY_10_BULLET_7":"","COMPANY_10_BULLET_8":"","COMPANY_10_BULLET_9":"","COMPANY_10_BULLET_10":"","COMPANY_11_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_11_BULLET_1":"","COMPANY_11_BULLET_2":"","COMPANY_11_BULLET_3":"","COMPANY_11_BULLET_4":"","COMPANY_11_BULLET_5":"","COMPANY_11_BULLET_6":"","COMPANY_11_BULLET_7":"","COMPANY_11_BULLET_8":"","COMPANY_11_BULLET_9":"","COMPANY_11_BULLET_10":"","COMPANY_12_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_12_BULLET_1":"","COMPANY_12_BULLET_2":"","COMPANY_12_BULLET_3":"","COMPANY_12_BULLET_4":"","COMPANY_12_BULLET_5":"","COMPANY_12_BULLET_6":"","COMPANY_12_BULLET_7":"","COMPANY_12_BULLET_8":"","COMPANY_12_BULLET_9":"","COMPANY_12_BULLET_10":"","COMPANY_13_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_13_BULLET_1":"","COMPANY_13_BULLET_2":"","COMPANY_13_BULLET_3":"","COMPANY_13_BULLET_4":"","COMPANY_13_BULLET_5":"","COMPANY_13_BULLET_6":"","COMPANY_13_BULLET_7":"","COMPANY_13_BULLET_8":"","COMPANY_13_BULLET_9":"","COMPANY_13_BULLET_10":"","COMPANY_14_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_14_BULLET_1":"","COMPANY_14_BULLET_2":"","COMPANY_14_BULLET_3":"","COMPANY_14_BULLET_4":"","COMPANY_14_BULLET_5":"","COMPANY_14_BULLET_6":"","COMPANY_14_BULLET_7":"","COMPANY_14_BULLET_8":"","COMPANY_14_BULLET_9":"","COMPANY_14_BULLET_10":"","COMPANY_15_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_15_BULLET_1":"","COMPANY_15_BULLET_2":"","COMPANY_15_BULLET_3":"","COMPANY_15_BULLET_4":"","COMPANY_15_BULLET_5":"","COMPANY_15_BULLET_6":"","COMPANY_15_BULLET_7":"","COMPANY_15_BULLET_8":"","COMPANY_15_BULLET_9":"","COMPANY_15_BULLET_10":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","AFFILIATION_2":"","AFFILIATION_2_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
@@ -1983,6 +1985,31 @@ JSON structure to use:
 CANDIDATE SOURCE:
 
 ` + inputText
+: isGbProfile
+  ? `You are a Sheffield Haworth executive search document-filling assistant for the GB Candidate Profile template. Extract information from the candidate CV below into structured JSON.
+
+ABSOLUTE RULES:
+- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
+- CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
+- MONTH_YEAR: current month and year (e.g. "May 2026").
+- Copy ALL text VERBATIM from the CV.
+
+COMPANIES GROUPING (CRITICAL):
+- Group CONSECUTIVE positions at the SAME company into ONE companies[] entry.
+- CONSECUTIVE means: no other company appears between those positions in the CV.
+- If Company A appears, then Company B, then Company A again — create THREE separate entries (A, B, A). Do NOT merge the two A stints.
+- "dates" on company = overall span covering all roles (e.g. "2015 – Present").
+- List all roles under "roles[]", most recent FIRST.
+- Only add role-level "dates" if 2 or more roles at that company — leave empty if only 1 role.
+- Place bullets under the MOST RECENT role only (or only role if just one).
+- Extract ALL bullet points VERBATIM without skipping any.
+
+EDUCATION:
+- EDU_1_YEARS: graduation year or range (e.g. "2013").
+- EDU_1_INSTITUTION: full institution name and location.
+- EDU_1_DEGREE: full degree name, field, honours, GPA if mentioned.
+
+Return ONLY valid JSON using this exact structure (expand companies[] as needed for all work history):\n` + '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CURRENT_TITLE":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","dates":"","bullets":[""]}]},{"name":"","location":"","dates":"","roles":[{"role":"","dates":"","bullets":[""]}]},{"name":"","location":"","dates":"","roles":[{"role":"","dates":"","bullets":[""]}]},{"name":"","location":"","dates":"","roles":[{"role":"","dates":"","bullets":[""]}]},{"name":"","location":"","dates":"","roles":[{"role":"","dates":"","bullets":[""]}]}],"EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}' + `\n\nCANDIDATE SOURCE — extract ALL information from this text:\n\n` + inputText
 : (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
     `You are a Sheffield Haworth executive search document assistant. Your task is to extract information from the candidate source below and fill the APAC Candidate Profile template fields EXACTLY as described.
 
@@ -2614,49 +2641,51 @@ async function downloadHistory(index) {
         _csDoc.render(item.content);
         out = _csDoc.getZip().generate({type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       } else if (item.template === 'gb-profile' || item.template === 'services-profile') {
-        // GB and Services use {{#companies}} loops — convert flat data to array
+        // GB and Services: use companies[] array directly from JSON (new GB prompt)
+        // or convert from flat keys (old history items)
         var _loopZip = new PizZip(ab);
         var _cv = item.content;
 
-        // Build companies[] array from flat COMPANY_N_* keys
-        var _companies = [];
-        for (var _ci2 = 1; _ci2 <= 15; _ci2++) {
-          var _cname = _cv['COMPANY_' + _ci2 + '_NAME'] || '';
-          if (!_cname) break;
-          var _bullets = [];
-          for (var _bi = 1; _bi <= 10; _bi++) {
-            var _b = _cv['COMPANY_' + _ci2 + '_BULLET_' + _bi] || '';
-            if (_b) _bullets.push(_b);
+        // Use companies[] if present (new GB prompt), otherwise convert from flat keys
+        var _companies;
+        if (_cv.companies && Array.isArray(_cv.companies) && _cv.companies.length > 0 && _cv.companies[0].name) {
+          _companies = _cv.companies;
+        } else {
+          // Legacy: convert flat COMPANY_N_* to companies[] array
+          _companies = [];
+          for (var _ci2 = 1; _ci2 <= 15; _ci2++) {
+            var _cname = _cv['COMPANY_' + _ci2 + '_NAME'] || '';
+            if (!_cname) break;
+            var _bullets = [];
+            for (var _bi = 1; _bi <= 10; _bi++) {
+              var _b = _cv['COMPANY_' + _ci2 + '_BULLET_' + _bi] || '';
+              if (_b) _bullets.push(_b);
+            }
+            _companies.push({
+              name: _cname,
+              location: _cv['COMPANY_' + _ci2 + '_LOCATION'] || '',
+              dates: _cv['COMPANY_' + _ci2 + '_DATES'] || '',
+              roles: [{
+                role: _cv['COMPANY_' + _ci2 + '_ROLE'] || '',
+                dates: '',
+                bullets: _bullets
+              }]
+            });
           }
-          _companies.push({
-            name: _cname,
-            location: _cv['COMPANY_' + _ci2 + '_LOCATION'] || '',
-            dates: _cv['COMPANY_' + _ci2 + '_DATES'] || '',
-            roles: [{
-              role: _cv['COMPANY_' + _ci2 + '_ROLE'] || '',
-              function: _cv['COMPANY_' + _ci2 + '_FUNCTION'] || '',
-              role_dates: '',
-              bullets: _bullets
-            }]
-          });
         }
 
-        // Build render data with both flat tokens and companies array
+        // Build render data
         var _renderData = Object.assign({}, _cv, {
           companies: _companies,
           CURRENT_TITLE: _cv.CURRENT_TITLE || _cv.CURRENT_EMPLOYER || '',
           EDU_INSTITUTION: _cv.EDU_1_INSTITUTION || '',
-          EDU_1_START: _cv.EDU_1_START || '',
-          EDU_1_END: _cv.EDU_1_END || '',
+          EDU_1_YEARS: _cv.EDU_1_YEARS || (_cv.EDU_1_START ? (_cv.EDU_1_START + (_cv.EDU_1_END ? ' – ' + _cv.EDU_1_END : '')) : ''),
           EDU_1_DEGREE: _cv.EDU_1_DEGREE || '',
+          EDU_2_YEARS: _cv.EDU_2_YEARS || '',
           EDU_2_INSTITUTION: _cv.EDU_2_INSTITUTION || '',
-          EDU_2_START: _cv.EDU_2_START || '',
-          EDU_2_END: _cv.EDU_2_END || '',
           EDU_2_DEGREE: _cv.EDU_2_DEGREE || '',
-          QUAL_1: _cv.QUAL_1 || '', QUAL_1_START: '', QUAL_1_END: '', QUAL_1_DETAILS: '',
-          QUAL_2: _cv.QUAL_2 || '', QUAL_2_START: '', QUAL_2_END: '', QUAL_2_DETAILS: '',
-          LANG_LEVEL: _cv.LANGUAGES_LEVEL || _cv.LANG_LEVEL || '',
-          EDU_1_YEARS: (_cv.EDU_1_START && _cv.EDU_1_END) ? _cv.EDU_1_START + '–' + _cv.EDU_1_END : (_cv.EDU_1_START || '')
+          QUAL_1: _cv.QUAL_1 || '',
+          LANG_LEVEL: _cv.LANGUAGES_LEVEL || _cv.LANG_LEVEL || ''
         });
 
         var _loopDoc = new window.docxtemplater(_loopZip, {
