@@ -168,6 +168,71 @@ app.get('/api/proxy', (req, res) => {
   proxyReq.end();
 });
 
+
+// ── Usage Logging ─────────────────────────────────────────────────────────────
+const fs = require('fs');
+const path = require('path');
+const LOG_FILE = path.join(__dirname, 'usage_logs.json');
+
+function readLogs() {
+  try {
+    if (!fs.existsSync(LOG_FILE)) return [];
+    return JSON.parse(fs.readFileSync(LOG_FILE, 'utf8'));
+  } catch { return []; }
+}
+
+function writeLogs(logs) {
+  try { fs.writeFileSync(LOG_FILE, JSON.stringify(logs)); } catch {}
+}
+
+// POST /api/proxy/log — save a usage entry
+app.post('/api/proxy/log', (req, res) => {
+  try {
+    const { userName, template, inputMethod, status, timestamp } = req.body;
+    const logs = readLogs();
+    logs.push({
+      id: Date.now(),
+      user: userName || 'Unknown',
+      template: template || '',
+      inputMethod: inputMethod || '',
+      status: status || '',
+      timestamp: timestamp || new Date().toISOString()
+    });
+    // Keep last 10000 entries
+    if (logs.length > 10000) logs.splice(0, logs.length - 10000);
+    writeLogs(logs);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/proxy/logs — return all logs as JSON
+app.get('/api/proxy/logs', (req, res) => {
+  try {
+    const logs = readLogs();
+    res.json(logs);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/proxy/logs/csv — download all logs as CSV
+app.get('/api/proxy/logs/csv', (req, res) => {
+  try {
+    const logs = readLogs();
+    const headers = ['ID','User','Template','Input Method','Status','Timestamp'];
+    const rows = logs.map(r => [r.id, r.user, r.template, r.inputMethod, r.status, r.timestamp]
+      .map(v => '"' + String(v||'').replace(/"/g, '""') + '"').join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="SH_DocGen_Usage_' + new Date().toISOString().slice(0,10) + '.csv"');
+    res.send(csv);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // In the container, nginx owns public port 80 and proxies to Node on 3000.
 // Azure may inject PORT=80, so use a dedicated backend port variable.
 const PORT = Number(process.env.BACKEND_PORT || 3000);
