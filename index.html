@@ -1094,13 +1094,7 @@ function buildSvcBizExp(companies) {
       if (!role || !role.role) continue;
       var roleDates = role.role_dates || role.dates || '';
 
-      // Location line (only on first role if present)
-      if (ri === 0 && co.location) {
-        xml += '<w:p><w:pPr>' + SPACING + IND + JC + '<w:rPr>' + FONT + COLOR + '</w:rPr></w:pPr>'
-            + '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:t>' + xe(co.location) + '</w:t></w:r></w:p>';
-      }
-
-      // Role line: role title, tab, role dates
+      // Role line: role title, tab, role dates (always shown)
       xml += '<w:p><w:pPr>' + TAB + SPACING + IND + JC + '<w:rPr>' + FONT + COLOR + '</w:rPr></w:pPr>'
           + '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
           + (roleDates ? '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:tab/><w:t>' + xe(roleDates) + '</w:t></w:r>' : '')
@@ -1150,10 +1144,9 @@ function buildSvcEducation(cv) {
   
   edus.forEach(function(e, i) {
     if (i > 0) xml += '<w:p><w:pPr>' + SPACING + '</w:pPr></w:p>';
-    // Institution line: bold institution + years right-aligned
-    xml += '<w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="9720"/></w:tabs>' + SPACING + IND + '<w:rPr>' + FONT + COLOR + '</w:rPr></w:pPr>'
-        + '<w:r><w:rPr>' + BFONT + COLOR + '</w:rPr><w:t xml:space="preserve">' + xe(e.inst) + '</w:t></w:r>'
-        + (e.years ? '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:tab/><w:t>' + xe(e.years) + '</w:t></w:r>' : '')
+    // Institution line: bold institution (no years in Services format)
+    xml += '<w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="9720"/></w:tabs>' + SPACING + IND + '<w:rPr>' + FONT + '<w:b/>' + COLOR + '</w:rPr></w:pPr>'
+        + '<w:r><w:rPr>' + FONT + '<w:b/>' + COLOR + '</w:rPr><w:t>' + xe(e.inst) + '</w:t></w:r>'
         + '</w:p>';
     // Degree line
     if (e.degree) {
@@ -2298,7 +2291,7 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
           model: 'claude-sonnet-4-6',
           max_tokens: 12000,
           messages: [{ role: 'user', content: prompt }],
-          system: (isGbProfile ? 'Return ONLY raw JSON. CRITICAL: For candidates with multiple roles at same company, create a SEPARATE COMPANY_N entry for EACH role. Example: Director 2024-Present = COMPANY_1, VP 2020-2024 = COMPANY_2, Associate 2016-2020 = COMPANY_3, Senior Analyst 2015-2016 = COMPANY_4 — ALL with same company name. No markdown. No explanations.' : 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.')
+          system: (isGbProfile || isServicesProfile ? 'Return ONLY raw JSON. CRITICAL: For candidates with multiple roles at same company, create a SEPARATE COMPANY_N entry for EACH role. Example: Director 2024-Present = COMPANY_1, VP 2020-2024 = COMPANY_2, Associate 2016-2020 = COMPANY_3, Senior Analyst 2015-2016 = COMPANY_4 — ALL with same company name. No markdown. No explanations.' : 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.')
         })
       });
       if (_r.status === 429) {
