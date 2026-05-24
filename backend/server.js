@@ -172,17 +172,39 @@ app.get('/api/proxy', (req, res) => {
 // ── Usage Logging ─────────────────────────────────────────────────────────────
 const fs = require('fs');
 const path = require('path');
-const LOG_FILE = path.join(__dirname, 'usage_logs.json');
+const os = require('os');
 
-function readLogs() {
+// Use in-memory store (survives restarts via file backup)
+// Try multiple write locations for Azure compatibility
+const LOG_PATHS = [
+  path.join(__dirname, 'usage_logs.json'),
+  path.join(os.tmpdir(), 'sh_docgen_usage_logs.json'),
+  '/tmp/sh_docgen_usage_logs.json'
+];
+
+let _inMemoryLogs = [];
+let _logFile = null;
+
+// Find a writable path
+for (const p of LOG_PATHS) {
   try {
-    if (!fs.existsSync(LOG_FILE)) return [];
-    return JSON.parse(fs.readFileSync(LOG_FILE, 'utf8'));
-  } catch { return []; }
+    fs.writeFileSync(p, fs.existsSync(p) ? fs.readFileSync(p) : '[]');
+    _logFile = p;
+    _inMemoryLogs = JSON.parse(fs.readFileSync(p, 'utf8') || '[]');
+    console.log('Log file:', p, '- loaded', _inMemoryLogs.length, 'entries');
+    break;
+  } catch(e) { console.log('Cannot use log path:', p, e.message); }
 }
 
+function readLogs() { return _inMemoryLogs; }
+
 function writeLogs(logs) {
-  try { fs.writeFileSync(LOG_FILE, JSON.stringify(logs)); } catch {}
+  _inMemoryLogs = logs;
+  if (_logFile) {
+    try { fs.writeFileSync(_logFile, JSON.stringify(logs)); } catch(e) {
+      console.log('Log write failed:', e.message);
+    }
+  }
 }
 
 // POST /api/proxy/log — save a usage entry
@@ -198,39 +220,31 @@ app.post('/api/proxy/log', (req, res) => {
       status: status || '',
       timestamp: timestamp || new Date().toISOString()
     });
-    // Keep last 10000 entries
     if (logs.length > 10000) logs.splice(0, logs.length - 10000);
     writeLogs(logs);
-    res.json({ ok: true });
+    console.log('Log saved:', userName, template, '- total:', logs.length);
+    res.json({ ok: true, total: logs.length });
   } catch (e) {
+    console.error('Log error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
 // GET /api/proxy/logs — return all logs as JSON
 app.get('/api/proxy/logs', (req, res) => {
-  try {
-    const logs = readLogs();
-    res.json(logs);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  res.json(readLogs());
 });
 
 // GET /api/proxy/logs/csv — download all logs as CSV
 app.get('/api/proxy/logs/csv', (req, res) => {
-  try {
-    const logs = readLogs();
-    const headers = ['ID','User','Template','Input Method','Status','Timestamp'];
-    const rows = logs.map(r => [r.id, r.user, r.template, r.inputMethod, r.status, r.timestamp]
-      .map(v => '"' + String(v||'').replace(/"/g, '""') + '"').join(','));
-    const csv = [headers.join(','), ...rows].join('\n');
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="SH_DocGen_Usage_' + new Date().toISOString().slice(0,10) + '.csv"');
-    res.send(csv);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  const logs = readLogs();
+  const headers = ['ID','User','Template','Input Method','Status','Timestamp'];
+  const rows = logs.map(r => [r.id, r.user, r.template, r.inputMethod, r.status, r.timestamp]
+    .map(v => '"' + String(v||'').replace(/"/g, '""') + '"').join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="SH_DocGen_Usage_' + new Date().toISOString().slice(0,10) + '.csv"');
+  res.send(csv);
 });
 
 // In the container, nginx owns public port 80 and proxies to Node on 3000.
