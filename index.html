@@ -2743,8 +2743,8 @@ async function downloadHistory(index) {
   // Override: project-report always downloads as xlsx
   if (item.template === 'project-report') fmt = 'x';
   console.log('[DL DEBUG] index:', index, 'template:', item.template, 'fmt:', fmt, 'name:', item.name);
-  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : (item.template === 'apac-profile' ) ? 'English' : false ? 'Chinese' :item.template === 'global-career-summary' ? 'with Career Summary' :  'No Scorecard';
-  var _profilePrefix = (item.template === 'apac-profile' || false ) ? 'APAC Profile' : 'Global';
+  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : 'No Scorecard';
+  var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : 'Global';
   var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
