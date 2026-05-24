@@ -2769,6 +2769,24 @@ async function downloadHistory(index) {
 
         _projZip.file('xl/worksheets/sheet1.xml', _sh1);
         _projZip.file('xl/sharedStrings.xml', _ssXml);
+
+        // Force Excel to recalculate all formulas on open
+        var _wbXml = await _projZip.files['xl/workbook.xml'].async('string');
+        _wbXml = _wbXml.replace(/<calcPr[^/]*\/>/,
+          '<calcPr calcId="0" fullCalcOnLoad="1"/>');
+        _projZip.file('xl/workbook.xml', _wbXml);
+
+        // Clear cached formula values in Dashboard and Pivot sheets
+        for (var _si2 = 2; _si2 <= 3; _si2++) {
+          var _shf = 'xl/worksheets/sheet' + _si2 + '.xml';
+          if (_projZip.files[_shf]) {
+            var _shXml = await _projZip.files[_shf].async('string');
+            _shXml = _shXml.replace(/(<c [^>]*>)(<f>[^<]+<\/f>)<v>[^<]*<\/v>(<\/c>)/g,
+              '$1$2<v/>$3');
+            _projZip.file(_shf, _shXml);
+          }
+        }
+
         // Remove calcChain so Excel recalculates all formulas fresh
         _projZip.remove('xl/calcChain.xml');
 
