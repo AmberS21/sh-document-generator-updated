@@ -1337,21 +1337,19 @@ async function generate() {
           console.log('[EZEKIA] Project data FULL:', JSON.stringify(projData).substring(0, 1500));
           var proj = projData.data || projData;
 
-          // Fetch consultants
+          // Fetch consultants - endpoint returns user objects, get names from owners
           var _consultants = [], _researchers = [];
           try {
             var _conResp = await fetch(ezekiaBase2 + '/v3/projects/' + projectId2 + '/consultants');
             if (_conResp.ok) {
               var _conData = await _conResp.json();
-              console.log('[EZEKIA] Consultants FULL:', JSON.stringify(_conData).substring(0, 1000));
               var _conArr = _conData.data || _conData || [];
               if (!Array.isArray(_conArr)) _conArr = [_conArr];
-              _conArr.forEach(function(c) {
-                var _role = (c.role || c.type || c.tag || '').toLowerCase();
-                var _name = c.fullName || c.name || (c.model && c.model.fullName) || '';
-                if (_role.includes('research') || _role.includes('associate')) _researchers.push(_name);
-                else _consultants.push(_name);
-              });
+              // Need to match consultant IDs to names via a user lookup
+              // For now use primary owner as lead consultant
+              var _primaryOwner = proj.owner && proj.owner.model && proj.owner.model.fullName || '';
+              if (_primaryOwner) _consultants.push(_primaryOwner);
+              console.log('[EZEKIA] Consultants count:', _conArr.length, 'Primary owner:', _primaryOwner);
             }
           } catch(e) { console.log('[EZEKIA] Consultants error:', e.message); }
 
@@ -1364,10 +1362,15 @@ async function generate() {
               console.log('[EZEKIA] Project additional-info:', JSON.stringify(_projAddData).substring(0, 500));
               (_projAddData.data || []).forEach(function(item) {
                 var _lbl = ((item.field && item.field.label) || '').toLowerCase();
-                var _val = (item.value || '').replace(/<[^>]+>/g, '').trim();
-                if (_lbl.includes('engagement') || _lbl.includes('type')) _projCustom.engagementType = _val;
-                if (_lbl.includes('status')) _projCustom.status = _val;
-                if (_lbl.includes('practice')) _projCustom.practice = _val;
+                var _rawVal = item.value;
+                var _val = '';
+                if (typeof _rawVal === 'string') _val = _rawVal.replace(/<[^>]+>/g, '').trim();
+                else if (_rawVal !== null && _rawVal !== undefined) _val = String(_rawVal);
+                if (_lbl.includes('engagement') || _lbl === 'engagement type') _projCustom.engagementType = _val;
+                if (_lbl === 'status') _projCustom.status = _val;
+                if (_lbl.includes('practice') || _lbl.includes('business group')) _projCustom.practice = _val;
+                if (_lbl === 'location' || _lbl.includes('geography')) _projCustom.geography = _val;
+                if (_lbl.includes('industry') || _lbl.includes('sector')) _projCustom.industry = _val;
               });
             }
           } catch(e) { console.log('[EZEKIA] Project custom error:', e.message); }
@@ -1442,14 +1445,14 @@ async function generate() {
           var projContent = {
             projectName: proj.name || '',
             projectId: proj.projectId || '',
-            clientCompany: (proj.relationships && proj.relationships.company && proj.relationships.company.name) || (proj.client && proj.client.name) || '',
-            assignmentType: _projCustom.engagementType || proj.dataType || '',
-            startDate: proj.createdAt ? proj.createdAt.substring(0,10) : (proj.startDate || ''),
-            status: _projCustom.status || (proj.status && (proj.status.name || proj.status)) || '',
-            practice: _projCustom.practice || (proj.practice && proj.practice.name) || '',
+            clientCompany: (proj.relationships && proj.relationships.client && proj.relationships.client.name) || (proj.relationships && proj.relationships.company && proj.relationships.company.name) || '',
+            assignmentType: _projCustom.engagementType || '',
+            startDate: proj.createdAt ? proj.createdAt.substring(0, 10) : (proj.startDate || ''),
+            status: (proj.manager && proj.manager.status && proj.manager.status.text) || _projCustom.status || '',
+            practice: _projCustom.practice || (proj.industries && proj.industries.map(function(i){return i.name;}).join(', ')) || '',
             leadConsultant: _consultants.join(', '),
             researcher: _researchers.join(', '),
-            geography: (proj.relationships && proj.relationships.geography && proj.relationships.geography.name) || (proj.location && proj.location.name) || '',
+            geography: _projCustom.geography || '',
             candidates: _enrichedCandidates.map(function(cand) {
               // Extract from Ezekia v4 API response structure
               var _pos = (cand.profile && cand.profile.positions && cand.profile.positions[0]) || {};
