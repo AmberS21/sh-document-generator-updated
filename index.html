@@ -678,7 +678,7 @@ function goTab(t) {
   setTimeout(function(){var f=document.querySelector('.footer');var p=document.querySelector('.page:not(.hidden)');if(f&&p)p.appendChild(f);},50);
   window.scrollTo(0, 0);
   if (t === 'hist') renderHistory();
-  if (t === 'admin') setTimeout(loadUsageLogs, 150);
+  if (t === 'admin') setTimeout(function(){ if(typeof loadUsageLogs==='function') loadUsageLogs(); }, 150);
 }
 
 // ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ INPUT SWITCH ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
@@ -3626,7 +3626,7 @@ function clearUsageLogs(){
   if(!confirm('Clear all local log entries? Server logs are unaffected.'))return;
   localStorage.removeItem('sh_usage_logs');
   loadUsageLogs();
-  notify('✓ Local logs cleared');
+  (window._safeNotify || notify)('✓ Local logs cleared');
 }
 </script>
 
@@ -3704,12 +3704,30 @@ function exportUsageLogs(){
   a.href='/api/proxy/logs/csv';
   a.download='SH_DocGen_Usage_'+new Date().toISOString().slice(0,10)+'.csv';
   document.body.appendChild(a);a.click();document.body.removeChild(a);
-  notify('⬇ Downloading usage report...');
+  (window._safeNotify || notify)('⬇ Downloading usage report...');
 }
 function clearUsageLogs(){
   if(!confirm('Clear all local log entries? Server logs are unaffected.'))return;
   localStorage.removeItem('sh_usage_logs');
   loadUsageLogs();
-  notify('✓ Local logs cleared');
+  (window._safeNotify || notify)('✓ Local logs cleared');
 }
 }
+
+// Safe notify wrapper
+var _origNotify = (typeof notify === 'function') ? notify : null;
+window._safeNotify = function(msg) {
+  var el = document.getElementById('notif');
+  if (el) { el.textContent = msg; el.classList.add('show'); setTimeout(function(){ el.classList.remove('show'); }, 3000); }
+};
+
+// Auto-init on page load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function(){ if(typeof initUserName==='function') initUserName(); });
+} else {
+  if(typeof initUserName==='function') initUserName();
+}
+</script>
+<div class="notif" id="notif"></div>
+</body>
+</html>
