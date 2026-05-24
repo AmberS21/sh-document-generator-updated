@@ -2761,7 +2761,9 @@ async function downloadHistory(index) {
               var _gRole = { role: _cv['COMPANY_' + _gci + '_ROLE']||'', role_dates: _cv['COMPANY_' + _gci + '_DATES']||'', bullets: _gbs };
               // Group consecutive same-company entries
               if (_gbCos.length > 0 && _gbCos[_gbCos.length-1].name === _gcn) {
-                _gbCos[_gbCos.length-1].roles.push(_gRole);
+                // Clear bullets for non-first roles (bullets only on most recent role)
+                var _gRoleNoBullets = Object.assign({}, _gRole, {bullets: []});
+                _gbCos[_gbCos.length-1].roles.push(_gRoleNoBullets);
                 // Extend date span
                 var _oldDates = _gbCos[_gbCos.length-1].dates;
                 var _newStart = (_cv['COMPANY_' + _gci + '_DATES']||'').split(/[–-]/)[0].trim();
@@ -2782,16 +2784,23 @@ async function downloadHistory(index) {
           // Find and replace the entire <w:p> paragraph containing the BE block token
           var _gbBeIdx = _gbDocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
           if (_gbBeIdx !== -1) {
-            // Find the true <w:p> start (must be <w:p> or <w:p followed by space/attr)
-            var _gbPStart = _gbBeIdx;
-            while (_gbPStart > 0) {
-              _gbPStart = _gbDocXml.lastIndexOf('<w:p', _gbPStart - 1);
-              var _next = _gbDocXml.charAt(_gbPStart + 4);
-              if (_next === '>' || _next === ' ') break;
+            // Search backwards for exact <w:p> or <w:p  (not <w:pStyle etc)
+            var _gbPStart = -1;
+            var _searchFrom = _gbBeIdx;
+            while (_searchFrom > 0) {
+              var _candidate = _gbDocXml.lastIndexOf('<w:p', _searchFrom - 1);
+              if (_candidate < 0) break;
+              var _c5 = _gbDocXml.charAt(_candidate + 4);
+              if (_c5 === '>' || _c5 === ' ') { _gbPStart = _candidate; break; }
+              _searchFrom = _candidate;
             }
             var _gbPEnd = _gbDocXml.indexOf('</w:p>', _gbBeIdx) + 6;
-            console.log('[GB] Replacing paragraph at', _gbPStart, 'to', _gbPEnd, 'with', _gbBizXml.length, 'chars');
-            _gbDocXml = _gbDocXml.substring(0, _gbPStart) + _gbBizXml + _gbDocXml.substring(_gbPEnd);
+            if (_gbPStart >= 0 && _gbPEnd > _gbPStart) {
+              console.log('[GB] Replacing para', _gbPStart, '-', _gbPEnd);
+              _gbDocXml = _gbDocXml.substring(0, _gbPStart) + _gbBizXml + _gbDocXml.substring(_gbPEnd);
+            } else {
+              console.error('[GB] Could not find paragraph boundaries', _gbPStart, _gbPEnd);
+            }
           }
           _gbZip.file('word/document.xml', _gbDocXml);
 
@@ -2812,7 +2821,7 @@ async function downloadHistory(index) {
                     .replace(/^Master of Science/i,'MS').replace(/^Master of Arts/i,'MA')
                     .replace(/^Doctor of Philosophy/i,'PhD').replace(/^Juris Doctor/i,'JD');
           }
-          var _gbEdu1Yrs = _cv.EDU_1_END ? (_cv.EDU_1_START||'') + ' – ' + _cv.EDU_1_END : (_cv.EDU_1_START||'');
+          var _gbEdu1Yrs = (_cv.EDU_1_YEARS||'') || (_cv.EDU_1_END ? (_cv.EDU_1_START||'') + ' – ' + _cv.EDU_1_END : (_cv.EDU_1_START||''));
           var _gbEdu2Yrs = _cv.EDU_2_END ? (_cv.EDU_2_START||'') + ' – ' + _cv.EDU_2_END : (_cv.EDU_2_START||'');
           var _curTitle = (_cv.companies && _cv.companies[0] && _cv.companies[0].roles && _cv.companies[0].roles[0]) ? _cv.companies[0].roles[0].role : (_cv.CURRENT_TITLE || '');
           var _gbRender = Object.assign({}, _cv, {
@@ -2821,7 +2830,7 @@ async function downloadHistory(index) {
             EDU_1_DEGREE: _abbrevDeg(_cv.EDU_1_DEGREE),
             EDU_2_YEARS: _gbEdu2Yrs, EDU_2_INSTITUTION: _cv.EDU_2_INSTITUTION||'',
             EDU_2_DEGREE: _abbrevDeg(_cv.EDU_2_DEGREE),
-            QUAL_1: _cv.QUAL_1||'', NATIONALITY: _cv.NATIONALITY||'',
+            QUAL_1: [_cv.QUAL_1||'', _cv.QUAL_2||'', _cv.QUAL_3||''].filter(Boolean).join(', '), NATIONALITY: _cv.NATIONALITY||'',
             LANGUAGES: _cv.LANGUAGES||'', INTERESTS: _cv.INTERESTS||''
           });
           // Log before docxtemplater for debugging
