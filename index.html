@@ -2779,7 +2779,13 @@ async function downloadHistory(index) {
             console.error('[GB] buildCareerSummaryBizExp error:', _gbErr.message, _gbErr.stack);
             _gbBizXml = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t>Business experience error</w:t></w:r></w:p>';
           }
-          _gbDocXml = _gbDocXml.split('{{BUSINESS_EXPERIENCE_BLOCK}}').join(_gbBizXml);
+          // Find and replace the entire <w:p> paragraph containing the BE block token
+          var _gbBeIdx = _gbDocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
+          if (_gbBeIdx !== -1) {
+            var _gbPStart = _gbDocXml.lastIndexOf('<w:p', _gbBeIdx);
+            var _gbPEnd = _gbDocXml.indexOf('</w:p>', _gbBeIdx) + 6;
+            _gbDocXml = _gbDocXml.substring(0, _gbPStart) + _gbBizXml + _gbDocXml.substring(_gbPEnd);
+          }
           _gbZip.file('word/document.xml', _gbDocXml);
 
           // Patch header2 with candidate name
