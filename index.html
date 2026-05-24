@@ -1325,12 +1325,12 @@ async function generate() {
           });
         }
         inputText = lines.join('\n');
-        } else if (urlVal.match(/(?:app\.)?ezekia\.com\/#?\/(?:projects|assignments)\/([\w-]+)/)) {
-          var projMatch2 = urlVal.match(/(?:app\.)?ezekia\.com\/#?\/(?:projects|assignments)\/([\w-]+)/);
+        } else if (urlVal.match(/(?:app\.)?ezekia\.com\/#?\/(?:projects|assignments|opportunities|lists)\/([\w-]+)/)) {
+          var projMatch2 = urlVal.match(/(?:app\.)?ezekia\.com\/#?\/(?:projects|assignments|opportunities|lists)\/([\w-]+)/);
           var projectId2 = projMatch2[1];
           var ezekiaBase2 = getEzekiaBaseUrl();
           btn.innerHTML = 'Fetching project data...';
-          var _projEndpoint = '/projects/';
+          var _projEndpoint = urlVal.includes('/opportunities/') ? '/opportunities/' : urlVal.includes('/lists/') ? '/lists/' : '/projects/';
           var projResp = await fetch(ezekiaBase2 + '/v4' + _projEndpoint + projectId2);
           if (!projResp.ok) throw new Error('Ezekia project API error: ' + projResp.status);
           var projData = await projResp.json();
@@ -1340,7 +1340,7 @@ async function generate() {
           // Fetch consultants
           var _consultants = [], _researchers = [];
           try {
-            var _conResp = await fetch(ezekiaBase2 + '/v3/projects/' + projectId2 + '/consultants');
+            var _conResp = await fetch(ezekiaBase2 + '/v3' + _projEndpoint + projectId2 + '/consultants');
             if (_conResp.ok) {
               var _conData = await _conResp.json();
               var _conArr = _conData.data || _conData || [];
@@ -1366,7 +1366,7 @@ async function generate() {
           // Fetch office groups (practice/business group)
           var _officeGroups = [];
           try {
-            var _ogResp = await fetch(ezekiaBase2 + '/v3/projects/' + projectId2 + '/office-groups');
+            var _ogResp = await fetch(ezekiaBase2 + '/v3' + _projEndpoint + projectId2 + '/office-groups');
             if (_ogResp.ok) {
               var _ogData = await _ogResp.json();
               
@@ -1382,7 +1382,7 @@ async function generate() {
           // Fetch regions (geography)
           var _regions = [];
           try {
-            var _regResp = await fetch(ezekiaBase2 + '/v3/projects/' + projectId2 + '/regions');
+            var _regResp = await fetch(ezekiaBase2 + '/v3' + _projEndpoint + projectId2 + '/regions');
             if (_regResp.ok) {
               var _regData = await _regResp.json();
               
@@ -1398,7 +1398,7 @@ async function generate() {
           // Fetch project additional-info (engagement type, status)
           var _projCustom = {};
           try {
-            var _projAddResp = await fetch(ezekiaBase2 + '/projects/' + projectId2 + '/additional-info');
+            var _projAddResp = await fetch(ezekiaBase2 + '' + _projEndpoint + '' + projectId2 + '/additional-info');
             if (_projAddResp.ok) {
               var _projAddData = await _projAddResp.json();
               
@@ -1418,7 +1418,7 @@ async function generate() {
           } catch(e) { console.log('[EZEKIA] Project custom error:', e.message); }
 
           btn.innerHTML = 'Fetching candidates...';
-          var _candUrl = ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates'
+          var _candUrl = ezekiaBase2 + '/v4' + _projEndpoint + projectId2 + '/candidates'
             + '?fieldsWithCandidate%5B%5D=manager.tags'
             + '&fieldsWithCandidate%5B%5D=manager.customValues'
             + '&fieldsWithCandidate%5B%5D=manager.researchNotes'
@@ -2752,7 +2752,7 @@ async function downloadHistory(index) {
           _vals.forEach(function(v, ci) {
             var _si = _ssCount + (ri * 7) + ci;
             _newSS += '<si><t xml:space="preserve">' + _xe(v) + '</t></si>';
-            _cells += '<c r="' + _cols[ci] + _r + '" s="11" t="s"><v>' + _si + '</v></c>';
+            _cells += '<c r="' + _cols[ci] + _r + '" t="s"><v>' + _si + '</v></c>';
           });
           _newRows += '<row r="' + _r + '" spans="1:7" ht="15.75" customHeight="1">' + _cells + '</row>';
         });
