@@ -3574,10 +3574,39 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   window.addEventListener('hashchange', checkHash);
-  window.addEventListener('load', function(){ restoreAdminState(); checkHash(); });
+  window.addEventListener('load', function(){ restoreAdminState(); checkHash(); initUserName(); var f=document.querySelector('.footer');var p=document.querySelector('.page:not(.hidden)');if(f&&p)p.appendChild(f); });
   if(document.readyState !== 'loading'){ restoreAdminState(); checkHash(); }
 })();
 
+
+function renderLogs(logs,tbody,summary){
+  var totalEl=document.getElementById('usageTotalCount');
+  var todayEl=document.getElementById('usageTodayCount');
+  if(totalEl)totalEl.textContent=logs.length;
+  if(todayEl){var today=new Date().toDateString();todayEl.textContent=logs.filter(function(r){return new Date(r.timestamp||r[7]).toDateString()===today;}).length;}
+  if(!logs.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">No usage data yet</td></tr>';return;}
+  var sorted=logs.slice().reverse();
+  tbody.innerHTML=sorted.map(function(r){
+    var user=r.user||r[1]||'',tpl=r.template||r[2]||'',inp=r.inputMethod||r[3]||'',st=r.status||r[4]||'';
+    var ts=r.timestamp||r[7]||'',d=new Date(ts),date=isNaN(d)?ts:d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    var lbl=(typeof TEMPLATES!=='undefined'&&TEMPLATES[tpl])?TEMPLATES[tpl].label:tpl;
+    return '<tr><td>'+user+'</td><td style="font-size:11px">'+lbl+'</td><td>'+inp+'</td><td class="status-'+st+'">'+st+'</td><td>'+date+'</td></tr>';
+  }).join('');
+  if(summary){var c={};logs.forEach(function(r){var n=r.user||r[1]||'Unknown';c[n]=(c[n]||0)+1;});summary.innerHTML=Object.keys(c).sort(function(a,b){return c[b]-c[a];}).map(function(n){return'<span style="background:rgba(255,255,255,.15);border-radius:12px;padding:3px 10px;font-size:11px;"><b>'+n+'</b> '+c[n]+'</span>';}).join('');}
+}
+function exportUsageLogs(){
+  var a=document.createElement('a');
+  a.href='/api/proxy/logs/csv';
+  a.download='SH_DocGen_Usage_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  notify('⬇ Downloading usage report...');
+}
+function clearUsageLogs(){
+  if(!confirm('Clear all local log entries? Server logs are unaffected.'))return;
+  localStorage.removeItem('sh_usage_logs');
+  loadUsageLogs();
+  notify('✓ Local logs cleared');
+}
 </script>
 
 <div id="adminModalOv">
@@ -3633,7 +3662,7 @@ function loadUsageLogs(){
     try{var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');renderLogs(logs,tbody,summary);}
     catch(e){tbody.innerHTML='<tr><td colspan="5" style="color:#dc2626">Error: '+e.message+'</td></tr>';}
   });
-}
+
 function renderLogs(logs,tbody,summary){
   var totalEl=document.getElementById('usageTotalCount');
   var todayEl=document.getElementById('usageTodayCount');
@@ -3649,7 +3678,6 @@ function renderLogs(logs,tbody,summary){
   }).join('');
   if(summary){var counts={};logs.forEach(function(r){var n=r.user||r[1]||'Unknown';counts[n]=(counts[n]||0)+1;});summary.innerHTML=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];}).map(function(n){return'<span style="background:rgba(255,255,255,.15);border-radius:12px;padding:3px 10px;font-size:11px;"><b>'+n+'</b> '+counts[n]+'</span>';}).join('');}
 }
-
 function exportUsageLogs(){
   var a=document.createElement('a');
   a.href='/api/proxy/logs/csv';
@@ -3662,4 +3690,5 @@ function clearUsageLogs(){
   localStorage.removeItem('sh_usage_logs');
   loadUsageLogs();
   notify('✓ Local logs cleared');
+}
 }
