@@ -1334,8 +1334,44 @@ async function generate() {
           var projResp = await fetch(ezekiaBase2 + '/v4' + _projEndpoint + projectId2);
           if (!projResp.ok) throw new Error('Ezekia project API error: ' + projResp.status);
           var projData = await projResp.json();
-          console.log('[EZEKIA] Project data:', JSON.stringify(projData).substring(0, 300));
+          console.log('[EZEKIA] Project data FULL:', JSON.stringify(projData).substring(0, 1500));
           var proj = projData.data || projData;
+
+          // Fetch consultants
+          var _consultants = [], _researchers = [];
+          try {
+            var _conResp = await fetch(ezekiaBase2 + '/v3/projects/' + projectId2 + '/consultants');
+            if (_conResp.ok) {
+              var _conData = await _conResp.json();
+              console.log('[EZEKIA] Consultants FULL:', JSON.stringify(_conData).substring(0, 1000));
+              var _conArr = _conData.data || _conData || [];
+              if (!Array.isArray(_conArr)) _conArr = [_conArr];
+              _conArr.forEach(function(c) {
+                var _role = (c.role || c.type || c.tag || '').toLowerCase();
+                var _name = c.fullName || c.name || (c.model && c.model.fullName) || '';
+                if (_role.includes('research') || _role.includes('associate')) _researchers.push(_name);
+                else _consultants.push(_name);
+              });
+            }
+          } catch(e) { console.log('[EZEKIA] Consultants error:', e.message); }
+
+          // Fetch project additional-info (engagement type, status)
+          var _projCustom = {};
+          try {
+            var _projAddResp = await fetch(ezekiaBase2 + '/projects/' + projectId2 + '/additional-info');
+            if (_projAddResp.ok) {
+              var _projAddData = await _projAddResp.json();
+              console.log('[EZEKIA] Project additional-info:', JSON.stringify(_projAddData).substring(0, 500));
+              (_projAddData.data || []).forEach(function(item) {
+                var _lbl = ((item.field && item.field.label) || '').toLowerCase();
+                var _val = (item.value || '').replace(/<[^>]+>/g, '').trim();
+                if (_lbl.includes('engagement') || _lbl.includes('type')) _projCustom.engagementType = _val;
+                if (_lbl.includes('status')) _projCustom.status = _val;
+                if (_lbl.includes('practice')) _projCustom.practice = _val;
+              });
+            }
+          } catch(e) { console.log('[EZEKIA] Project custom error:', e.message); }
+
           btn.innerHTML = 'Fetching candidates&';
           var _candUrl = ezekiaBase2 + '/v4/projects/' + projectId2 + '/candidates'
             + '?fieldsWithCandidate%5B%5D=manager.tags'
@@ -1346,6 +1382,10 @@ async function generate() {
           console.log('[EZEKIA] Candidates full URL:', _candUrl, 'status:', candResp.status);
           var _rawCandData = candResp.ok ? await candResp.json() : {data:[]};
           var _basicCandidates = _rawCandData.data || [];
+          // Log COMPLETE first candidate from candidates list to find pipeline tag
+          if (_basicCandidates.length > 0) {
+            console.log('[EZEKIA] COMPLETE raw candidate:', JSON.stringify(_basicCandidates[0]));
+          }
 
           // Enrich each candidate with full person data to get custom fields, gender, tags
           btn.innerHTML = 'Fetching details for ' + _basicCandidates.length + ' candidates...';
@@ -1356,18 +1396,30 @@ async function generate() {
               var _pResp = await fetch(ezekiaBase2 + '/v4/people/' + _bc.id
                 + '?fieldsWithCandidate%5B%5D=manager.tags'
                 + '&fieldsWithCandidate%5B%5D=manager.customValues'
-                + '&fieldsWithCandidate%5B%5D=manager.researchNotes');
+                + '&fieldsWithCandidate%5B%5D=manager.researchNotes'
+                + '&fieldsWithCandidate%5B%5D=meta.candidate');
               if (_pResp.ok) {
                 var _pJson = await _pResp.json();
                 var _fullCand = _pJson.data || _pJson;
                 // Pipeline tag from additional-info (will be extracted below)
                 // Fetch custom values (gender, progress notes) via additional-info endpoint
                 try {
+                  // Fetch general custom values (includes gender)
                   var _addResp = await fetch(ezekiaBase2 + '/people/' + _bc.id + '/additional-info');
                   if (_addResp.ok) {
                     var _addJson = await _addResp.json();
-                    if (_ci === 0) console.log('[EZEKIA] Additional info FULL:', JSON.stringify(_addJson));
                     _fullCand._additionalInfo = _addJson.data || _addJson;
+                  }
+                  // Fetch assignment-scoped custom values (includes progress notes + pipeline tag)
+                  var _addResp2 = await fetch(ezekiaBase2 + '/people/' + _bc.id + '/additional-info?scopedModel=assignment&modelId=' + projectId2);
+                  if (_addResp2.ok) {
+                    var _addJson2 = await _addResp2.json();
+                    if (_ci === 0) console.log('[EZEKIA] Scoped additional info:', JSON.stringify(_addJson2));
+                    var _scoped = _addJson2.data || _addJson2;
+                    // Merge scoped fields into additionalInfo
+                    if (Array.isArray(_scoped) && Array.isArray(_fullCand._additionalInfo)) {
+                      _fullCand._additionalInfo = _fullCand._additionalInfo.concat(_scoped);
+                    }
                   }
                 } catch(e) { if (_ci === 0) console.log('[EZEKIA] Additional info error:', e.message); }
                 if (_ci === 0) {
@@ -1389,7 +1441,15 @@ async function generate() {
 
           var projContent = {
             projectName: proj.name || '',
-            clientCompany: (proj.client && proj.client.name) || '',
+            projectId: proj.projectId || '',
+            clientCompany: (proj.relationships && proj.relationships.company && proj.relationships.company.name) || (proj.client && proj.client.name) || '',
+            assignmentType: _projCustom.engagementType || proj.dataType || '',
+            startDate: proj.createdAt ? proj.createdAt.substring(0,10) : (proj.startDate || ''),
+            status: _projCustom.status || (proj.status && (proj.status.name || proj.status)) || '',
+            practice: _projCustom.practice || (proj.practice && proj.practice.name) || '',
+            leadConsultant: _consultants.join(', '),
+            researcher: _researchers.join(', '),
+            geography: (proj.relationships && proj.relationships.geography && proj.relationships.geography.name) || (proj.location && proj.location.name) || '',
             candidates: _enrichedCandidates.map(function(cand) {
               // Extract from Ezekia v4 API response structure
               var _pos = (cand.profile && cand.profile.positions && cand.profile.positions[0]) || {};
@@ -1398,15 +1458,19 @@ async function generate() {
               var _city = _addr.city || _addr.state || '';
               var _country = _addr.country || '';
               var _loc = [_city, _country].filter(Boolean).join(', ');
-              // Pipeline Tag — from assignment status or owner tags
+              // Pipeline Tag — from meta.candidate.pipelineTags (requires meta.candidate in fieldsWithCandidate)
               var _tag = cand._pipelineTag || '';
+              // Check meta.candidate.pipelineTags
+              if (!_tag && cand.meta && cand.meta.candidate && cand.meta.candidate.pipelineTags) {
+                var _ptags = cand.meta.candidate.pipelineTags;
+                if (Array.isArray(_ptags) && _ptags.length > 0) _tag = _ptags[0].text || '';
+              }
+              // Fallback: owner.tags
               if (!_tag && cand.owner && cand.owner.tags) {
                 var _tags = Array.isArray(cand.owner.tags) ? cand.owner.tags : [cand.owner.tags];
                 if (_tags.length > 0 && _tags[0].text) _tag = _tags[0].text;
               }
-              if (!_tag && cand.manager && cand.manager.tags && cand.manager.tags.length) {
-                _tag = cand.manager.tags[0].text || '';
-              }
+              
 
               // Gender + Notes — from additional-info (custom values endpoint)
               var _gender2 = '';
@@ -2599,7 +2663,7 @@ async function downloadHistory(index) {
         console.log('[PROJECT REPORT] Response status:', tplResp.status, 'size:', tplResp.headers.get('content-length'));
         if (!tplResp.ok) throw new Error('Could not load project report template: ' + tplResp.status);
         var tplAb = await tplResp.arrayBuffer();
-        var projWb = XLSX.read(new Uint8Array(tplAb), {type:'array'});
+        var projWb = XLSX.read(new Uint8Array(tplAb), {type:'array', cellStyles:true, cellHTML:false});
         var projWs = projWb.Sheets[projWb.SheetNames[0]];
         // Row 1 = Ezekia field mappings (keep), Row 2 = headers (keep), data from row 3
         var startRow = 3;
@@ -2622,18 +2686,37 @@ async function downloadHistory(index) {
         // Fill Dashboard tokens
         var _dashWs = projWb.Sheets['Dashboard'];
         if (_dashWs) {
-          var _projName = projData2.projectName || projData2.name || '';
-          var _reportDate = new Date().toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
+          var _d = projData2;
+          var _now = new Date();
+          var _reportDate = _now.getDate() + ' ' + ['January','February','March','April','May','June','July','August','September','October','November','December'][_now.getMonth()] + ' ' + _now.getFullYear();
+          var _tokens = {
+            '{{project_name}}':     _d.projectName || '',
+            '{{report_date}}':      _reportDate,
+            '{{client_name}}':      _d.clientCompany || '',
+            '{{assignment_type}}':  _d.assignmentType || 'Assignment',
+            '{{lead_consultant}}':  _d.leadConsultant || '',
+            '{{consultant}}':      _d.leadConsultant || '',
+            '{{researcher_name}}':  _d.researcher || '',
+            '{{date_created}}':     _d.startDate || '',
+            '{{project_status}}':   _d.status || '',
+            '{{practice_area}}':    _d.practice || '',
+            '{{geography}}':        _d.geography || '',
+            '{{project_status}}':   _d.status || ''
+          };
           Object.keys(_dashWs).forEach(function(ref) {
             if (ref[0] === '!') return;
             var cell = _dashWs[ref];
             if (cell && cell.v && typeof cell.v === 'string') {
-              cell.v = cell.v.replace('{{project_name}}', _projName).replace('{{report_date}}', _reportDate);
-              if (cell.w) cell.w = cell.w.replace('{{project_name}}', _projName).replace('{{report_date}}', _reportDate);
+              var _val = cell.v;
+              Object.keys(_tokens).forEach(function(tok) {
+                _val = _val.split(tok).join(_tokens[tok]);
+              });
+              cell.v = _val;
+              if (cell.w) cell.w = _val;
             }
           });
         }
-        var projBuf = XLSX.write(projWb, {type:'array', bookType:'xlsx'});
+        var projBuf = XLSX.write(projWb, {type:'array', bookType:'xlsx', bookSST:true, cellStyles:true});
         var projBlob = new Blob([projBuf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
         var projA = document.createElement('a');
         projA.href = URL.createObjectURL(projBlob);
