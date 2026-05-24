@@ -2125,6 +2125,11 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
   .then(function(data) {
     var rawOutput = (data.content && data.content[0] && data.content[0].text) ? data.content[0].text : '{}';
 
+// DEBUG: log raw output for GB profile
+if (isGbProfile) {
+  console.log('[GB DEBUG] Raw JSON:', rawOutput.substring(0, 2000));
+}
+
 var output;
 
 try {
