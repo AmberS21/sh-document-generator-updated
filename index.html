@@ -1986,53 +1986,32 @@ CANDIDATE SOURCE:
 
 ` + inputText
 : isGbProfile
-  ? `You are a Sheffield Haworth executive search document-filling assistant for the GB Candidate Profile template. Extract information from the candidate CV below into structured JSON.
+  ? ((isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. ' : '') + `You are a Sheffield Haworth executive search document assistant. Extract ALL information from the candidate CV into the JSON structure below.
 
-ABSOLUTE RULES:
-- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
-- CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
-- MONTH_YEAR: current month and year (e.g. "May 2026").
-- Copy ALL text VERBATIM from the CV.
+RULES:
+- Return ONLY raw JSON. No markdown, no code blocks.
+- CLIENT_COMPANY and SEARCH_TITLE: always "".
+- Extract EVERY work history entry without exception.
+- Copy ALL bullet points VERBATIM.
 
-COMPANIES GROUPING (CRITICAL):
-- Group CONSECUTIVE positions at the SAME company into ONE companies[] entry.
-- CONSECUTIVE means: no other company appears between those positions in the CV.
-- If Company A appears, then Company B, then Company A again — create THREE separate entries (A, B, A). Do NOT merge the two A stints.
-- "dates" on company = overall span covering all roles (e.g. "2015 – Present").
-- List ALL roles under "roles[]", most recent FIRST — do NOT skip any roles.
-- Each role MUST have its own entry in roles[] even if they are at the same company.
-- Only add role-level "dates" if 2 or more roles at that company — leave empty string if only 1 role.
-- Place ALL bullet points under the MOST RECENT (first in the array) role only. Other roles MUST have empty bullets array: [].
-- If bullets appear in the CV under the whole company section (not under individual roles), still put them ALL under the first/most recent role.
-- Extract ALL bullet points VERBATIM without skipping any — include every single bullet.
-- CRITICAL EXAMPLE: If the CV shows:
-  Truist Securities
-  Director 2024-Present
-  Vice President 2020-2024
-  Associate 2016-2020
-  Senior Analyst 2015-2016
-  [bullets under the whole section]
+MULTIPLE ROLES AT SAME COMPANY — CRITICAL:
+- Each role at a company gets its OWN COMPANY_N entry, even if same company name.
+- Example: Director 2024-Present, VP 2020-2024, Associate 2016-2020, Senior Analyst 2015-2016 at Truist:
+  COMPANY_1: name=Truist, ROLE=Director, DATES=2024 – Present, all bullets here
+  COMPANY_2: name=Truist, ROLE=Vice President, DATES=2020 – 2024, no bullets
+  COMPANY_3: name=Truist, ROLE=Associate, DATES=2016 – 2020, no bullets
+  COMPANY_4: name=Truist, ROLE=Senior Analyst, DATES=2015 – 2016, no bullets
+- COMPANY_N_DATES = that specific role dates only.
+- Put ALL bullets under COMPANY_1 (most recent role) only.
 
-  Then roles[] MUST have 4 entries:
-  {"role":"Director – Investment Grade Debt Capital Markets","dates":"2024 – Present","bullets":["bullet1","bullet2",...all bullets here...]},
-  {"role":"Vice President – Investment Grade Debt Capital Markets","dates":"2020 – 2024","bullets":[]},
-  {"role":"Associate – Investment Grade Debt Capital Markets","dates":"2016 – 2020","bullets":[]},
-  {"role":"Senior Analyst – Investment Grade Debt Capital Markets","dates":"2015 – 2016","bullets":[]}
+EDUCATION — EDU_1_DEGREE must abbreviate degree name:
+- Bachelor of Science Business Administration → BSBA
+- Bachelor of Science → BS, Bachelor of Arts → BA, Bachelor Business Admin → BBA
+- Master of Business Administration → MBA, Master of Science → MS, Master of Arts → MA
+- Doctor of Philosophy → PhD, Juris Doctor → JD
+- Keep rest verbatim: e.g. BSBA, Concentration in Finance & Minor in Leadership Studies
 
-  DO NOT put only 1 role. ALL positions listed under a company MUST appear as separate role entries.
-
-EDUCATION:
-- EDU_1_YEARS: graduation year or year range (e.g. "2013" or "2009 – 2013"). Add colon after year: "2013:".
-- EDU_1_INSTITUTION: university/school name only (no location in this field).
-- EDU_1_DEGREE: ABBREVIATE the degree type, keep the rest verbatim. Rules:
-  * Bachelor of Science = BS, Bachelor of Arts = BA, Bachelor of Business Administration = BBA,
-    Bachelor of Science in Business Administration = BSBA, Master of Business Administration = MBA,
-    Master of Science = MS, Master of Arts = MA, Doctor of Philosophy = PhD.
-  * Format: "BSBA, Concentration in Finance & Minor in Leadership Studies" (abbreviation + comma + rest verbatim).
-  * Include GPA/honours if mentioned.
-- EDU_2_YEARS, EDU_2_INSTITUTION, EDU_2_DEGREE: same rules for second education entry if present.
-
-Return ONLY valid JSON using this exact structure (expand companies[] as needed for all work history):\n` + '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CURRENT_TITLE":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","companies":[{"name":"COMPANY NAME (most recent first)","location":"City, Country","dates":"YYYY – Present (overall span)","roles":[{"role":"Most Recent Title","dates":"YYYY – Present","bullets":["Bullet 1 verbatim","Bullet 2 verbatim","All bullets here"]},{"role":"Previous Title","dates":"YYYY – YYYY","bullets":[]},{"role":"Earlier Title","dates":"YYYY – YYYY","bullets":[]},{"role":"Earliest Title at same company","dates":"YYYY – YYYY","bullets":[]}]},{"name":"PREVIOUS COMPANY","location":"City, Country","dates":"YYYY – YYYY","roles":[{"role":"Title","dates":"","bullets":["Bullet 1","Bullet 2"]}]}],"EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}' + `\n\nCANDIDATE SOURCE — extract ALL information from this text:\n\n` + inputText
+Return ONLY valid JSON using this structure:\n` + globalJsonStr + `\n\nCANDIDATE SOURCE:\n\n` + inputText)
 : (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
     `You are a Sheffield Haworth executive search document assistant. Your task is to extract information from the candidate source below and fill the APAC Candidate Profile template fields EXACTLY as described.
 
@@ -2674,33 +2653,53 @@ async function downloadHistory(index) {
         var _loopZip = new PizZip(ab);
         var _cv = item.content;
 
-        // Use companies[] if present (new GB prompt), otherwise convert from flat keys
-        var _companies;
-        if (_cv.companies && Array.isArray(_cv.companies) && _cv.companies.length > 0 && _cv.companies[0].name) {
-          _companies = _cv.companies;
-        } else {
-          // Legacy: convert flat COMPANY_N_* to companies[] array
-          _companies = [];
-          for (var _ci2 = 1; _ci2 <= 15; _ci2++) {
-            var _cname = _cv['COMPANY_' + _ci2 + '_NAME'] || '';
-            if (!_cname) break;
-            var _bullets = [];
-            for (var _bi = 1; _bi <= 10; _bi++) {
-              var _b = _cv['COMPANY_' + _ci2 + '_BULLET_' + _bi] || '';
-              if (_b) _bullets.push(_b);
-            }
+        // Convert flat COMPANY_N_* to companies[] grouping consecutive same-company entries
+        var _companies = [];
+        // First build flat list
+        var _flatCo = [];
+        for (var _ci2 = 1; _ci2 <= 15; _ci2++) {
+          var _cname = _cv['COMPANY_' + _ci2 + '_NAME'] || '';
+          if (!_cname) break;
+          var _bullets = [];
+          for (var _bi = 1; _bi <= 10; _bi++) {
+            var _b = _cv['COMPANY_' + _ci2 + '_BULLET_' + _bi] || '';
+            if (_b) _bullets.push(_b);
+          }
+          _flatCo.push({
+            name: _cname,
+            location: _cv['COMPANY_' + _ci2 + '_LOCATION'] || '',
+            role: _cv['COMPANY_' + _ci2 + '_ROLE'] || '',
+            dates: _cv['COMPANY_' + _ci2 + '_DATES'] || '',
+            bullets: _bullets
+          });
+        }
+        // Group consecutive same-company entries
+        for (var _fi = 0; _fi < _flatCo.length; _fi++) {
+          var _fc2 = _flatCo[_fi];
+          var _prevCo = _companies.length > 0 ? _companies[_companies.length - 1] : null;
+          if (_prevCo && _prevCo.name === _fc2.name) {
+            // Same company as previous - add as new role, update overall dates
+            _prevCo.roles.push({ role: _fc2.role, dates: _fc2.dates, bullets: _fc2.bullets });
+            // Update overall company dates to span from earliest to latest
+            var _earlierDate = _fc2.dates.split(/[–-]/)[0].trim();
+            var _latestDate = _prevCo.dates.split(/[–-]/).pop().trim();
+            _prevCo.dates = _earlierDate + ' – ' + _latestDate;
+          } else {
+            // New company
             _companies.push({
-              name: _cname,
-              location: _cv['COMPANY_' + _ci2 + '_LOCATION'] || '',
-              dates: _cv['COMPANY_' + _ci2 + '_DATES'] || '',
-              roles: [{
-                role: _cv['COMPANY_' + _ci2 + '_ROLE'] || '',
-                dates: '',
-                bullets: _bullets
-              }]
+              name: _fc2.name,
+              location: _fc2.location,
+              dates: _fc2.dates,
+              roles: [{ role: _fc2.role, dates: _fc2.dates, bullets: _fc2.bullets }]
             });
           }
         }
+        // If company has only 1 role, clear that role's dates (shown on company line instead)
+        _companies.forEach(function(co) {
+          if (co.roles.length === 1) {
+            co.roles[0].dates = '';
+          }
+        });
 
         // Build render data
         var _renderData = Object.assign({}, _cv, {
