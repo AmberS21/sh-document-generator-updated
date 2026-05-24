@@ -2782,8 +2782,15 @@ async function downloadHistory(index) {
           // Find and replace the entire <w:p> paragraph containing the BE block token
           var _gbBeIdx = _gbDocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
           if (_gbBeIdx !== -1) {
-            var _gbPStart = _gbDocXml.lastIndexOf('<w:p', _gbBeIdx);
+            // Find the true <w:p> start (must be <w:p> or <w:p followed by space/attr)
+            var _gbPStart = _gbBeIdx;
+            while (_gbPStart > 0) {
+              _gbPStart = _gbDocXml.lastIndexOf('<w:p', _gbPStart - 1);
+              var _next = _gbDocXml.charAt(_gbPStart + 4);
+              if (_next === '>' || _next === ' ') break;
+            }
             var _gbPEnd = _gbDocXml.indexOf('</w:p>', _gbBeIdx) + 6;
+            console.log('[GB] Replacing paragraph at', _gbPStart, 'to', _gbPEnd, 'with', _gbBizXml.length, 'chars');
             _gbDocXml = _gbDocXml.substring(0, _gbPStart) + _gbBizXml + _gbDocXml.substring(_gbPEnd);
           }
           _gbZip.file('word/document.xml', _gbDocXml);
