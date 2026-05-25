@@ -1678,8 +1678,10 @@ async function generate() {
                   
                   
                 }
+                _fullCand._resolvedPipelineTag = _bc._resolvedPipelineTag || '';
                 _enrichedCandidates.push(_fullCand);
               } else {
+                _bc._resolvedPipelineTag = _bc._resolvedPipelineTag || '';
                 _enrichedCandidates.push(_bc);
               }
             } catch(_pe) {
@@ -1707,8 +1709,8 @@ async function generate() {
               var _country = _addr.country || '';
               var _loc = [_city, _country].filter(Boolean).join(', ');
               // Pipeline Tag — from meta.candidate.pipelineTags (requires meta.candidate in fieldsWithCandidate)
-              // Use pipeline tag stored on _bc object (immune to async scope issues)
-              var _tag = _bc._resolvedPipelineTag || '';
+              // Use pipeline tag stored on each enriched candidate object
+              var _tag = cand._resolvedPipelineTag || '';
               // Fallback: owner.tags
               if (!_tag && cand.owner && cand.owner.tags) {
                 var _tags = Array.isArray(cand.owner.tags) ? cand.owner.tags : [cand.owner.tags];
