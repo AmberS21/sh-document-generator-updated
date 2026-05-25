@@ -3276,50 +3276,9 @@ async function downloadHistory(index) {
         var _femaleCount = _cands.filter(function(c){ return (c.gender||'').toLowerCase() === 'female'; }).length;
         var _nonBinary   = _cands.filter(function(c){ var g=(c.gender||'').toLowerCase(); return g && g!=='male' && g!=='female'; }).length;
 
-        // Total Candidates: A6 and B43 — replace regardless of cached value
-        _sh3Xml = _sh3Xml.replace(/<c r="A6" s="7"><f>[^<]*<\/f><v[^<]*<\/v><\/c>/,
-          '<c r="A6" s="7" t="n"><v>' + _totalCands + '</v></c>');
-        _sh3Xml = _sh3Xml.replace(/<c r="B43" s="[^"]*"><f>[^<]*<\/f><v[^<]*<\/v><\/c>/,
-          '<c r="B43" s="24" t="n"><v>' + _totalCands + '</v></c>');
-        // Gender counts: B47=Male, B48=Female, B49=Other
-        _sh3Xml = _sh3Xml.replace(/<c r="B47" s="[^"]*"><f>[^<]*<\/f><v[^<]*<\/v><\/c>/,
-          '<c r="B47" s="16" t="n"><v>' + _maleCount + '</v></c>');
-        _sh3Xml = _sh3Xml.replace(/<c r="B48" s="[^"]*"><f>[^<]*<\/f><v[^<]*<\/v><\/c>/,
-          '<c r="B48" s="20" t="n"><v>' + _femaleCount + '</v></c>');
-        _sh3Xml = _sh3Xml.replace(/<c r="B49" s="[^"]*"><f>[^<]*<\/f><v[^<]*<\/v><\/c>/,
-          '<c r="B49" s="20" t="n"><v>' + _nonBinary + '</v></c>');
-
-        // Header stats: C6=Unique Tags, E6=In Interview, G6=Offers Made, I6=Placed
-        var _uniqueTags = Object.keys(function(){ var t={}; _cands.forEach(function(c){ if(c.pipelineTag) t[c.pipelineTag]=1; }); return t; }()).length;
-        var _interviewCount = _cands.filter(function(c){ return (c.pipelineTag||'').toLowerCase().indexOf('interview') !== -1; }).length;
-        var _offerCount = _cands.filter(function(c){ return (c.pipelineTag||'').toLowerCase().indexOf('offer') !== -1; }).length;
-        var _placedCount = _cands.filter(function(c){ return (c.pipelineTag||'').toLowerCase().indexOf('placed') !== -1; }).length;
-        function _replaceCell(xml, ref, styleId, val) {
-          var p = new RegExp('<c r="' + ref + '" s="[^"]*"[^>]*><f[^>]*>[^<]*<\/f><v[^<]*<\/v><\/c>');
-          return xml.replace(p, '<c r="' + ref + '" s="' + styleId + '" t="n"><v>' + val + '</v></c>');
-        }
-        _sh3Xml = _replaceCell(_sh3Xml, 'C6',  '7', _uniqueTags);
-        _sh3Xml = _replaceCell(_sh3Xml, 'E6',  '7', _interviewCount);
-        _sh3Xml = _replaceCell(_sh3Xml, 'G6',  '7', _offerCount);
-        _sh3Xml = _replaceCell(_sh3Xml, 'I6',  '7', _placedCount);
-
-        // Top Locations - count by location from candidates
-        var _locCounts = {};
-        _cands.forEach(function(c){ var l=(c.location||'').trim(); if(l) _locCounts[l]=(_locCounts[l]||0)+1; });
-        var _topLocs = Object.keys(_locCounts).sort(function(a,b){ return _locCounts[b]-_locCounts[a]; }).slice(0,8);
-        _topLocs.forEach(function(loc, i) {
-          var aRef = 'A' + (28+i);
-          var bRef = 'B' + (28+i);
-          var cnt = _locCounts[loc];
-          _sh3Xml = _sh3Xml.replace(
-            new RegExp('<c r="'+aRef+'" s="[^"]*"[^>]*><f[^>]*>[^<]*<\/f>(?:<v[^<]*<\/v>)?<\/c>'),
-            '<c r="'+aRef+'" s="15" t="inlineStr"><is><t>'+_xe(loc)+'</t></is></c>'
-          );
-          _sh3Xml = _sh3Xml.replace(
-            new RegExp('<c r="'+bRef+'" s="[^"]*"[^>]*><f[^>]*>[^<]*<\/f>(?:<v[^<]*<\/v>)?<\/c>'),
-            '<c r="'+bRef+'" s="16" t="n"><v>'+cnt+'</v></c>'
-          );
-        });
+        // Template formulas handle Total, Gender, Interview, Offers, Placed, Top Locations
+        // JS only needs to clear cached values so Excel recalculates on open
+        _sh3Xml = _sh3Xml.replace(/<v>-9996<\/v>/g, '<v>0</v>');
         _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
 
         // Write pipeline tag counts directly to _Pivot sheet using inline strings
@@ -3364,7 +3323,7 @@ async function downloadHistory(index) {
             _sh3Xml2 = _sh3Xml2.replace(_cPattern, '<c r="C' + dRow + '" s="17" t="n"><v>' + pct.toFixed(6) + '</v></c>');
           });
           _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml2);
-          console.log('[DASHBOARD] Pipeline breakdown written to rows 13-' + (12 + _tagList.length));
+
         } catch(_pvErr) {
           console.error('[PIVOT] Error:', _pvErr.message);
         }
