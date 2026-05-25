@@ -3311,7 +3311,7 @@ async function downloadHistory(index) {
               + '<c r="C' + row + '" t="n"><v>' + pct.toFixed(6) + '</v></c>'
               + '</row>';
           });
-          _sh2Xml = _sh2Xml.replace(/<row r="[2-9][0-9]*"[^/>]*(?:\/>|>[\s\S]*?<\/row>)/g, '');
+          // Simply append new rows before </sheetData> - template pivot has no data rows
           _sh2Xml = _sh2Xml.replace('</sheetData>', _pivotRows + '</sheetData>');
           _projZip.file('xl/worksheets/sheet2.xml', _sh2Xml);
           console.log('[PIVOT] Written', _tagList.length, 'unique tags to _Pivot');
