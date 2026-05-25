@@ -1690,11 +1690,16 @@ async function generate() {
               var _country = _addr.country || '';
               var _loc = [_city, _country].filter(Boolean).join(', ');
               // Pipeline Tag — from meta.candidate.pipelineTags (requires meta.candidate in fieldsWithCandidate)
-              var _tag = cand._pipelineTag || '';
-              // Check meta.candidate.pipelineTags
-              if (!_tag && cand.meta && cand.meta.candidate && cand.meta.candidate.pipelineTags) {
-                var _ptags = cand.meta.candidate.pipelineTags;
+              var _tag = '';
+              // Pipeline tag is on the raw candidate object (_bc), not the enriched person (cand)
+              if (_bc.meta && _bc.meta.candidate && _bc.meta.candidate.pipelineTags) {
+                var _ptags = _bc.meta.candidate.pipelineTags;
                 if (Array.isArray(_ptags) && _ptags.length > 0) _tag = _ptags[0].text || '';
+              }
+              // Also check enriched person just in case
+              if (!_tag && cand.meta && cand.meta.candidate && cand.meta.candidate.pipelineTags) {
+                var _ptags2 = cand.meta.candidate.pipelineTags;
+                if (Array.isArray(_ptags2) && _ptags2.length > 0) _tag = _ptags2[0].text || '';
               }
               // Fallback: owner.tags
               if (!_tag && cand.owner && cand.owner.tags) {
