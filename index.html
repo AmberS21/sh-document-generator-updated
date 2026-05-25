@@ -3276,18 +3276,18 @@ async function downloadHistory(index) {
         var _femaleCount = _cands.filter(function(c){ return (c.gender||'').toLowerCase() === 'female'; }).length;
         var _nonBinary   = _cands.filter(function(c){ var g=(c.gender||'').toLowerCase(); return g && g!=='male' && g!=='female'; }).length;
 
-        // Total Candidates: A6 and B43
-        _sh3Xml = _sh3Xml.replace(/<c r="A6" s="7"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
-          '<c r="A6" s="7" t="n"><v>' + _totalCands + '<\/v><\/c>');
-        _sh3Xml = _sh3Xml.replace(/<c r="B43" s="[^"]*"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
-          '<c r="B43" s="24" t="n"><v>' + _totalCands + '<\/v><\/c>');
+        // Total Candidates: A6 and B43 — replace regardless of cached value
+        _sh3Xml = _sh3Xml.replace(/<c r="A6" s="7"><f>[^<]*<\/f><v[^<]*<\/v><\/c>/,
+          '<c r="A6" s="7" t="n"><v>' + _totalCands + '</v></c>');
+        _sh3Xml = _sh3Xml.replace(/<c r="B43" s="[^"]*"><f>[^<]*<\/f><v[^<]*<\/v><\/c>/,
+          '<c r="B43" s="24" t="n"><v>' + _totalCands + '</v></c>');
         // Gender counts: B47=Male, B48=Female, B49=Other
-        _sh3Xml = _sh3Xml.replace(/<c r="B47" s="[^"]*"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
-          '<c r="B47" s="16" t="n"><v>' + _maleCount + '<\/v><\/c>');
-        _sh3Xml = _sh3Xml.replace(/<c r="B48" s="[^"]*"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
-          '<c r="B48" s="20" t="n"><v>' + _femaleCount + '<\/v><\/c>');
-        _sh3Xml = _sh3Xml.replace(/<c r="B49" s="[^"]*"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
-          '<c r="B49" s="20" t="n"><v>' + _nonBinary + '<\/v><\/c>');
+        _sh3Xml = _sh3Xml.replace(/<c r="B47" s="[^"]*"><f>[^<]*<\/f><v[^<]*<\/v><\/c>/,
+          '<c r="B47" s="16" t="n"><v>' + _maleCount + '</v></c>');
+        _sh3Xml = _sh3Xml.replace(/<c r="B48" s="[^"]*"><f>[^<]*<\/f><v[^<]*<\/v><\/c>/,
+          '<c r="B48" s="20" t="n"><v>' + _femaleCount + '</v></c>');
+        _sh3Xml = _sh3Xml.replace(/<c r="B49" s="[^"]*"><f>[^<]*<\/f><v[^<]*<\/v><\/c>/,
+          '<c r="B49" s="20" t="n"><v>' + _nonBinary + '</v></c>');
         _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
 
         // Write pipeline tag counts directly to _Pivot sheet using inline strings
@@ -3315,6 +3315,24 @@ async function downloadHistory(index) {
           _sh2Xml = _sh2Xml.replace('</sheetData>', _pivotRows + '</sheetData>');
           _projZip.file('xl/worksheets/sheet2.xml', _sh2Xml);
           console.log('[PIVOT] Written', _tagList.length, 'unique tags to _Pivot');
+
+          // Also write directly into Dashboard pipeline rows (A13:C42) to bypass formula recalc
+          // Reuse _sh3Xml which already has Total/Gender counts written
+          var _sh3Xml2 = _sh3Xml;
+          _tagList.forEach(function(tag, i) {
+            var dRow = i + 13; // Dashboard data starts at row 13
+            var cnt = _tagCounts[tag];
+            var pct = _total > 0 ? cnt / _total : 0;
+            // Replace cached values for A, B, C columns in this row
+            var _aPattern = new RegExp('<c r="A' + dRow + '" s="[^"]*" t="[^"]*"><f[^>]*>[^<]*</f><v[^<]*</v></c>');
+            var _bPattern = new RegExp('<c r="B' + dRow + '" s="[^"]*" t="[^"]*"><f[^>]*>[^<]*</f><v[^<]*</v></c>');
+            var _cPattern = new RegExp('<c r="C' + dRow + '" s="[^"]*" t="[^"]*"><f[^>]*>[^<]*</f><v[^<]*</v></c>');
+            _sh3Xml2 = _sh3Xml2.replace(_aPattern, '<c r="A' + dRow + '" s="15" t="inlineStr"><is><t>' + _xe(tag) + '</t></is></c>');
+            _sh3Xml2 = _sh3Xml2.replace(_bPattern, '<c r="B' + dRow + '" s="16" t="n"><v>' + cnt + '</v></c>');
+            _sh3Xml2 = _sh3Xml2.replace(_cPattern, '<c r="C' + dRow + '" s="17" t="n"><v>' + pct.toFixed(6) + '</v></c>');
+          });
+          _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml2);
+          console.log('[DASHBOARD] Pipeline breakdown written to rows 13-' + (12 + _tagList.length));
         } catch(_pvErr) {
           console.error('[PIVOT] Error:', _pvErr.message);
         }
