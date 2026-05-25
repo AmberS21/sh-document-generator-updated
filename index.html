@@ -678,7 +678,7 @@ function goTab(t) {
   setTimeout(function(){var f=document.querySelector('.footer');var p=document.querySelector('.page:not(.hidden)');if(f&&p)p.appendChild(f);},50);
   window.scrollTo(0, 0);
   if (t === 'hist') renderHistory();
-  if (t === 'admin') setTimeout(function(){ if(typeof loadUsageLogs==='function') loadUsageLogs(); }, 150);
+  if (t === 'admin') setTimeout(loadUsageLogs, 150);
 }
 
 // ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ INPUT SWITCH ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
@@ -1603,27 +1603,11 @@ async function generate() {
             + '?fieldsWithCandidate%5B%5D=manager.tags'
             + '&fieldsWithCandidate%5B%5D=manager.customValues'
             + '&fieldsWithCandidate%5B%5D=manager.researchNotes'
-            + '&fields%5B%5D=meta.candidate';
+            + '&fieldsWithCandidate%5B%5D=meta.candidate';
           var candResp = await fetch(_candUrl);
           
           var _rawCandData = candResp.ok ? await candResp.json() : {data:[]};
           var _basicCandidates = _rawCandData.data || [];
-          // Debug: log first candidate to check meta.candidate field
-          if (_basicCandidates.length > 0) {
-            var _fc = _basicCandidates[0];
-            console.log('[PIPELINE DEBUG] meta.candidate FULL:', JSON.stringify(_fc.meta && _fc.meta.candidate));
-            // Log all candidates pipeline tags to find the right one
-            _basicCandidates.slice(0,5).forEach(function(c,i){
-              var mc = c.meta && c.meta.candidate;
-              console.log('[PIPELINE DEBUG] Candidate '+i+' ('+c.name+'):', 
-                'tags:', JSON.stringify(mc && mc.pipelineTags && mc.pipelineTags.map(function(t){return {text:t.text,addedAt:t.addedAt};})),
-                'status:', JSON.stringify(mc && mc.status),
-                'stage:', JSON.stringify(mc && mc.stage),
-                'currentTag:', JSON.stringify(mc && mc.currentTag),
-                'rank:', mc && mc.rank, 'order:', mc && mc.order
-              );
-            });
-          }
           // Log COMPLETE first candidate from candidates list to find pipeline tag
           if (_basicCandidates.length > 0) {
             
@@ -1634,14 +1618,6 @@ async function generate() {
           var _enrichedCandidates = [];
           for (var _ci = 0; _ci < _basicCandidates.length; _ci++) {
             var _bc = _basicCandidates[_ci];
-            // Extract pipeline tag and store ON _bc so it survives async scope
-            _bc._resolvedPipelineTag = '';
-            if (_bc.meta && _bc.meta.candidate && _bc.meta.candidate.pipelineTags) {
-              var _bcTags = _bc.meta.candidate.pipelineTags.slice().sort(function(a,b){
-                return new Date(b.addedAt||0) - new Date(a.addedAt||0);
-              });
-              if (_bcTags.length > 0) _bc._resolvedPipelineTag = _bcTags[0].text || '';
-            }
             try {
               var _pResp = await fetch(ezekiaBase2 + '/v4/people/' + _bc.id
                 + '?fieldsWithCandidate%5B%5D=manager.tags'
@@ -1678,10 +1654,8 @@ async function generate() {
                   
                   
                 }
-                _fullCand._resolvedPipelineTag = _bc._resolvedPipelineTag || '';
                 _enrichedCandidates.push(_fullCand);
               } else {
-                _bc._resolvedPipelineTag = _bc._resolvedPipelineTag || '';
                 _enrichedCandidates.push(_bc);
               }
             } catch(_pe) {
@@ -1709,8 +1683,12 @@ async function generate() {
               var _country = _addr.country || '';
               var _loc = [_city, _country].filter(Boolean).join(', ');
               // Pipeline Tag — from meta.candidate.pipelineTags (requires meta.candidate in fieldsWithCandidate)
-              // Use pipeline tag stored on each enriched candidate object
-              var _tag = cand._resolvedPipelineTag || '';
+              var _tag = cand._pipelineTag || '';
+              // Check meta.candidate.pipelineTags
+              if (!_tag && cand.meta && cand.meta.candidate && cand.meta.candidate.pipelineTags) {
+                var _ptags = cand.meta.candidate.pipelineTags;
+                if (Array.isArray(_ptags) && _ptags.length > 0) _tag = _ptags[0].text || '';
+              }
               // Fallback: owner.tags
               if (!_tag && cand.owner && cand.owner.tags) {
                 var _tags = Array.isArray(cand.owner.tags) ? cand.owner.tags : [cand.owner.tags];
@@ -3239,21 +3217,14 @@ async function downloadHistory(index) {
         // Count existing shared strings
         var _ssCount = (_ssXml.match(/<si>/g) || []).length;
 
-        // Build candidate rows using DEDUPLICATED shared strings (getSSIdx pattern)
+        // Build candidate rows with DEDUPLICATED shared strings
         var _cands = (_d.candidates || []);
-        var _ssMap = {};   // value -> index
-        var _ssArr = [];   // unique values in order
+        var _ssMap = {}, _ssArr = [];
         function _ssIdx(val) {
           var k = val || '';
           if (!(k in _ssMap)) { _ssMap[k] = _ssCount + _ssArr.length; _ssArr.push(k); }
           return _ssMap[k];
         }
-        // Pre-index all pipeline tags (for pivot) in sorted order
-        var _tagCountsPv = {};
-        _cands.forEach(function(c){ var t=(c.pipelineTag||'').trim(); if(t) _tagCountsPv[t]=(_tagCountsPv[t]||0)+1; });
-        var _tagListPv = Object.keys(_tagCountsPv).sort();
-        _tagListPv.forEach(function(tag){ _ssIdx(tag); }); // reserve indices for tags first
-
         var _newRows = '';
         _cands.forEach(function(cand, ri) {
           var _r = 3 + ri;
@@ -3265,7 +3236,6 @@ async function downloadHistory(index) {
           });
           _newRows += '<row r="' + _r + '" spans="1:7" ht="15.75" customHeight="1">' + _cells + '</row>';
         });
-        // Build deduped shared strings XML
         var _newSS = _ssArr.map(function(v){ return '<si><t xml:space="preserve">' + _xe(v) + '</t></si>'; }).join('');
 
         // Remove old data rows and insert new ones
@@ -3274,7 +3244,6 @@ async function downloadHistory(index) {
         _sh1 = _sh1.replace('</sheetData>', _newRows + '</sheetData>');
 
         // Update shared strings count
-        // Update shared strings count with deduped array
         var _totalSS = _ssCount + _ssArr.length;
         _ssXml = _ssXml.replace(/count="[^"]*"/, 'count="' + _totalSS + '"').replace(/uniqueCount="[^"]*"/, 'uniqueCount="' + _ssArr.length + '"');
         _ssXml = _ssXml.replace('</sst>', _newSS + '</sst>');
@@ -3289,46 +3258,19 @@ async function downloadHistory(index) {
         var _femaleCount = _cands.filter(function(c){ return (c.gender||'').toLowerCase() === 'female'; }).length;
         var _nonBinary   = _cands.filter(function(c){ var g=(c.gender||'').toLowerCase(); return g && g!=='male' && g!=='female'; }).length;
 
-        // Template formulas handle Total, Gender, Interview, Offers, Placed, Top Locations
-        // JS only needs to clear cached values so Excel recalculates on open
-        _sh3Xml = _sh3Xml.replace(/<v>-9996<\/v>/g, '<v>0</v>');
+        // Total Candidates: A6 and B43
+        _sh3Xml = _sh3Xml.replace(/<c r="A6" s="7"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
+          '<c r="A6" s="7" t="n"><v>' + _totalCands + '<\/v><\/c>');
+        _sh3Xml = _sh3Xml.replace(/<c r="B43" s="[^"]*"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
+          '<c r="B43" s="24" t="n"><v>' + _totalCands + '<\/v><\/c>');
+        // Gender counts: B47=Male, B48=Female, B49=Other
+        _sh3Xml = _sh3Xml.replace(/<c r="B47" s="[^"]*"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
+          '<c r="B47" s="16" t="n"><v>' + _maleCount + '<\/v><\/c>');
+        _sh3Xml = _sh3Xml.replace(/<c r="B48" s="[^"]*"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
+          '<c r="B48" s="20" t="n"><v>' + _femaleCount + '<\/v><\/c>');
+        _sh3Xml = _sh3Xml.replace(/<c r="B49" s="[^"]*"><f>[^<]*<\/f><v[^>]*\/><\/c>/,
+          '<c r="B49" s="20" t="n"><v>' + _nonBinary + '<\/v><\/c>');
         _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
-
-        // Write pipeline breakdown + top locations directly into Dashboard (no _Pivot needed)
-        try {
-          // Pipeline breakdown: write tag names + counts into Dashboard A13:C42
-          _tagListPv.forEach(function(tag, i) {
-            var dRow = i + 13;
-            var cnt = _tagCountsPv[tag];
-            var pct = _cands.length > 0 ? cnt / _cands.length : 0;
-            var ssI = _ssIdx(tag);
-            // Replace formula cells with values
-            var rA = new RegExp('<c r="A'+dRow+'" [^>]*><f[^>]*>[^<]*</f><v[^<]*</v></c>');
-            var rB = new RegExp('<c r="B'+dRow+'" [^>]*><f[^>]*>[^<]*</f><v[^<]*</v></c>');
-            var rC = new RegExp('<c r="C'+dRow+'" [^>]*><f[^>]*>[^<]*</f><v[^<]*</v></c>');
-            _sh3Xml = _sh3Xml.replace(rA, '<c r="A'+dRow+'" s="15" t="s"><v>'+ssI+'</v></c>');
-            _sh3Xml = _sh3Xml.replace(rB, '<c r="B'+dRow+'" s="16" t="n"><v>'+cnt+'</v></c>');
-            _sh3Xml = _sh3Xml.replace(rC, '<c r="C'+dRow+'" s="17" t="n"><v>'+pct.toFixed(6)+'</v></c>');
-          });
-
-          // Top Locations: write into Dashboard A27:B35
-          var _locCounts = {};
-          _cands.forEach(function(c){ var l=(c.location||'').trim(); if(l) _locCounts[l]=(_locCounts[l]||0)+1; });
-          var _topLocs = Object.keys(_locCounts).sort(function(a,b){ return _locCounts[b]-_locCounts[a]; }).slice(0,9);
-          _topLocs.forEach(function(loc, i) {
-            var dRow = i + 27;
-            var ssI = _ssIdx(loc);
-            var rA = new RegExp('<c r="A'+dRow+'" [^>]*><f[^>]*>[^<]*</f>(?:<v[^<]*</v>)?</c>');
-            var rB = new RegExp('<c r="B'+dRow+'" [^>]*><f[^>]*>[^<]*</f>(?:<v[^<]*</v>)?</c>');
-            _sh3Xml = _sh3Xml.replace(rA, '<c r="A'+dRow+'" s="15" t="s"><v>'+ssI+'</v></c>');
-            _sh3Xml = _sh3Xml.replace(rB, '<c r="B'+dRow+'" s="16" t="n"><v>'+_locCounts[loc]+'</v></c>');
-          });
-
-          _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
-          console.log('[DASHBOARD] Pipeline:', _tagListPv.length, 'tags | Locations:', _topLocs.length);
-        } catch(_pvErr) {
-          console.error('[PIVOT] Error:', _pvErr.message);
-        }
 
         // Force Excel to recalculate remaining formulas on open
         var _wbXml = await _projZip.files['xl/workbook.xml'].async('string');
@@ -3341,7 +3283,7 @@ async function downloadHistory(index) {
         var projBlob = new Blob([_projBuf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
         var projA = document.createElement('a');
         projA.href = URL.createObjectURL(projBlob);
-        projA.download = 'Project Report - ' + ((_d.projectName || item.name || 'Report').replace(/[^a-zA-Z0-9 _-]/g,'')) + '.xlsx';
+        projA.download = baseName + '.xlsx';
         document.body.appendChild(projA); projA.click(); document.body.removeChild(projA);
         return;
       }
@@ -3688,7 +3630,7 @@ function clearUsageLogs(){
   if(!confirm('Clear all local log entries? Server logs are unaffected.'))return;
   localStorage.removeItem('sh_usage_logs');
   loadUsageLogs();
-  (window._safeNotify || notify)('✓ Local logs cleared');
+  notify('✓ Local logs cleared');
 }
 </script>
 
@@ -3766,30 +3708,12 @@ function exportUsageLogs(){
   a.href='/api/proxy/logs/csv';
   a.download='SH_DocGen_Usage_'+new Date().toISOString().slice(0,10)+'.csv';
   document.body.appendChild(a);a.click();document.body.removeChild(a);
-  (window._safeNotify || notify)('⬇ Downloading usage report...');
+  notify('⬇ Downloading usage report...');
 }
 function clearUsageLogs(){
   if(!confirm('Clear all local log entries? Server logs are unaffected.'))return;
   localStorage.removeItem('sh_usage_logs');
   loadUsageLogs();
-  (window._safeNotify || notify)('✓ Local logs cleared');
+  notify('✓ Local logs cleared');
 }
 }
-
-// Safe notify wrapper
-var _origNotify = (typeof notify === 'function') ? notify : null;
-window._safeNotify = function(msg) {
-  var el = document.getElementById('notif');
-  if (el) { el.textContent = msg; el.classList.add('show'); setTimeout(function(){ el.classList.remove('show'); }, 3000); }
-};
-
-// Auto-init on page load
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', function(){ if(typeof initUserName==='function') initUserName(); });
-} else {
-  if(typeof initUserName==='function') initUserName();
-}
-</script>
-<div class="notif" id="notif"></div>
-</body>
-</html>
