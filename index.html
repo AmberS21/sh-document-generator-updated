@@ -1603,7 +1603,7 @@ async function generate() {
             + '?fieldsWithCandidate%5B%5D=manager.tags'
             + '&fieldsWithCandidate%5B%5D=manager.customValues'
             + '&fieldsWithCandidate%5B%5D=manager.researchNotes'
-            + '&fieldsWithCandidate%5B%5D=meta.candidate';
+            + '&fields%5B%5D=meta.candidate';
           var candResp = await fetch(_candUrl);
           
           var _rawCandData = candResp.ok ? await candResp.json() : {data:[]};
