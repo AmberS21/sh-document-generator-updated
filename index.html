@@ -2442,6 +2442,7 @@ try {
   
   rawOutput = rawOutput.trim();
   output = JSON.parse(rawOutput);
+  console.log('[DEBUG] RAW KEYS:', Object.keys(output).filter(function(k){return k.indexOf('COMPANY_1')===0;}));
   console.log('[DEBUG] COMPANY_1_NAME:', output.COMPANY_1_NAME, '| ROLE:', output.COMPANY_1_ROLE, '| DATES:', output.COMPANY_1_DATES);
   // DEBUG: log parsed output for GB profile
   if (isGbProfile) {
@@ -2885,7 +2886,7 @@ async function downloadHistory(index) {
           } else {
             var _zipI = new PizZip(_abC.slice(0));
             // Build BUSINESS_EXPERIENCE_BLOCK before rendering (same as single-file path)
-            var _docXmlC = await _zipI.files['word/document.xml'].async('string');
+            var _docXmlC = _zipI.files['word/document.xml'].asText();
             var _BE_PARAC = '<w:p><w:pPr><w:spacing w:after="0"/><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr><w:t>{{BUSINESS_EXPERIENCE_BLOCK}}</w:t></w:r></w:p>';
             var _sumXmlC = buildGlobalSummary(_cvC.SUMMARY || '');
             var _SUMMARY_PARAC = '<w:p><w:pPr><w:spacing w:after="0"/><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr><w:t>{{SUMMARY_BLOCK}}</w:t></w:r></w:p>';
