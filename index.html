@@ -1942,9 +1942,9 @@ async function generate() {
               inputText = await file.text();
             } else if (ext === 'docx') {
               var arrBuf = await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
-              var zipF = new PizZip(arrBuf);
-              var bodyXml = zipF.files['word/document.xml'] ? zipF.files['word/document.xml'].asText() : '';
-              inputText = bodyXml.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().substring(0,50000);
+              // Use Mammoth.js for proper DOCX text extraction (preserves structure)
+              var mammothResult = await mammoth.extractRawText({arrayBuffer: arrBuf});
+              inputText = mammothResult.value.trim().substring(0, 50000);
             } else if (ext === 'pdf') {
               inputText = await (async function(){
                 var ab = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res(e.target.result);};rd.onerror=rej;rd.readAsArrayBuffer(file);});
@@ -1964,8 +1964,9 @@ async function generate() {
               inputText = await file.text();
             }
           } catch(fileErr) {
-            btn.classList.remove('loading'); btn.innerHTML = '\u274c Error \u2014 Try Again';
-            notify('Could not read file: ' + fileErr.message); return;
+            notify('\u26a0 Skipped ' + file.name + ': ' + fileErr.message);
+            console.error('[BATCH] Error on', file.name, fileErr.message);
+            continue; // skip this file, continue with next
           }
           if (inputText && inputText.length >= 10) {
             btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + '...';
