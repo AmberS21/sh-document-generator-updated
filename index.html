@@ -3290,6 +3290,55 @@ async function downloadHistory(index) {
           '<c r="B49" s="20" t="n"><v>' + _nonBinary + '<\/v><\/c>');
         _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
 
+        // Write pipeline tag unique values + counts directly to _Pivot sheet (sheet2)
+        // This bypasses the array formulas which don't recalc in JSZip output
+        try {
+          var _sh2Xml = await _projZip.files['xl/worksheets/sheet2.xml'].async('string');
+          
+          // Count unique tags from candidates
+          var _tagCounts = {};
+          _cands.forEach(function(c) {
+            var t = (c.pipelineTag || '').trim();
+            if (t) _tagCounts[t] = (_tagCounts[t] || 0) + 1;
+          });
+          var _tagList = Object.keys(_tagCounts).sort();
+          var _total = _cands.length;
+          
+          // Build new shared strings for pivot data
+          var _ssXml2 = await _projZip.files['xl/sharedStrings.xml'].async('string');
+          var _ssCount2 = (_ssXml2.match(/<si>/g) || []).length;
+          var _newSS2 = '';
+          var _pivotRows = '';
+          
+          _tagList.forEach(function(tag, i) {
+            var row = i + 2; // starts at row 2
+            var cnt = _tagCounts[tag];
+            var pct = _total > 0 ? cnt / _total : 0;
+            var ssIdx = _ssCount2 + i;
+            _newSS2 += '<si><t xml:space="preserve">' + _xe(tag) + '</t></si>';
+            _pivotRows += '<row r="' + row + '" spans="1:3">'
+              + '<c r="A' + row + '" t="s"><v>' + ssIdx + '</v></c>'
+              + '<c r="B' + row + '" t="n"><v>' + cnt + '</v></c>'
+              + '<c r="C' + row + '" t="n"><v>' + pct.toFixed(6) + '</v></c>'
+              + '</row>';
+          });
+          
+          // Replace existing data rows in _Pivot (keep row 1 header)
+          _sh2Xml = _sh2Xml.replace(/<row r="[2-9][0-9]*"[^>]*>[\s\S]*?<\/row>/g, '');
+          _sh2Xml = _sh2Xml.replace('</sheetData>', _pivotRows + '</sheetData>');
+          
+          // Update shared strings
+          var _totalSS2 = _ssCount2 + _tagList.length;
+          _ssXml2 = _ssXml2.replace(/count="[^"]*"/, 'count="' + _totalSS2 + '"')
+                           .replace(/uniqueCount="[^"]*"/, 'uniqueCount="' + _totalSS2 + '"');
+          _ssXml2 = _ssXml2.replace('</sst>', _newSS2 + '</sst>');
+          
+          _projZip.file('xl/worksheets/sheet2.xml', _sh2Xml);
+          _projZip.file('xl/sharedStrings.xml', _ssXml2);
+        } catch(_pvErr) {
+          console.error('[PIVOT] Error writing pipeline data:', _pvErr.message);
+        }
+
         // Force Excel to recalculate remaining formulas on open
         var _wbXml = await _projZip.files['xl/workbook.xml'].async('string');
         _wbXml = _wbXml.replace(/<calcPr[^/]*\/>/,
