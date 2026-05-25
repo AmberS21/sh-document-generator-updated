@@ -3262,9 +3262,16 @@ async function downloadHistory(index) {
         _sh1 = _sh1.replace('</sheetData>', _newRows + '</sheetData>');
 
         // Update shared strings count
-        var _totalSS = _ssCount + (_cands.length * 7);
+        // Also build pivot tag shared strings here in same write
+        var _tagCountsPv = {};
+        _cands.forEach(function(c){ var t=(c.pipelineTag||'').trim(); if(t) _tagCountsPv[t]=(_tagCountsPv[t]||0)+1; });
+        var _tagListPv = Object.keys(_tagCountsPv).sort();
+        var _newSSpv = '';
+        _tagListPv.forEach(function(tag){ _newSSpv += '<si><t xml:space="preserve">' + _xe(tag) + '</t></si>'; });
+
+        var _totalSS = _ssCount + (_cands.length * 7) + _tagListPv.length;
         _ssXml = _ssXml.replace(/count="[^"]*"/, 'count="' + _totalSS + '"').replace(/uniqueCount="[^"]*"/, 'uniqueCount="' + _totalSS + '"');
-        _ssXml = _ssXml.replace('</sst>', _newSS + '</sst>');
+        _ssXml = _ssXml.replace('</sst>', _newSS + _newSSpv + '</sst>');
 
         _projZip.file('xl/worksheets/sheet1.xml', _sh1);
         _projZip.file('xl/sharedStrings.xml', _ssXml);
@@ -3281,40 +3288,25 @@ async function downloadHistory(index) {
         _sh3Xml = _sh3Xml.replace(/<v>-9996<\/v>/g, '<v>0</v>');
         _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
 
-        // Write pipeline tag counts to _Pivot using shared strings
+        // Write pivot tags to _Pivot sheet using pre-built shared string indices
         try {
           var _sh2Xml = await _projZip.files['xl/worksheets/sheet2.xml'].async('string');
-          var _ssXmlPv = await _projZip.files['xl/sharedStrings.xml'].async('string');
-          var _tagCounts = {};
-          _cands.forEach(function(c) {
-            var t = (c.pipelineTag || '').trim();
-            if (t) _tagCounts[t] = (_tagCounts[t] || 0) + 1;
-          });
-          var _tagList = Object.keys(_tagCounts).sort();
-          var _pvTot = _cands.length;
-          var _ssCurr = (_ssXmlPv.match(/<si>/g) || []).length;
-          var _newSsPv = '';
           var _pivotRows = '';
-          _tagList.forEach(function(tag, i) {
+          var _pvBaseIdx = _ssCount + (_cands.length * 7); // starts after candidate strings
+          _tagListPv.forEach(function(tag, i) {
             var row = i + 2;
-            var cnt = _tagCounts[tag];
-            var pct = _pvTot > 0 ? cnt / _pvTot : 0;
-            _newSsPv += '<si><t xml:space="preserve">' + _xe(tag) + '</t></si>';
+            var cnt = _tagCountsPv[tag];
+            var pct = _cands.length > 0 ? cnt / _cands.length : 0;
             _pivotRows += '<row r="' + row + '" spans="1:3">'
-              + '<c r="A' + row + '" t="s"><v>' + (_ssCurr + i) + '</v></c>'
+              + '<c r="A' + row + '" t="s"><v>' + (_pvBaseIdx + i) + '</v></c>'
               + '<c r="B' + row + '" t="n"><v>' + cnt + '</v></c>'
               + '<c r="C' + row + '" t="n"><v>' + pct.toFixed(6) + '</v></c>'
               + '</row>';
           });
-          var _pvTot2 = _ssCurr + _tagList.length;
-          _ssXmlPv = _ssXmlPv.replace(/count="[^"]*"/, 'count="' + _pvTot2 + '"')
-                             .replace(/uniqueCount="[^"]*"/, 'uniqueCount="' + _pvTot2 + '"')
-                             .replace('</sst>', _newSsPv + '</sst>');
-          _projZip.file('xl/sharedStrings.xml', _ssXmlPv);
           _sh2Xml = _sh2Xml.replace('</sheetData>', _pivotRows + '</sheetData>');
           _projZip.file('xl/worksheets/sheet2.xml', _sh2Xml);
           _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
-          console.log('[PIVOT] Written', _tagList.length, 'tags');
+          console.log('[PIVOT] Written', _tagListPv.length, 'tags');
         } catch(_pvErr) {
           console.error('[PIVOT] Error:', _pvErr.message);
         }
@@ -3330,7 +3322,7 @@ async function downloadHistory(index) {
         var projBlob = new Blob([_projBuf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
         var projA = document.createElement('a');
         projA.href = URL.createObjectURL(projBlob);
-        projA.download = baseName + '.xlsx';
+        projA.download = 'Project Report - ' + ((_d.projectName || item.name || 'Report').replace(/[^a-zA-Z0-9 _-]/g,'')) + '.xlsx';
         document.body.appendChild(projA); projA.click(); document.body.removeChild(projA);
         return;
       }
