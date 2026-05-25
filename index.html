@@ -2884,6 +2884,15 @@ async function downloadHistory(index) {
             _outC = await _azipC.generateAsync({type:'arraybuffer',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
           } else {
             var _zipI = new PizZip(_abC.slice(0));
+            // Build BUSINESS_EXPERIENCE_BLOCK before rendering (same as single-file path)
+            var _docXmlC = await _zipI.files['word/document.xml'].async('string');
+            var _BE_PARAC = '<w:p><w:pPr><w:spacing w:after="0"/><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr><w:t>{{BUSINESS_EXPERIENCE_BLOCK}}</w:t></w:r></w:p>';
+            var _sumXmlC = buildGlobalSummary(_cvC.SUMMARY || '');
+            var _SUMMARY_PARAC = '<w:p><w:pPr><w:spacing w:after="0"/><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr><w:t>{{SUMMARY_BLOCK}}</w:t></w:r></w:p>';
+            _docXmlC = _docXmlC.replace(_SUMMARY_PARAC, _sumXmlC);
+            var _bizXmlC = buildGlobalBizExp(_cvC);
+            _docXmlC = _docXmlC.replace(_BE_PARAC, _bizXmlC);
+            _zipI.file('word/document.xml', _docXmlC);
             var _docC = new window.docxtemplater(_zipI, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return "";}});
             _cvC.SUMMARY_BULLET_1 = _cvC.SUMMARY || ''; _cvC.SUMMARY_BULLET_2 = ''; _cvC.SUMMARY_BULLET_3 = ''; _docC.render(_cvC);
             _outC = _docC.getZip().generate({type:'arraybuffer',mimeType:_docMime});
