@@ -1634,13 +1634,13 @@ async function generate() {
           var _enrichedCandidates = [];
           for (var _ci = 0; _ci < _basicCandidates.length; _ci++) {
             var _bc = _basicCandidates[_ci];
-            // Extract pipeline tag immediately from _bc before any enrichment overwrites it
-            var _bcPipelineTag = '';
+            // Extract pipeline tag and store ON _bc so it survives async scope
+            _bc._resolvedPipelineTag = '';
             if (_bc.meta && _bc.meta.candidate && _bc.meta.candidate.pipelineTags) {
               var _bcTags = _bc.meta.candidate.pipelineTags.slice().sort(function(a,b){
                 return new Date(b.addedAt||0) - new Date(a.addedAt||0);
               });
-              if (_bcTags.length > 0) _bcPipelineTag = _bcTags[0].text || '';
+              if (_bcTags.length > 0) _bc._resolvedPipelineTag = _bcTags[0].text || '';
             }
             try {
               var _pResp = await fetch(ezekiaBase2 + '/v4/people/' + _bc.id
@@ -1707,8 +1707,8 @@ async function generate() {
               var _country = _addr.country || '';
               var _loc = [_city, _country].filter(Boolean).join(', ');
               // Pipeline Tag — from meta.candidate.pipelineTags (requires meta.candidate in fieldsWithCandidate)
-              // Use pre-extracted pipeline tag from raw _bc object
-              var _tag = _bcPipelineTag || '';
+              // Use pipeline tag stored on _bc object (immune to async scope issues)
+              var _tag = _bc._resolvedPipelineTag || '';
               // Fallback: owner.tags
               if (!_tag && cand.owner && cand.owner.tags) {
                 var _tags = Array.isArray(cand.owner.tags) ? cand.owner.tags : [cand.owner.tags];
