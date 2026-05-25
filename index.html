@@ -3308,9 +3308,22 @@ async function downloadHistory(index) {
               + '<c r="C' + row + '" t="n"><v>' + pct.toFixed(6) + '</v></c>'
               + '</row>';
           });
+          // Build top locations rows (go into _Pivot rows 16-24, Dashboard reads them)
+          var _locCounts = {};
+          _cands.forEach(function(c){ var l=(c.location||'').trim(); if(l) _locCounts[l]=(_locCounts[l]||0)+1; });
+          var _topLocs = Object.keys(_locCounts).sort(function(a,b){ return _locCounts[b]-_locCounts[a]; }).slice(0,9);
+          var _locRows = '';
+          _topLocs.forEach(function(loc, i) {
+            var row = i + 16; // locations start at _Pivot row 16
+            _locRows += '<row r="' + row + '" spans="1:3">'
+              + '<c r="A' + row + '" t="s"><v>' + _ssIdx(loc) + '</v></c>'
+              + '<c r="B' + row + '" t="n"><v>' + _locCounts[loc] + '</v></c>'
+              + '</row>';
+          });
+
           // Remove existing data rows 2+ from pivot before inserting
           _sh2Xml = _sh2Xml.replace(/<row r="([2-9]|[1-9][0-9]+)"[^>]*>[\s\S]*?<\/row>/g, '');
-          _sh2Xml = _sh2Xml.replace('</sheetData>', _pivotRows + '</sheetData>');
+          _sh2Xml = _sh2Xml.replace('</sheetData>', _pivotRows + _locRows + '</sheetData>');
           _projZip.file('xl/worksheets/sheet2.xml', _sh2Xml);
           _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
           console.log('[PIVOT] Written', _tagListPv.length, 'unique tags (deduped)');
