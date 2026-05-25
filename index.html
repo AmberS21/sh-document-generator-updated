@@ -3294,39 +3294,38 @@ async function downloadHistory(index) {
         _sh3Xml = _sh3Xml.replace(/<v>-9996<\/v>/g, '<v>0</v>');
         _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
 
-        // Write pivot tags to _Pivot sheet - use correct deduped indices
+        // Write pipeline breakdown + top locations directly into Dashboard (no _Pivot needed)
         try {
-          var _sh2Xml = await _projZip.files['xl/worksheets/sheet2.xml'].async('string');
-          var _pivotRows = '';
+          // Pipeline breakdown: write tag names + counts into Dashboard A13:C42
           _tagListPv.forEach(function(tag, i) {
-            var row = i + 2;
+            var dRow = i + 13;
             var cnt = _tagCountsPv[tag];
             var pct = _cands.length > 0 ? cnt / _cands.length : 0;
-            _pivotRows += '<row r="' + row + '" spans="1:3">'
-              + '<c r="A' + row + '" t="s"><v>' + _ssIdx(tag) + '</v></c>'
-              + '<c r="B' + row + '" t="n"><v>' + cnt + '</v></c>'
-              + '<c r="C' + row + '" t="n"><v>' + pct.toFixed(6) + '</v></c>'
-              + '</row>';
+            var ssI = _ssIdx(tag);
+            // Replace formula cells with values
+            var rA = new RegExp('<c r="A'+dRow+'" [^>]*><f[^>]*>[^<]*</f><v[^<]*</v></c>');
+            var rB = new RegExp('<c r="B'+dRow+'" [^>]*><f[^>]*>[^<]*</f><v[^<]*</v></c>');
+            var rC = new RegExp('<c r="C'+dRow+'" [^>]*><f[^>]*>[^<]*</f><v[^<]*</v></c>');
+            _sh3Xml = _sh3Xml.replace(rA, '<c r="A'+dRow+'" s="15" t="s"><v>'+ssI+'</v></c>');
+            _sh3Xml = _sh3Xml.replace(rB, '<c r="B'+dRow+'" s="16" t="n"><v>'+cnt+'</v></c>');
+            _sh3Xml = _sh3Xml.replace(rC, '<c r="C'+dRow+'" s="17" t="n"><v>'+pct.toFixed(6)+'</v></c>');
           });
-          // Build top locations rows (go into _Pivot rows 16-24, Dashboard reads them)
+
+          // Top Locations: write into Dashboard A27:B35
           var _locCounts = {};
           _cands.forEach(function(c){ var l=(c.location||'').trim(); if(l) _locCounts[l]=(_locCounts[l]||0)+1; });
           var _topLocs = Object.keys(_locCounts).sort(function(a,b){ return _locCounts[b]-_locCounts[a]; }).slice(0,9);
-          var _locRows = '';
           _topLocs.forEach(function(loc, i) {
-            var row = i + 16; // locations start at _Pivot row 16
-            _locRows += '<row r="' + row + '" spans="1:3">'
-              + '<c r="A' + row + '" t="s"><v>' + _ssIdx(loc) + '</v></c>'
-              + '<c r="B' + row + '" t="n"><v>' + _locCounts[loc] + '</v></c>'
-              + '</row>';
+            var dRow = i + 27;
+            var ssI = _ssIdx(loc);
+            var rA = new RegExp('<c r="A'+dRow+'" [^>]*><f[^>]*>[^<]*</f>(?:<v[^<]*</v>)?</c>');
+            var rB = new RegExp('<c r="B'+dRow+'" [^>]*><f[^>]*>[^<]*</f>(?:<v[^<]*</v>)?</c>');
+            _sh3Xml = _sh3Xml.replace(rA, '<c r="A'+dRow+'" s="15" t="s"><v>'+ssI+'</v></c>');
+            _sh3Xml = _sh3Xml.replace(rB, '<c r="B'+dRow+'" s="16" t="n"><v>'+_locCounts[loc]+'</v></c>');
           });
 
-          // Remove existing data rows 2+ from pivot before inserting
-          _sh2Xml = _sh2Xml.replace(/<row r="([2-9]|[1-9][0-9]+)"[^>]*>[\s\S]*?<\/row>/g, '');
-          _sh2Xml = _sh2Xml.replace('</sheetData>', _pivotRows + _locRows + '</sheetData>');
-          _projZip.file('xl/worksheets/sheet2.xml', _sh2Xml);
           _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
-          console.log('[PIVOT] Written', _tagListPv.length, 'unique tags (deduped)');
+          console.log('[DASHBOARD] Pipeline:', _tagListPv.length, 'tags | Locations:', _topLocs.length);
         } catch(_pvErr) {
           console.error('[PIVOT] Error:', _pvErr.message);
         }
