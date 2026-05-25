@@ -1608,6 +1608,13 @@ async function generate() {
           
           var _rawCandData = candResp.ok ? await candResp.json() : {data:[]};
           var _basicCandidates = _rawCandData.data || [];
+          // Debug: log first candidate to check meta.candidate field
+          if (_basicCandidates.length > 0) {
+            var _fc = _basicCandidates[0];
+            console.log('[PIPELINE DEBUG] First candidate keys:', Object.keys(_fc));
+            console.log('[PIPELINE DEBUG] meta:', JSON.stringify(_fc.meta));
+            console.log('[PIPELINE DEBUG] manager.tags:', JSON.stringify(_fc.manager && _fc.manager.tags));
+          }
           // Log COMPLETE first candidate from candidates list to find pipeline tag
           if (_basicCandidates.length > 0) {
             
