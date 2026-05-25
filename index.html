@@ -3281,49 +3281,40 @@ async function downloadHistory(index) {
         _sh3Xml = _sh3Xml.replace(/<v>-9996<\/v>/g, '<v>0</v>');
         _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
 
-        // Write pipeline tag counts directly to _Pivot sheet using inline strings
+        // Write pipeline tag counts to _Pivot using shared strings
         try {
           var _sh2Xml = await _projZip.files['xl/worksheets/sheet2.xml'].async('string');
+          var _ssXmlPv = await _projZip.files['xl/sharedStrings.xml'].async('string');
           var _tagCounts = {};
           _cands.forEach(function(c) {
             var t = (c.pipelineTag || '').trim();
             if (t) _tagCounts[t] = (_tagCounts[t] || 0) + 1;
           });
           var _tagList = Object.keys(_tagCounts).sort();
-          var _total = _cands.length;
+          var _pvTot = _cands.length;
+          var _ssCurr = (_ssXmlPv.match(/<si>/g) || []).length;
+          var _newSsPv = '';
           var _pivotRows = '';
           _tagList.forEach(function(tag, i) {
             var row = i + 2;
             var cnt = _tagCounts[tag];
-            var pct = _total > 0 ? cnt / _total : 0;
+            var pct = _pvTot > 0 ? cnt / _pvTot : 0;
+            _newSsPv += '<si><t xml:space="preserve">' + _xe(tag) + '</t></si>';
             _pivotRows += '<row r="' + row + '" spans="1:3">'
-              + '<c r="A' + row + '" t="inlineStr"><is><t>' + _xe(tag) + '</t></is></c>'
+              + '<c r="A' + row + '" t="s"><v>' + (_ssCurr + i) + '</v></c>'
               + '<c r="B' + row + '" t="n"><v>' + cnt + '</v></c>'
               + '<c r="C' + row + '" t="n"><v>' + pct.toFixed(6) + '</v></c>'
               + '</row>';
           });
-          // Simply append new rows before </sheetData> - template pivot has no data rows
+          var _pvTot2 = _ssCurr + _tagList.length;
+          _ssXmlPv = _ssXmlPv.replace(/count="[^"]*"/, 'count="' + _pvTot2 + '"')
+                             .replace(/uniqueCount="[^"]*"/, 'uniqueCount="' + _pvTot2 + '"')
+                             .replace('</sst>', _newSsPv + '</sst>');
+          _projZip.file('xl/sharedStrings.xml', _ssXmlPv);
           _sh2Xml = _sh2Xml.replace('</sheetData>', _pivotRows + '</sheetData>');
           _projZip.file('xl/worksheets/sheet2.xml', _sh2Xml);
-          console.log('[PIVOT] Written', _tagList.length, 'unique tags to _Pivot');
-
-          // Also write directly into Dashboard pipeline rows (A13:C42) to bypass formula recalc
-          // Reuse _sh3Xml which already has Total/Gender counts written
-          var _sh3Xml2 = _sh3Xml;
-          _tagList.forEach(function(tag, i) {
-            var dRow = i + 13; // Dashboard data starts at row 13
-            var cnt = _tagCounts[tag];
-            var pct = _total > 0 ? cnt / _total : 0;
-            // Replace cached values for A, B, C columns in this row
-            var _aPattern = new RegExp('<c r="A' + dRow + '" s="[^"]*" t="[^"]*"><f[^>]*>[^<]*</f><v[^<]*</v></c>');
-            var _bPattern = new RegExp('<c r="B' + dRow + '" s="[^"]*" t="[^"]*"><f[^>]*>[^<]*</f><v[^<]*</v></c>');
-            var _cPattern = new RegExp('<c r="C' + dRow + '" s="[^"]*" t="[^"]*"><f[^>]*>[^<]*</f><v[^<]*</v></c>');
-            _sh3Xml2 = _sh3Xml2.replace(_aPattern, '<c r="A' + dRow + '" s="15" t="inlineStr"><is><t>' + _xe(tag) + '</t></is></c>');
-            _sh3Xml2 = _sh3Xml2.replace(_bPattern, '<c r="B' + dRow + '" s="16" t="n"><v>' + cnt + '</v></c>');
-            _sh3Xml2 = _sh3Xml2.replace(_cPattern, '<c r="C' + dRow + '" s="17" t="n"><v>' + pct.toFixed(6) + '</v></c>');
-          });
-          _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml2);
-
+          _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
+          console.log('[PIVOT] Written', _tagList.length, 'tags');
         } catch(_pvErr) {
           console.error('[PIVOT] Error:', _pvErr.message);
         }
