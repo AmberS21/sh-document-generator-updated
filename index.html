@@ -3239,9 +3239,21 @@ async function downloadHistory(index) {
         // Count existing shared strings
         var _ssCount = (_ssXml.match(/<si>/g) || []).length;
 
-        // Build candidate rows + new shared strings
+        // Build candidate rows using DEDUPLICATED shared strings (getSSIdx pattern)
         var _cands = (_d.candidates || []);
-        var _newSS = '';
+        var _ssMap = {};   // value -> index
+        var _ssArr = [];   // unique values in order
+        function _ssIdx(val) {
+          var k = val || '';
+          if (!(k in _ssMap)) { _ssMap[k] = _ssCount + _ssArr.length; _ssArr.push(k); }
+          return _ssMap[k];
+        }
+        // Pre-index all pipeline tags (for pivot) in sorted order
+        var _tagCountsPv = {};
+        _cands.forEach(function(c){ var t=(c.pipelineTag||'').trim(); if(t) _tagCountsPv[t]=(_tagCountsPv[t]||0)+1; });
+        var _tagListPv = Object.keys(_tagCountsPv).sort();
+        _tagListPv.forEach(function(tag){ _ssIdx(tag); }); // reserve indices for tags first
+
         var _newRows = '';
         _cands.forEach(function(cand, ri) {
           var _r = 3 + ri;
@@ -3249,12 +3261,12 @@ async function downloadHistory(index) {
           var _cols = ['A','B','C','D','E','F','G'];
           var _cells = '';
           _vals.forEach(function(v, ci) {
-            var _si = _ssCount + (ri * 7) + ci;
-            _newSS += '<si><t xml:space="preserve">' + _xe(v) + '</t></si>';
-            _cells += '<c r="' + _cols[ci] + _r + '" t="s"><v>' + _si + '</v></c>';
+            _cells += '<c r="' + _cols[ci] + _r + '" t="s"><v>' + _ssIdx(v) + '</v></c>';
           });
           _newRows += '<row r="' + _r + '" spans="1:7" ht="15.75" customHeight="1">' + _cells + '</row>';
         });
+        // Build deduped shared strings XML
+        var _newSS = _ssArr.map(function(v){ return '<si><t xml:space="preserve">' + _xe(v) + '</t></si>'; }).join('');
 
         // Remove old data rows and insert new ones
         _sh1 = _sh1.replace(/<row r="[3-9][0-9]*"[^/]*\/>/g, '');
@@ -3262,16 +3274,10 @@ async function downloadHistory(index) {
         _sh1 = _sh1.replace('</sheetData>', _newRows + '</sheetData>');
 
         // Update shared strings count
-        // Also build pivot tag shared strings here in same write
-        var _tagCountsPv = {};
-        _cands.forEach(function(c){ var t=(c.pipelineTag||'').trim(); if(t) _tagCountsPv[t]=(_tagCountsPv[t]||0)+1; });
-        var _tagListPv = Object.keys(_tagCountsPv).sort();
-        var _newSSpv = '';
-        _tagListPv.forEach(function(tag){ _newSSpv += '<si><t xml:space="preserve">' + _xe(tag) + '</t></si>'; });
-
-        var _totalSS = _ssCount + (_cands.length * 7) + _tagListPv.length;
-        _ssXml = _ssXml.replace(/count="[^"]*"/, 'count="' + _totalSS + '"').replace(/uniqueCount="[^"]*"/, 'uniqueCount="' + _totalSS + '"');
-        _ssXml = _ssXml.replace('</sst>', _newSS + _newSSpv + '</sst>');
+        // Update shared strings count with deduped array
+        var _totalSS = _ssCount + _ssArr.length;
+        _ssXml = _ssXml.replace(/count="[^"]*"/, 'count="' + _totalSS + '"').replace(/uniqueCount="[^"]*"/, 'uniqueCount="' + _ssArr.length + '"');
+        _ssXml = _ssXml.replace('</sst>', _newSS + '</sst>');
 
         _projZip.file('xl/worksheets/sheet1.xml', _sh1);
         _projZip.file('xl/sharedStrings.xml', _ssXml);
@@ -3288,25 +3294,26 @@ async function downloadHistory(index) {
         _sh3Xml = _sh3Xml.replace(/<v>-9996<\/v>/g, '<v>0</v>');
         _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
 
-        // Write pivot tags to _Pivot sheet using pre-built shared string indices
+        // Write pivot tags to _Pivot sheet - use correct deduped indices
         try {
           var _sh2Xml = await _projZip.files['xl/worksheets/sheet2.xml'].async('string');
           var _pivotRows = '';
-          var _pvBaseIdx = _ssCount + (_cands.length * 7); // starts after candidate strings
           _tagListPv.forEach(function(tag, i) {
             var row = i + 2;
             var cnt = _tagCountsPv[tag];
             var pct = _cands.length > 0 ? cnt / _cands.length : 0;
             _pivotRows += '<row r="' + row + '" spans="1:3">'
-              + '<c r="A' + row + '" t="s"><v>' + (_pvBaseIdx + i) + '</v></c>'
+              + '<c r="A' + row + '" t="s"><v>' + _ssIdx(tag) + '</v></c>'
               + '<c r="B' + row + '" t="n"><v>' + cnt + '</v></c>'
               + '<c r="C' + row + '" t="n"><v>' + pct.toFixed(6) + '</v></c>'
               + '</row>';
           });
+          // Remove existing data rows 2+ from pivot before inserting
+          _sh2Xml = _sh2Xml.replace(/<row r="([2-9]|[1-9][0-9]+)"[^>]*>[\s\S]*?<\/row>/g, '');
           _sh2Xml = _sh2Xml.replace('</sheetData>', _pivotRows + '</sheetData>');
           _projZip.file('xl/worksheets/sheet2.xml', _sh2Xml);
           _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
-          console.log('[PIVOT] Written', _tagListPv.length, 'tags');
+          console.log('[PIVOT] Written', _tagListPv.length, 'unique tags (deduped)');
         } catch(_pvErr) {
           console.error('[PIVOT] Error:', _pvErr.message);
         }
