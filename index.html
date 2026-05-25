@@ -2136,6 +2136,8 @@ async function convertPdfToWord() {
 }
 
 async function processOneCV(inputText, tpl, btn, returnOnly) {
+  console.log('[DEBUG] processOneCV called - tpl:', tpl, 'inputText length:', inputText ? inputText.length : 0);
+  console.log('[DEBUG] inputText first 300 chars:', inputText ? inputText.substring(0,300) : 'EMPTY');
   var selChip = document.querySelector('.fmt-chip.on-d,.fmt-chip.on-p,.fmt-chip.on-x,.fmt-chip.on-f');
   var fmt = selChip ? (selChip.className.match(/on-([dpxf])/) ? selChip.className.match(/on-([dpxf])/)[1] : 'd') : 'd';
   var claudeKey = (localStorage.getItem('sh_claudeKey') || '').trim();
