@@ -3303,6 +3303,30 @@ async function downloadHistory(index) {
           var pattern = new RegExp('<c r="'+fRef+'" s="([^"]*)"[^>]*>(?:<v>[^<]*</v>)?</c>');
           _sh3Xml = _sh3Xml.replace(pattern, '<c r="'+fRef+'" s="$1" t="s"><v>'+ssI+'</v></c>');
         });
+        // Write unique tag names into _Pivot col A (rows 2-31)
+        // Template COUNTIF in col B will auto-calculate counts, col C calculates %
+        try {
+          var _sh2Xml = await _projZip.files['xl/worksheets/sheet2.xml'].async('string');
+          var _tagCountsPv = {};
+          _cands.forEach(function(c){ var t=(c.pipelineTag||'').trim(); if(t) _tagCountsPv[t]=(_tagCountsPv[t]||0)+1; });
+          var _tagListPv = Object.keys(_tagCountsPv).sort();
+          _tagListPv.forEach(function(tag, i) {
+            var pRow = i + 2;
+            var ssI = _ssIdx(tag);
+            // Replace col A formula cell with static value
+            var search = 'r="A'+pRow+'" t="str"><f>';
+            var pos = _sh2Xml.indexOf(search);
+            if (pos !== -1) {
+              var cellStart = _sh2Xml.lastIndexOf('<c ', pos);
+              var cellEnd = _sh2Xml.indexOf('</c>', pos) + 4;
+              _sh2Xml = _sh2Xml.substring(0,cellStart)
+                + '<c r="A'+pRow+'" t="s"><v>'+ssI+'</v></c>'
+                + _sh2Xml.substring(cellEnd);
+            }
+          });
+          _projZip.file('xl/worksheets/sheet2.xml', _sh2Xml);
+        } catch(e){ console.error('[PIVOT]', e.message); }
+
         // Clear stale cached values
         _sh3Xml = _sh3Xml.replace(/<v>-9996<\/v>/g, '<v>0</v>');
         _projZip.file('xl/worksheets/sheet3.xml', _sh3Xml);
