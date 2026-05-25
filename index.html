@@ -1611,9 +1611,18 @@ async function generate() {
           // Debug: log first candidate to check meta.candidate field
           if (_basicCandidates.length > 0) {
             var _fc = _basicCandidates[0];
-            console.log('[PIPELINE DEBUG] First candidate keys:', Object.keys(_fc));
-            console.log('[PIPELINE DEBUG] meta:', JSON.stringify(_fc.meta));
-            console.log('[PIPELINE DEBUG] manager.tags:', JSON.stringify(_fc.manager && _fc.manager.tags));
+            console.log('[PIPELINE DEBUG] meta.candidate FULL:', JSON.stringify(_fc.meta && _fc.meta.candidate));
+            // Log all candidates pipeline tags to find the right one
+            _basicCandidates.slice(0,5).forEach(function(c,i){
+              var mc = c.meta && c.meta.candidate;
+              console.log('[PIPELINE DEBUG] Candidate '+i+' ('+c.name+'):', 
+                'tags:', JSON.stringify(mc && mc.pipelineTags && mc.pipelineTags.map(function(t){return {text:t.text,addedAt:t.addedAt};})),
+                'status:', JSON.stringify(mc && mc.status),
+                'stage:', JSON.stringify(mc && mc.stage),
+                'currentTag:', JSON.stringify(mc && mc.currentTag),
+                'rank:', mc && mc.rank, 'order:', mc && mc.order
+              );
+            });
           }
           // Log COMPLETE first candidate from candidates list to find pipeline tag
           if (_basicCandidates.length > 0) {
@@ -1694,7 +1703,13 @@ async function generate() {
               // Pipeline tag is on the raw candidate object (_bc), not the enriched person (cand)
               if (_bc.meta && _bc.meta.candidate && _bc.meta.candidate.pipelineTags) {
                 var _ptags = _bc.meta.candidate.pipelineTags;
-                if (Array.isArray(_ptags) && _ptags.length > 0) _tag = _ptags[0].text || '';
+                if (Array.isArray(_ptags) && _ptags.length > 0) {
+                  // Sort by addedAt descending to get most recently applied tag
+                  var _sorted = _ptags.slice().sort(function(a, b) {
+                    return new Date(b.addedAt||0) - new Date(a.addedAt||0);
+                  });
+                  _tag = _sorted[0].text || '';
+                }
               }
               // Also check enriched person just in case
               if (!_tag && cand.meta && cand.meta.candidate && cand.meta.candidate.pipelineTags) {
