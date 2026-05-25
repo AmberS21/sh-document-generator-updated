@@ -1943,18 +1943,9 @@ async function generate() {
               inputText = await file.text();
             } else if (ext === 'docx') {
               var arrBuf = await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
-              // Extract text from DOCX using PizZip (already loaded)
-              var _dZip = new PizZip(arrBuf);
-              var _dXml = _dZip.files['word/document.xml'] ? _dZip.files['word/document.xml'].asText() : '';
-              // Better XML extraction - preserve paragraph breaks
-              inputText = _dXml
-                .replace(/<w:p[ >]/g, '\n<w:p ')
-                .replace(/<\/w:p>/g, '</w:p>\n')
-                .replace(/<w:t[^>]*>([^<]*)<\/w:t>/g, '$1')
-                .replace(/<[^>]+>/g, '')
-                .replace(/[ \t]+/g, ' ')
-                .replace(/\n{3,}/g, '\n\n')
-                .trim().substring(0, 50000);
+              var zipF = new PizZip(arrBuf);
+              var bodyXml = zipF.files['word/document.xml'] ? zipF.files['word/document.xml'].asText() : '';
+              inputText = bodyXml.replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().substring(0,50000);
             } else if (ext === 'pdf') {
               inputText = await (async function(){
                 var ab = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res(e.target.result);};rd.onerror=rej;rd.readAsArrayBuffer(file);});
@@ -2372,6 +2363,7 @@ CRITICAL RULES ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ�
 FORMATTING RULES:
 - Copy ALL text VERBATIM. Do NOT summarise, rephrase, or add content.
 - Do NOT skip any work history entry.
+- CRITICAL: The text may be extracted from a PDF or Word file and may lack formatting. Look for ANY company names, job titles, and date ranges (e.g. 2019-2023, Jan 2020 - Present) to identify work history — even if the text appears unstructured.
 - If fewer than 15 companies, leave unused COMPANY fields as empty string.
 - Return ONLY valid JSON. No markdown. No code blocks. No explanation.
 
