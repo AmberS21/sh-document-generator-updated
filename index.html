@@ -1948,7 +1948,9 @@ async function generate() {
             } else if (ext === 'pdf') {
               inputText = await (async function(){
                 var ab = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){res(e.target.result);};rd.onerror=rej;rd.readAsArrayBuffer(file);});
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + pdfjsLib.version + '/pdf.worker.min.js';
+                if (pdfjsLib && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+                  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + pdfjsLib.version + '/pdf.worker.min.js';
+                }
                 var pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
                 var txt='';
                 for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();txt+=tc.items.map(function(s){return s.str;}).join(' ')+' ';}
@@ -1964,8 +1966,8 @@ async function generate() {
               inputText = await file.text();
             }
           } catch(fileErr) {
+            console.error('[BATCH] Full error on', file.name, ':', fileErr);
             notify('\u26a0 Skipped ' + file.name + ': ' + fileErr.message);
-            console.error('[BATCH] Error on', file.name, fileErr.message);
             continue; // skip this file, continue with next
           }
           if (inputText && inputText.length >= 10) {
