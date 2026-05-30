@@ -1743,7 +1743,6 @@ async function generate() {
                   var _addResp2 = await fetch(ezekiaBase2 + '/people/' + _bc.id + '/additional-info?scopedModel=assignment&modelId=' + projectId2);
                   if (_addResp2.ok) {
                     var _addJson2 = await _addResp2.json();
-                    if (_ci === 0) 
                     var _scoped = _addJson2.data || _addJson2;
                     // Merge scoped fields into additionalInfo
                     if (Array.isArray(_scoped) && Array.isArray(_fullCand._additionalInfo)) {
@@ -2136,8 +2135,6 @@ async function convertPdfToWord() {
 }
 
 async function processOneCV(inputText, tpl, btn, returnOnly) {
-  console.log('[DEBUG] processOneCV called - tpl:', tpl, 'inputText length:', inputText ? inputText.length : 0);
-  console.log('[DEBUG] inputText first 300 chars:', inputText ? inputText.substring(0,300) : 'EMPTY');
   var selChip = document.querySelector('.fmt-chip.on-d,.fmt-chip.on-p,.fmt-chip.on-x,.fmt-chip.on-f');
   var fmt = selChip ? (selChip.className.match(/on-([dpxf])/) ? selChip.className.match(/on-([dpxf])/)[1] : 'd') : 'd';
   var claudeKey = (localStorage.getItem('sh_claudeKey') || '').trim();
@@ -2442,8 +2439,6 @@ try {
   
   rawOutput = rawOutput.trim();
   output = JSON.parse(rawOutput);
-  console.log('[DEBUG] RAW KEYS:', Object.keys(output).filter(function(k){return k.indexOf('COMPANY_1')===0;}));
-  console.log('[DEBUG] COMPANY_1_NAME:', output.COMPANY_1_NAME, '| ROLE:', output.COMPANY_1_ROLE, '| DATES:', output.COMPANY_1_DATES);
   // DEBUG: log parsed output for GB profile
   if (isGbProfile) {
     console.log('[GB DEBUG] COMPANY_1:', output.COMPANY_1_NAME, output.COMPANY_1_ROLE, output.COMPANY_1_DATES);
