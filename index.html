@@ -1739,6 +1739,7 @@ async function generate() {
                   if (_addResp.ok) {
                     var _addJson = await _addResp.json();
                     _fullCand._additionalInfo = _addJson.data || _addJson;
+                    if (_ci < 3) console.log('[ADDINFO] cand', _ci, (_fullCand.fullName||'?'), 'additionalInfo items:', Array.isArray(_fullCand._additionalInfo) ? _fullCand._additionalInfo.length : typeof _fullCand._additionalInfo);
                   }
                   // Fetch assignment-scoped custom values (includes progress notes + pipeline tag)
                   var _addResp2 = await fetch(ezekiaBase2 + '/people/' + _bc.id + '/additional-info?scopedModel=assignment&modelId=' + projectId2);
