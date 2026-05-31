@@ -1800,6 +1800,7 @@ async function generate() {
               // Gender + Notes — from additional-info (custom values endpoint)
               var _gender2 = '';
               var _notes = '';
+              console.log('[ADD-INFO DEBUG] cand:', (cand.fullName||cand.name||'?'), '| _additionalInfo length:', cand._additionalInfo ? (Array.isArray(cand._additionalInfo) ? cand._additionalInfo.length : 'not array') : 'MISSING');
               if (cand._additionalInfo) {
                 var _addArr = Array.isArray(cand._additionalInfo) ? cand._additionalInfo : [cand._additionalInfo];
                 _addArr.forEach(function(item) {
