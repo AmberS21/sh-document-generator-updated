@@ -1,0 +1,11 @@
+{
+  "routes": [
+    {
+      "route": "/icons/*",
+      "allowedRoles": ["anonymous"]
+    }
+  ],
+  "globalHeaders": {
+    "Cache-Control": "public, max-age=86400"
+  }
+}
