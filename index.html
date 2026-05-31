@@ -1804,7 +1804,7 @@ async function generate() {
                 _addArr.forEach(function(item) {
                   var _lbl = ((item.field && item.field.label) || item.label || '').toLowerCase();
                   var _hid = (item.field && item.field.hashId) || item.hashId || '';
-                  var _val = item.value || '';
+                  var _val = (item.value !== null && item.value !== undefined) ? String(item.value) : '';
                   // Strip HTML tags from value
                   _val = _val.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
                   if (_lbl === 'gender' || _lbl === 'sex') {
