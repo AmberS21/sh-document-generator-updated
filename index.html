@@ -278,7 +278,8 @@ table.usage tr:last-child td{border-bottom:none;}
 <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.47.4/build/docxtemplater.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js">
-<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js">
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script></head>
@@ -3818,7 +3819,65 @@ function clearUsageLogs(){
 </div>
 <script>
 const SH_LOGGER = '/api/proxy';
-function initUserName(){var n=localStorage.getItem('sh_userName');if(!n){document.getElementById('namePromptOverlay').style.display='flex';}else{document.getElementById('userName').textContent=n;}}
+// MSAL SSO Configuration
+var _msalConfig = {
+  auth: {
+    clientId: '9b7066f2-5e10-4a36-9a68-361b025acc88',
+    authority: 'https://login.microsoftonline.com/ae57639d-05e1-4adc-b4c9-c8013c58fb86',
+    redirectUri: 'https://docgen.shglobalhub.com'
+  },
+  cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
+};
+var _msalInstance = null;
+try { _msalInstance = new msal.PublicClientApplication(_msalConfig); } catch(e) { console.warn('MSAL init failed:', e.message); }
+
+async function initUserName() {
+  // Try MSAL SSO first
+  if (_msalInstance) {
+    try {
+      // Check if already signed in
+      var accounts = _msalInstance.getAllAccounts();
+      if (accounts.length > 0) {
+        var name = accounts[0].name || accounts[0].username;
+        localStorage.setItem('sh_userName', name);
+        document.getElementById('userName').textContent = name;
+        document.getElementById('namePromptOverlay').style.display = 'none';
+        return;
+      }
+      // Try silent SSO
+      var silentReq = { scopes: ['User.Read'], loginHint: undefined };
+      try {
+        var silentResult = await _msalInstance.ssoSilent(silentReq);
+        var name = silentResult.account.name || silentResult.account.username;
+        localStorage.setItem('sh_userName', name);
+        document.getElementById('userName').textContent = name;
+        document.getElementById('namePromptOverlay').style.display = 'none';
+        return;
+      } catch(silentErr) {
+        // Silent SSO failed - try popup
+        try {
+          var popupResult = await _msalInstance.loginPopup({ scopes: ['User.Read'] });
+          var name = popupResult.account.name || popupResult.account.username;
+          localStorage.setItem('sh_userName', name);
+          document.getElementById('userName').textContent = name;
+          document.getElementById('namePromptOverlay').style.display = 'none';
+          return;
+        } catch(popupErr) {
+          console.warn('MSAL popup failed:', popupErr.message);
+        }
+      }
+    } catch(msalErr) {
+      console.warn('MSAL error:', msalErr.message);
+    }
+  }
+  // Fallback: manual name prompt
+  var n = localStorage.getItem('sh_userName');
+  if (!n) {
+    document.getElementById('namePromptOverlay').style.display = 'flex';
+  } else {
+    document.getElementById('userName').textContent = n;
+  }
+}
 function saveUserName(){var inp=document.getElementById('namePromptInput');var name=inp.value.trim();if(!name){inp.style.border='1.5px solid #e74c3c';return;}localStorage.setItem('sh_userName',name);document.getElementById('userName').textContent=name;document.getElementById('namePromptOverlay').style.display='none';notify('Welcome, '+name+'!');}
 function logUsage(template,inputMethod,status){
   try {
