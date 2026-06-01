@@ -2091,11 +2091,11 @@ async function convertPdfToWord() {
       if (!line.trim()) {
         return '<w:p/>';
       } else if (line.startsWith('ÃÂ¢ÃÂÃÂ¢')) {
-        return '<w:p><w:pPr><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">' + escaped + '</w:t></w:r></w:p>';
+        return '<w:p><w:pPr><w:ind w:left="360"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">' + escaped + '</w:t></w:r></w:p>';
       } else if ((line === line.toUpperCase() && line.trim().length > 0) || line.trim().endsWith(':')) {
-        return '<w:p><w:pPr><w:rPr><w:b/><w:sz w:val="24"/></w:rPr></w:pPr><w:r><w:rPr><w:b/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/></w:rPr><w:t>' + escaped + '</w:t></w:r></w:p>';
+        return '<w:p><w:pPr><w:rPr><w:b/><w:sz w:val="20"/></w:rPr></w:pPr><w:r><w:rPr><w:b/><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/><w:sz w:val="20"/></w:rPr><w:t>' + escaped + '</w:t></w:r></w:p>';
       } else {
-        return '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/></w:rPr><w:t xml:space="preserve">' + escaped + '</w:t></w:r></w:p>';
+        return '<w:p><w:r><w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">' + escaped + '</w:t></w:r></w:p>';
       }
     }).join('\n');
 
