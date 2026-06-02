@@ -2457,7 +2457,15 @@ try {
   }
   rawOutput = _fixedOutput;
   
-  output = JSON.parse(rawOutput);
+  // Debug: show chars around failing position
+  try {
+    output = JSON.parse(rawOutput);
+  } catch(_je) {
+    var _pos = 1349;
+    console.error('[JSON FIX DEBUG] char at pos', _pos, '=', rawOutput.charCodeAt(_pos), repr(rawOutput.substring(_pos-30, _pos+30)));
+    console.error('[JSON FIX DEBUG] rawOutput length:', rawOutput.length);
+    throw _je;
+  }
   // DEBUG: log parsed output for GB profile
   if (isGbProfile) {
     console.log('[GB DEBUG] COMPANY_1:', output.COMPANY_1_NAME, output.COMPANY_1_ROLE, output.COMPANY_1_DATES);
