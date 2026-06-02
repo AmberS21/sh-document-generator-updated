@@ -2442,22 +2442,17 @@ try {
   
   rawOutput = rawOutput.trim();
   
-  // Fix unescaped newlines by replacing actual newlines/carriage returns inside JSON strings
-  // This handles multi-line values Claude sometimes returns
-  rawOutput = rawOutput.split('\n').map(function(line, idx, arr) {
-    return line;
-  }).join('\\n');
-  // But we need to be smarter - only replace newlines INSIDE string values
-  // Simplest reliable approach: replace all literal newlines, then fix JSON structure newlines
+  // Fix actual newline/carriage return characters inside JSON string values
   var _fixedOutput = '';
   var _inStr = false;
-  var _escape = false;
-  for (var _ci2 = 0; _ci2 < rawOutput.length; _ci2++) {
-    var _ch = rawOutput[_ci2];
-    if (_escape) { _fixedOutput += _ch; _escape = false; continue; }
-    if (_ch === '\\') { _fixedOutput += _ch; _escape = true; continue; }
-    if (_ch === '"') { _inStr = !_inStr; _fixedOutput += _ch; continue; }
-    if (_inStr && (_ch.charCodeAt(0) === 10 || _ch.charCodeAt(0) === 13)) { _fixedOutput += ' '; continue; }
+  var _esc = false;
+  for (var _i = 0; _i < rawOutput.length; _i++) {
+    var _c = rawOutput.charCodeAt(_i);
+    var _ch = rawOutput[_i];
+    if (_esc) { _fixedOutput += _ch; _esc = false; continue; }
+    if (_c === 92) { _fixedOutput += _ch; _esc = true; continue; } // backslash
+    if (_c === 34) { _inStr = !_inStr; _fixedOutput += _ch; continue; } // quote
+    if (_inStr && (_c === 10 || _c === 13)) { _fixedOutput += ' '; continue; } // newline
     _fixedOutput += _ch;
   }
   rawOutput = _fixedOutput;
