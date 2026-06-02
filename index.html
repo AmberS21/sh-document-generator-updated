@@ -2462,7 +2462,7 @@ try {
     output = JSON.parse(rawOutput);
   } catch(_je) {
     var _pos = 1349;
-    console.error('[JSON FIX DEBUG] char at pos', _pos, '=', rawOutput.charCodeAt(_pos), repr(rawOutput.substring(_pos-30, _pos+30)));
+    console.error('[JSON FIX DEBUG] char at pos', _pos, '=', rawOutput.charCodeAt(_pos), JSON.stringify(rawOutput.substring(_pos-30, _pos+30)));
     console.error('[JSON FIX DEBUG] rawOutput length:', rawOutput.length);
     throw _je;
   }
