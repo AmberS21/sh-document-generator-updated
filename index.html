@@ -2435,13 +2435,26 @@ try {
   rawOutput = rawOutput.replace(/^[^{[]*/, '').replace(/[^}\]]*$/, '');
   
   // Remove control characters that break JSON
-  rawOutput = rawOutput.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ');
+  rawOutput = rawOutput.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ');
+  
+  // Fix unescaped newlines/tabs inside JSON string values
+  rawOutput = rawOutput.replace(/"([^"]*)"/g, function(match, p1) {
+    return '"' + p1.replace(/\n/g, '\\n').replace(/\r/g, '').replace(/\t/g, ' ') + '"';
+  });
   
   // Remove trailing commas before closing brackets/braces
   rawOutput = rawOutput.replace(/,\s*([}\]])/g, '$1');
   
   rawOutput = rawOutput.trim();
-  output = JSON.parse(rawOutput);
+  try {
+    output = JSON.parse(rawOutput);
+  } catch(_e1) {
+    // Second attempt: strip all actual newlines inside strings
+    var _cleaned = rawOutput.replace(/"((?:[^"\\]|\\.)*)"/g, function(m, p) {
+      return '"' + p.replace(/[\r\n]+/g, ' ') + '"';
+    });
+    output = JSON.parse(_cleaned);
+  }
   // DEBUG: log parsed output for GB profile
   if (isGbProfile) {
     console.log('[GB DEBUG] COMPANY_1:', output.COMPANY_1_NAME, output.COMPANY_1_ROLE, output.COMPANY_1_DATES);
