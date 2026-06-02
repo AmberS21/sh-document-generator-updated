@@ -2437,24 +2437,32 @@ try {
   // Remove control characters that break JSON
   rawOutput = rawOutput.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ');
   
-  // Fix unescaped newlines/tabs inside JSON string values
-  rawOutput = rawOutput.replace(/"([^"]*)"/g, function(match, p1) {
-    return '"' + p1.replace(/\n/g, '\\n').replace(/\r/g, '').replace(/\t/g, ' ') + '"';
-  });
-  
   // Remove trailing commas before closing brackets/braces
   rawOutput = rawOutput.replace(/,\s*([}\]])/g, '$1');
   
   rawOutput = rawOutput.trim();
-  try {
-    output = JSON.parse(rawOutput);
-  } catch(_e1) {
-    // Second attempt: strip all actual newlines inside strings
-    var _cleaned = rawOutput.replace(/"((?:[^"\\]|\\.)*)"/g, function(m, p) {
-      return '"' + p.replace(/[\r\n]+/g, ' ') + '"';
-    });
-    output = JSON.parse(_cleaned);
+  
+  // Fix unescaped newlines by replacing actual newlines/carriage returns inside JSON strings
+  // This handles multi-line values Claude sometimes returns
+  rawOutput = rawOutput.split('\n').map(function(line, idx, arr) {
+    return line;
+  }).join('\\n');
+  // But we need to be smarter - only replace newlines INSIDE string values
+  // Simplest reliable approach: replace all literal newlines, then fix JSON structure newlines
+  var _fixedOutput = '';
+  var _inStr = false;
+  var _escape = false;
+  for (var _ci2 = 0; _ci2 < rawOutput.length; _ci2++) {
+    var _ch = rawOutput[_ci2];
+    if (_escape) { _fixedOutput += _ch; _escape = false; continue; }
+    if (_ch === '\\') { _fixedOutput += _ch; _escape = true; continue; }
+    if (_ch === '"') { _inStr = !_inStr; _fixedOutput += _ch; continue; }
+    if (_inStr && (_ch === '\n' || _ch === '\r')) { _fixedOutput += ' '; continue; }
+    _fixedOutput += _ch;
   }
+  rawOutput = _fixedOutput;
+  
+  output = JSON.parse(rawOutput);
   // DEBUG: log parsed output for GB profile
   if (isGbProfile) {
     console.log('[GB DEBUG] COMPANY_1:', output.COMPANY_1_NAME, output.COMPANY_1_ROLE, output.COMPANY_1_DATES);
