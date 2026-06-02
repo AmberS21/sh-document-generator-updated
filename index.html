@@ -2435,36 +2435,36 @@ try {
   rawOutput = rawOutput.replace(/^[^{[]*/, '').replace(/[^}\]]*$/, '');
   
   // Remove control characters that break JSON
-  rawOutput = rawOutput.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ');
+  rawOutput = rawOutput.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' '); // strip ALL control chars including newlines
   
   // Remove trailing commas before closing brackets/braces
   rawOutput = rawOutput.replace(/,\s*([}\]])/g, '$1');
   
   rawOutput = rawOutput.trim();
-  
-  // Fix actual newline/carriage return characters inside JSON string values
-  var _fixedOutput = '';
-  var _inStr = false;
-  var _esc = false;
-  for (var _i = 0; _i < rawOutput.length; _i++) {
-    var _c = rawOutput.charCodeAt(_i);
-    var _ch = rawOutput[_i];
-    if (_esc) { _fixedOutput += _ch; _esc = false; continue; }
-    if (_c === 92) { _fixedOutput += _ch; _esc = true; continue; } // backslash
-    if (_c === 34) { _inStr = !_inStr; _fixedOutput += _ch; continue; } // quote
-    if (_inStr && (_c === 10 || _c === 13)) { _fixedOutput += ' '; continue; } // newline
-    _fixedOutput += _ch;
-  }
-  rawOutput = _fixedOutput;
-  
-  // Debug: show chars around failing position
+
+  // Try parse, if fails attempt repair for unescaped quotes inside values
   try {
     output = JSON.parse(rawOutput);
-  } catch(_je) {
-    var _pos = 1349;
-    console.error('[JSON FIX DEBUG] char at pos', _pos, '=', rawOutput.charCodeAt(_pos), JSON.stringify(rawOutput.substring(_pos-30, _pos+30)));
-    console.error('[JSON FIX DEBUG] rawOutput length:', rawOutput.length);
-    throw _je;
+  } catch(_e1) {
+    // Replace unescaped double quotes inside string values with single quotes
+    var _rep = ''; var _inS = false; var _esc2 = false;
+    for (var _j = 0; _j < rawOutput.length; _j++) {
+      var _ch2 = rawOutput[_j]; var _code = rawOutput.charCodeAt(_j);
+      if (_esc2) { _rep += _ch2; _esc2 = false; continue; }
+      if (_code === 92) { _rep += _ch2; _esc2 = true; continue; }
+      if (_code === 34) {
+        if (!_inS) { _inS = true; _rep += _ch2; continue; }
+        // Check if this closes the string: next meaningful char is : , } ]
+        var _rest = rawOutput.substring(_j+1).replace(/^\s+/,'');
+        if (_rest.length === 0 || /^[:,}\]]/.test(_rest)) {
+          _inS = false; _rep += _ch2; continue;
+        }
+        // Unescaped quote inside string - replace with apostrophe
+        _rep += "'"; continue;
+      }
+      _rep += _ch2;
+    }
+    output = JSON.parse(_rep);
   }
   // DEBUG: log parsed output for GB profile
   if (isGbProfile) {
