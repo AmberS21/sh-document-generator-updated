@@ -2457,7 +2457,7 @@ try {
     if (_escape) { _fixedOutput += _ch; _escape = false; continue; }
     if (_ch === '\\') { _fixedOutput += _ch; _escape = true; continue; }
     if (_ch === '"') { _inStr = !_inStr; _fixedOutput += _ch; continue; }
-    if (_inStr && (_ch === '\n' || _ch === '\r')) { _fixedOutput += ' '; continue; }
+    if (_inStr && (_ch.charCodeAt(0) === 10 || _ch.charCodeAt(0) === 13)) { _fixedOutput += ' '; continue; }
     _fixedOutput += _ch;
   }
   rawOutput = _fixedOutput;
