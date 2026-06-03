@@ -1741,6 +1741,9 @@ async function generate() {
                 + '&fieldsWithCandidate%5B%5D=manager.researchNotes'
                 + '&fieldsWithCandidate%5B%5D=meta.candidate'
                 + '&fields%5B%5D=websites'
+                + '&fields%5B%5D=urls'
+                + '&fields%5B%5D=contactDetails'
+                + '&fields%5B%5D=links'
                 + '&fields%5B%5D=summary');
               if (_pResp.ok) {
                 var _pJson = await _pResp.json();
@@ -1856,12 +1859,21 @@ async function generate() {
               }
               // LinkedIn: from websites array, find entry with title containing 'linkedin'
               var _linkedin = '';
-              if (cand.websites && Array.isArray(cand.websites)) {
-                var _liSite = cand.websites.find(function(w){
-                  return w.title && w.title.toLowerCase().includes('linkedin');
-                });
-                if (_liSite) _linkedin = _liSite.url || _liSite.value || '';
+              // Check multiple possible field names for websites/social links
+              var _webSources = cand.websites || cand.urls || cand.links || cand.contactDetails || [];
+              if (!Array.isArray(_webSources)) _webSources = [];
+              // Also check profile.websites
+              if (_webSources.length === 0 && cand.profile && cand.profile.websites) {
+                _webSources = Array.isArray(cand.profile.websites) ? cand.profile.websites : [];
               }
+              var _liSite = _webSources.find(function(w){
+                var t = (w.title || w.label || w.type || w.name || '').toLowerCase();
+                var v = (w.url || w.value || w.href || '').toLowerCase();
+                return t.includes('linkedin') || v.includes('linkedin');
+              });
+              if (_liSite) _linkedin = _liSite.url || _liSite.value || _liSite.href || '';
+              // Log what we found for debugging
+              if (!cand._liLogged) { cand._liLogged = true; console.log('[LI DEBUG] webSources:', _webSources.length, 'linkedin found:', !!_liSite); }
 
               // Bio: from additional-info, find field labelled 'Bio' or 'Details'
               var _bio = '';
