@@ -1,4 +1,15 @@
-<!DOCTYPE html>
+<!D
+
+  'project-report-ext': {
+
+    label: 'Project Report / Pipeline — Extended',
+
+    file: 'templates/SH_Project_Report_Extended_v1.xlsx',
+    patchFiles: []
+
+  },
+
+OCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -821,7 +832,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
   var sel = document.getElementById('tplSel');
   if (!sel) return;
   var profileKeys = ['global-no-scorecard','global-with-scorecard','global-career-summary','apac-profile','services-profile','gb-profile'];
-  var reportKeys  = ['project-report'];
+  var reportKeys  = ['project-report','project-report-ext'];
 
   var grp1 = document.createElement('optgroup');
   grp1.label = '── PROFILES ──';
@@ -1727,7 +1738,9 @@ async function generate() {
                 + '?fieldsWithCandidate%5B%5D=manager.tags'
                 + '&fieldsWithCandidate%5B%5D=manager.customValues'
                 + '&fieldsWithCandidate%5B%5D=manager.researchNotes'
-                + '&fieldsWithCandidate%5B%5D=meta.candidate');
+                + '&fieldsWithCandidate%5B%5D=meta.candidate'
+                + '&fields%5B%5D=websites'
+                + '&fields%5B%5D=summary');
               if (_pResp.ok) {
                 var _pJson = await _pResp.json();
                 var _fullCand = _pJson.data || _pJson;
@@ -1833,6 +1846,28 @@ async function generate() {
               var _gender = _gender2 || cand.gender || (cand.profile && cand.profile.gender) || '';
               if (!_notes && cand._researchNotes && cand._researchNotes.length) _notes = cand._researchNotes[0].text || '';
 
+              // LinkedIn: from websites array, find entry with title containing 'linkedin'
+              var _linkedin = '';
+              if (cand.websites && Array.isArray(cand.websites)) {
+                var _liSite = cand.websites.find(function(w){
+                  return w.title && w.title.toLowerCase().includes('linkedin');
+                });
+                if (_liSite) _linkedin = _liSite.url || _liSite.value || '';
+              }
+
+              // Bio: from additional-info, find field labelled 'Bio' or 'Details'
+              var _bio = '';
+              if (cand._additionalInfo && Array.isArray(cand._additionalInfo)) {
+                var _bioField = cand._additionalInfo.find(function(f){
+                  var lbl = (f.field && f.field.label ? f.field.label : f.label || '').toLowerCase();
+                  return lbl.includes('bio') || lbl.includes('details');
+                });
+                if (_bioField) _bio = String(_bioField.value || '').replace(/<[^>]+>/g,'').trim();
+              }
+
+              // Summary: standard field on people record
+              var _summary = (cand.summary || (cand.profile && cand.profile.summary) || '').replace(/<[^>]+>/g,'').trim();
+
               return {
                 fullname: cand.fullName || cand.name || ((cand.firstName||'') + ' ' + (cand.lastName||'')).trim(),
                 company:  _co.name || cand.current_company || '',
@@ -1840,7 +1875,10 @@ async function generate() {
                 location: _loc,
                 pipelineTag: _tag,
                 gender:   _gender,
-                notes:    _notes
+                notes:    _notes,
+                linkedin: _linkedin,
+                bio:      _bio,
+                summary:  _summary
               };
             })
           };
@@ -3375,8 +3413,13 @@ async function downloadHistory(index) {
         var _newRows = '';
         _cands.forEach(function(cand, ri) {
           var _r = 3 + ri;
+          var _isExtReport = (tpl === 'project-report-ext');
           var _vals = [cand.fullname||'', cand.company||'', cand.title||'', cand.location||'', cand.pipelineTag||'', cand.gender||'', cand.notes||''];
           var _cols = ['A','B','C','D','E','F','G'];
+          if (_isExtReport) {
+            _vals.push(cand.linkedin||'', cand.bio||'', cand.summary||'');
+            _cols.push('H','I','J');
+          }
           var _cells = '';
           _vals.forEach(function(v, ci) {
             _cells += '<c r="' + _cols[ci] + _r + '" t="s"><v>' + _ssIdx(v) + '</v></c>';
