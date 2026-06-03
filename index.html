@@ -1847,6 +1847,13 @@ async function generate() {
               var _gender = _gender2 || cand.gender || (cand.profile && cand.profile.gender) || '';
               if (!_notes && cand._researchNotes && cand._researchNotes.length) _notes = cand._researchNotes[0].text || '';
 
+              // Debug: check what's on cand
+              if (!cand._dbgLogged) {
+                cand._dbgLogged = true;
+                console.log('[EXT DEBUG] cand keys:', Object.keys(cand).filter(function(k){ return !k.startsWith('_'); }).join(','));
+                console.log('[EXT DEBUG] cand.websites:', cand.websites ? JSON.stringify(cand.websites).substring(0,100) : 'undefined');
+                console.log('[EXT DEBUG] cand.summary:', cand.summary ? cand.summary.substring(0,50) : 'undefined');
+              }
               // LinkedIn: from websites array, find entry with title containing 'linkedin'
               var _linkedin = '';
               if (cand.websites && Array.isArray(cand.websites)) {
