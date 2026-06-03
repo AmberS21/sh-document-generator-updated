@@ -3416,7 +3416,7 @@ async function downloadHistory(index) {
         var _newRows = '';
         _cands.forEach(function(cand, ri) {
           var _r = 3 + ri;
-          var _isExtReport = (tpl === 'project-report-ext');
+          var _isExtReport = (item.template === 'project-report-ext');
           var _vals = [cand.fullname||'', cand.company||'', cand.title||'', cand.location||'', cand.pipelineTag||'', cand.gender||'', cand.notes||''];
           var _cols = ['A','B','C','D','E','F','G'];
           if (_isExtReport) {
