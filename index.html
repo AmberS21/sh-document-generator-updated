@@ -2919,7 +2919,7 @@ async function downloadHistory(index) {
   if (!item) return;
   var fmt = item.fmt || 'd';
   // Override: project-report always downloads as xlsx
-  if (item.template === 'project-report') fmt = 'x';
+  if (item.template === 'project-report' || item.template === 'project-report-ext') fmt = 'x';
   console.log('[DL DEBUG] index:', index, 'template:', item.template, 'fmt:', fmt, 'name:', item.name);
   var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : 'No Scorecard';
   var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : 'Global';
@@ -3350,9 +3350,11 @@ async function downloadHistory(index) {
 
     } else if (fmt === 'x') {
       // --- Project Report: fill xlsx template preserving ALL styles/images ---
-      if (item.template === 'services-profile' || item.template === 'project-report') {
+      if (item.template === 'services-profile' || item.template === 'project-report' || item.template === 'project-report-ext') {
         var projData2 = item.content;
-        var _projTplFile = (item.template === 'project-report')
+        var _projTplFile = (item.template === 'project-report-ext')
+          ? 'templates/SH_Project_Report_Extended_v1.xlsx'
+          : (item.template === 'project-report')
           ? 'templates/SH_Project_Report_Template_v4.xlsx'
           : 'Service%20Team%20-%20Project%20Report%20(with%20Notes).xlsx';
         var _RAW_BASE = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
