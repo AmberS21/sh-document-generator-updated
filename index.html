@@ -1850,17 +1850,10 @@ async function generate() {
               var _gender = _gender2 || cand.gender || (cand.profile && cand.profile.gender) || '';
               if (!_notes && cand._researchNotes && cand._researchNotes.length) _notes = cand._researchNotes[0].text || '';
 
-              // Debug: check what's on cand
-              if (!cand._dbgLogged) {
-                cand._dbgLogged = true;
-                console.log('[EXT DEBUG] cand keys:', Object.keys(cand).filter(function(k){ return !k.startsWith('_'); }).join(','));
-                console.log('[EXT DEBUG] cand.websites:', cand.websites ? JSON.stringify(cand.websites).substring(0,100) : 'undefined');
-                console.log('[EXT DEBUG] cand.summary:', cand.summary ? cand.summary.substring(0,50) : 'undefined');
-              }
               // LinkedIn: from websites array, find entry with title containing 'linkedin'
               var _linkedin = '';
               // Check multiple possible field names for websites/social links
-              var _webSources = cand.websites || cand.urls || cand.links || cand.contactDetails || [];
+              var _webSources = cand.links || cand.websites || cand.urls || cand.contactDetails || [];
               if (!Array.isArray(_webSources)) _webSources = [];
               // Also check profile.websites
               if (_webSources.length === 0 && cand.profile && cand.profile.websites) {
@@ -1872,8 +1865,6 @@ async function generate() {
                 return t.includes('linkedin') || v.includes('linkedin');
               });
               if (_liSite) _linkedin = _liSite.url || _liSite.value || _liSite.href || '';
-              // Log what we found for debugging
-              if (!cand._liLogged) { cand._liLogged = true; console.log('[LI DEBUG] webSources:', _webSources.length, 'linkedin found:', !!_liSite); }
 
               // Bio: from additional-info, find field labelled 'Bio' or 'Details'
               var _bio = '';
@@ -3446,7 +3437,8 @@ async function downloadHistory(index) {
           _vals.forEach(function(v, ci) {
             _cells += '<c r="' + _cols[ci] + _r + '" t="s"><v>' + _ssIdx(v) + '</v></c>';
           });
-          _newRows += '<row r="' + _r + '" spans="1:7" ht="15.75" customHeight="1">' + _cells + '</row>';
+          var _spanEnd = _cols.length;
+          _newRows += '<row r="' + _r + '" spans="1:' + _spanEnd + '" ht="15.75" customHeight="1">' + _cells + '</row>';
         });
         // Build deduped shared strings XML
         var _newSS = _ssArr.map(function(v){ return '<si><t xml:space="preserve">' + _xe(v) + '</t></si>'; }).join('');
