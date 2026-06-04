@@ -373,7 +373,7 @@ table.usage tr:last-child td{border-bottom:none;}
       </div>
       <div class="tpl-drop-wrap">
         <select class="tpl-sel" id="tplSel" onchange="pickTpl(this.value)">
-<option value="" disabled selected>— Choose a template —</option>
+<option value="" disabled selected>Choose a template</option>
 </select>
       </div>
       <div class="tpl-preview" id="tplPrev">
@@ -797,7 +797,7 @@ const TEMPLATES = {
 
   'project-report-ext': {
 
-    label: 'Project Report — Pipeline Extended',
+    label: 'Project Report — Pipeline Dashboard - Extended',
 
     file: 'templates/SH_Project_Report_Extended_v1.xlsx',
 
@@ -836,7 +836,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
   var reportKeys  = ['project-report','project-report-ext'];
 
   var grp1 = document.createElement('optgroup');
-  grp1.label = '── PROFILES ──';
+  grp1.label = 'PROFILES ──';
   profileKeys.forEach(function(key) {
     if (!TEMPLATES[key]) return;
     var opt = document.createElement('option');
@@ -847,7 +847,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
   sel.appendChild(grp1);
 
   var grp2 = document.createElement('optgroup');
-  grp2.label = '── PROJECT REPORTS ──';
+  grp2.label = 'PROJECT REPORTS ──';
   reportKeys.forEach(function(key) {
     if (!TEMPLATES[key]) return;
     var opt = document.createElement('option');
