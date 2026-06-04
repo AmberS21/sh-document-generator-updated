@@ -2589,10 +2589,10 @@ function hideProgress(msg) {
   list.innerHTML = history.map(function(item, index) {
     return `
     <div class="hist-row">
-      <div class="hist-ico" style="background:${item.type==='combined'?'rgba(245,158,11,.15)':'rgba(43,124,211,.12)'};">${item.type==='combined'?'M':'W'}</div>
+      <div class="hist-ico" style="background:${item.type==='combined'?'rgba(245,158,11,.15)':item.fmt==='x'?'rgba(33,115,70,.15)':item.fmt==='p'?'rgba(210,71,38,.15)':item.fmt==='f'?'rgba(210,0,0,.12)':'rgba(43,124,211,.12)'};">${item.type==='combined'?'M':item.fmt==='x'?'E':item.fmt==='p'?'P':item.fmt==='f'?'F':'W'}</div>
       <div style="flex:1;">
         <div class="hist-name">${item.name}</div>
-        <div class="hist-meta">${item.date} &middot; ${item.type==='combined'?('Combined ('+item.content.length+' profiles)'):'Word'}</div>
+        <div class="hist-meta">${item.date} &middot; ${item.type==='combined'?('Combined ('+item.content.length+' profiles)'):(item.fmt==='x'?'Excel':item.fmt==='p'?'PowerPoint':item.fmt==='f'?'PDF':'Word')}</div>
       </div>
       <span class="badge" style="background:#dcfce7;color:#166534;">Done</span>
       <div class="ico-btn" onclick="downloadHistory(${index})">&#11015;</div>
