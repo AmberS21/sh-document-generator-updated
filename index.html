@@ -3303,7 +3303,7 @@ async function downloadHistory(index) {
       var a = document.createElement('a'); a.href = URL.createObjectURL(out); a.download = baseName + '.' + _docExtSingle; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
     } else if (fmt === 'f') {
-      var tplUrl2 = item.template === 'global-with-scorecard' ? 'Global_Candidate_Profile_With_Scorecard_New.docx' : 'Global_Candidate_Profile_No Scorecard_New.docx';
+      var tplUrl2 = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/' + getTemplateFile(item.template);
       var resp2 = await fetch(tplUrl2);
       var ab2 = await resp2.arrayBuffer();
       var zip2 = new PizZip(ab2);
