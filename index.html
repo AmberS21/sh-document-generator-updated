@@ -1866,17 +1866,12 @@ async function generate() {
               });
               if (_liSite) _linkedin = _liSite.url || _liSite.value || _liSite.href || '';
 
-              // Debug: show all additional-info labels
-              if (cand._additionalInfo && Array.isArray(cand._additionalInfo) && cand._additionalInfo.length > 0) {
-                var _allLabels = cand._additionalInfo.map(function(f){ return (f.field && f.field.label) || f.label || f.hashId || '?'; });
-                console.log('[BIO DEBUG] additionalInfo labels:', JSON.stringify(_allLabels));
-              }
               // Bio: from additional-info, find field labelled 'Bio' or 'Details'
               var _bio = '';
               if (cand._additionalInfo && Array.isArray(cand._additionalInfo)) {
                 var _bioField = cand._additionalInfo.find(function(f){
                   var lbl = (f.field && f.field.label ? f.field.label : f.label || '').toLowerCase();
-                  return lbl.includes('bio') || lbl.includes('details');
+                  return lbl.includes('bio') || lbl.includes('additional candidate data');
                 });
                 if (_bioField) _bio = String(_bioField.value || '').replace(/<[^>]+>/g,'').trim();
               }
