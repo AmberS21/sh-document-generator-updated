@@ -3454,7 +3454,7 @@ async function downloadHistory(index) {
         // Update shared strings count
         // Update shared strings count with deduped array
         var _totalSS = _ssCount + _ssArr.length;
-        _ssXml = _ssXml.replace(/count="[^"]*"/, 'count="' + _totalSS + '"').replace(/uniqueCount="[^"]*"/, 'uniqueCount="' + _ssArr.length + '"');
+        _ssXml = _ssXml.replace(/count="[^"]*"/, 'count="' + _totalSS + '"').replace(/uniqueCount="[^"]*"/, 'uniqueCount="' + _totalSS + '"');
         _ssXml = _ssXml.replace('</sst>', _newSS + '</sst>');
 
         _projZip.file('xl/worksheets/sheet1.xml', _sh1);
