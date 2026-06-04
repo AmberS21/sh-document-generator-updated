@@ -1744,7 +1744,9 @@ async function generate() {
                 + '&fields%5B%5D=urls'
                 + '&fields%5B%5D=contactDetails'
                 + '&fields%5B%5D=links'
-                + '&fields%5B%5D=summary');
+                + '&fields%5B%5D=summary'
+                + '&fields%5B%5D=profile'
+                + '&fields%5B%5D=addresses');
               if (_pResp.ok) {
                 var _pJson = await _pResp.json();
                 var _fullCand = _pJson.data || _pJson;
