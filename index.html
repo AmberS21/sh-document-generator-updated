@@ -1703,17 +1703,10 @@ async function generate() {
           // Debug: log first candidate to check meta.candidate field
           if (_basicCandidates.length > 0) {
             var _fc = _basicCandidates[0];
-            console.log('[PIPELINE DEBUG] meta.candidate FULL:', JSON.stringify(_fc.meta && _fc.meta.candidate));
             // Log all candidates pipeline tags to find the right one
             _basicCandidates.slice(0,5).forEach(function(c,i){
               var mc = c.meta && c.meta.candidate;
-              console.log('[PIPELINE DEBUG] Candidate '+i+' ('+c.name+'):', 
-                'tags:', JSON.stringify(mc && mc.pipelineTags && mc.pipelineTags.map(function(t){return {text:t.text,addedAt:t.addedAt};})),
-                'status:', JSON.stringify(mc && mc.status),
-                'stage:', JSON.stringify(mc && mc.stage),
-                'currentTag:', JSON.stringify(mc && mc.currentTag),
-                'rank:', mc && mc.rank, 'order:', mc && mc.order
-              );
+              
             });
           }
           // Log COMPLETE first candidate from candidates list to find pipeline tag
@@ -2520,10 +2513,9 @@ try {
   }
   // DEBUG: log parsed output for GB profile
   if (isGbProfile) {
-    console.log('[GB DEBUG] COMPANY_1:', output.COMPANY_1_NAME, output.COMPANY_1_ROLE, output.COMPANY_1_DATES);
-    console.log('[GB DEBUG] COMPANY_2:', output.COMPANY_2_NAME, output.COMPANY_2_ROLE, output.COMPANY_2_DATES);
-    console.log('[GB DEBUG] COMPANY_3:', output.COMPANY_3_NAME, output.COMPANY_3_ROLE, output.COMPANY_3_DATES);
-    console.log('[GB DEBUG] COMPANY_4:', output.COMPANY_4_NAME, output.COMPANY_4_ROLE, output.COMPANY_4_DATES);
+
+
+
   }
 } catch(e) {
   console.error('JSON Parse Error:', e);
@@ -2933,7 +2925,6 @@ async function downloadHistory(index) {
   var fmt = item.fmt || 'd';
   // Override: project-report always downloads as xlsx
   if (item.template === 'project-report' || item.template === 'project-report-ext') fmt = 'x';
-  console.log('[DL DEBUG] index:', index, 'template:', item.template, 'fmt:', fmt, 'name:', item.name);
   var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : 'No Scorecard';
   var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : 'Global';
   var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
