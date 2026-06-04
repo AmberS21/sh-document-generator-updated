@@ -793,6 +793,18 @@ const TEMPLATES = {
 
     promptType: 'none'
 
+  },
+
+  'project-report-ext': {
+
+    label: 'Project Report — Pipeline Extended',
+
+    file: 'templates/SH_Project_Report_Extended_v1.xlsx',
+
+    isProjectReport: true,
+
+    promptType: 'none'
+
   }
 
 };
@@ -821,7 +833,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
   var sel = document.getElementById('tplSel');
   if (!sel) return;
   var profileKeys = ['global-no-scorecard','global-with-scorecard','global-career-summary','apac-profile','services-profile','gb-profile'];
-  var reportKeys  = ['project-report'];
+  var reportKeys  = ['project-report','project-report-ext'];
 
   var grp1 = document.createElement('optgroup');
   grp1.label = '── PROFILES ──';
@@ -1691,17 +1703,10 @@ async function generate() {
           // Debug: log first candidate to check meta.candidate field
           if (_basicCandidates.length > 0) {
             var _fc = _basicCandidates[0];
-            console.log('[PIPELINE DEBUG] meta.candidate FULL:', JSON.stringify(_fc.meta && _fc.meta.candidate));
             // Log all candidates pipeline tags to find the right one
             _basicCandidates.slice(0,5).forEach(function(c,i){
               var mc = c.meta && c.meta.candidate;
-              console.log('[PIPELINE DEBUG] Candidate '+i+' ('+c.name+'):', 
-                'tags:', JSON.stringify(mc && mc.pipelineTags && mc.pipelineTags.map(function(t){return {text:t.text,addedAt:t.addedAt};})),
-                'status:', JSON.stringify(mc && mc.status),
-                'stage:', JSON.stringify(mc && mc.stage),
-                'currentTag:', JSON.stringify(mc && mc.currentTag),
-                'rank:', mc && mc.rank, 'order:', mc && mc.order
-              );
+              
             });
           }
           // Log COMPLETE first candidate from candidates list to find pipeline tag
@@ -1727,7 +1732,17 @@ async function generate() {
                 + '?fieldsWithCandidate%5B%5D=manager.tags'
                 + '&fieldsWithCandidate%5B%5D=manager.customValues'
                 + '&fieldsWithCandidate%5B%5D=manager.researchNotes'
-                + '&fieldsWithCandidate%5B%5D=meta.candidate');
+                + '&fieldsWithCandidate%5B%5D=meta.candidate'
+                + '&fields%5B%5D=websites'
+                + '&fields%5B%5D=urls'
+                + '&fields%5B%5D=contactDetails'
+                + '&fields%5B%5D=links'
+                + '&fields%5B%5D=summary'
+                + '&fields%5B%5D=profile'
+                + '&fields%5B%5D=addresses'
+                + '&fields%5B%5D=firstName'
+                + '&fields%5B%5D=lastName'
+                + '&fields%5B%5D=fullName');
               if (_pResp.ok) {
                 var _pJson = await _pResp.json();
                 var _fullCand = _pJson.data || _pJson;
@@ -1739,8 +1754,7 @@ async function generate() {
                   if (_addResp.ok) {
                     var _addJson = await _addResp.json();
                     _fullCand._additionalInfo = _addJson.data || _addJson;
-                    if (_ci < 3) console.log('[ADDINFO] cand', _ci, (_fullCand.fullName||'?'), 'additionalInfo items:', Array.isArray(_fullCand._additionalInfo) ? _fullCand._additionalInfo.length : typeof _fullCand._additionalInfo);
-                  }
+                        }
                   // Fetch assignment-scoped custom values (includes progress notes + pipeline tag)
                   var _addResp2 = await fetch(ezekiaBase2 + '/people/' + _bc.id + '/additional-info?scopedModel=assignment&modelId=' + projectId2);
                   if (_addResp2.ok) {
@@ -1801,7 +1815,6 @@ async function generate() {
               // Gender + Notes — from additional-info (custom values endpoint)
               var _gender2 = '';
               var _notes = '';
-              console.log('[ADD-INFO DEBUG] cand:', (cand.fullName||cand.name||'?'), '| _additionalInfo length:', cand._additionalInfo ? (Array.isArray(cand._additionalInfo) ? cand._additionalInfo.length : 'not array') : 'MISSING');
               if (cand._additionalInfo) {
                 var _addArr = Array.isArray(cand._additionalInfo) ? cand._additionalInfo : [cand._additionalInfo];
                 _addArr.forEach(function(item) {
@@ -1833,14 +1846,46 @@ async function generate() {
               var _gender = _gender2 || cand.gender || (cand.profile && cand.profile.gender) || '';
               if (!_notes && cand._researchNotes && cand._researchNotes.length) _notes = cand._researchNotes[0].text || '';
 
+              // LinkedIn: from websites array, find entry with title containing 'linkedin'
+              var _linkedin = '';
+              // Check multiple possible field names for websites/social links
+              var _webSources = cand.links || cand.websites || cand.urls || cand.contactDetails || [];
+              if (!Array.isArray(_webSources)) _webSources = [];
+              // Also check profile.websites
+              if (_webSources.length === 0 && cand.profile && cand.profile.websites) {
+                _webSources = Array.isArray(cand.profile.websites) ? cand.profile.websites : [];
+              }
+              var _liSite = _webSources.find(function(w){
+                var t = (w.title || w.label || w.type || w.name || '').toLowerCase();
+                var v = (w.url || w.value || w.href || '').toLowerCase();
+                return t.includes('linkedin') || v.includes('linkedin');
+              });
+              if (_liSite) _linkedin = _liSite.url || _liSite.value || _liSite.href || '';
+
+              // Bio: from additional-info, find field labelled 'Bio' or 'Details'
+              var _bio = '';
+              if (cand._additionalInfo && Array.isArray(cand._additionalInfo)) {
+                var _bioField = cand._additionalInfo.find(function(f){
+                  var lbl = (f.field && f.field.label ? f.field.label : f.label || '').toLowerCase();
+                  return lbl.includes('bio') || lbl.includes('additional candidate data');
+                });
+                if (_bioField) _bio = String(_bioField.value || '').replace(/<[^>]+>/g,'').trim();
+              }
+
+              // Summary: standard field on people record
+              var _summary = (cand.summary || (cand.profile && cand.profile.summary) || '').replace(/<[^>]+>/g,'').trim();
+
               return {
-                fullname: cand.fullName || cand.name || ((cand.firstName||'') + ' ' + (cand.lastName||'')).trim(),
+                fullname: cand.fullName || cand.name || ((cand.firstName||'') + ' ' + (cand.lastName||'')).trim() || _bc.fullName || _bc.name || '',
                 company:  _co.name || cand.current_company || '',
                 title:    _pos.title || cand.current_title || '',
                 location: _loc,
                 pipelineTag: _tag,
                 gender:   _gender,
-                notes:    _notes
+                notes:    _notes,
+                linkedin: _linkedin,
+                bio:      _bio,
+                summary:  _summary
               };
             })
           };
@@ -2435,19 +2480,42 @@ try {
   rawOutput = rawOutput.replace(/^[^{[]*/, '').replace(/[^}\]]*$/, '');
   
   // Remove control characters that break JSON
-  rawOutput = rawOutput.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ');
+  rawOutput = rawOutput.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' '); // strip ALL control chars including newlines
   
   // Remove trailing commas before closing brackets/braces
   rawOutput = rawOutput.replace(/,\s*([}\]])/g, '$1');
   
   rawOutput = rawOutput.trim();
-  output = JSON.parse(rawOutput);
+
+  // Try parse, if fails attempt repair for unescaped quotes inside values
+  try {
+    output = JSON.parse(rawOutput);
+  } catch(_e1) {
+    // Replace unescaped double quotes inside string values with single quotes
+    var _rep = ''; var _inS = false; var _esc2 = false;
+    for (var _j = 0; _j < rawOutput.length; _j++) {
+      var _ch2 = rawOutput[_j]; var _code = rawOutput.charCodeAt(_j);
+      if (_esc2) { _rep += _ch2; _esc2 = false; continue; }
+      if (_code === 92) { _rep += _ch2; _esc2 = true; continue; }
+      if (_code === 34) {
+        if (!_inS) { _inS = true; _rep += _ch2; continue; }
+        // Check if this closes the string: next meaningful char is : , } ]
+        var _rest = rawOutput.substring(_j+1).replace(/^\s+/,'');
+        if (_rest.length === 0 || /^[:,}\]]/.test(_rest)) {
+          _inS = false; _rep += _ch2; continue;
+        }
+        // Unescaped quote inside string - replace with apostrophe
+        _rep += "'"; continue;
+      }
+      _rep += _ch2;
+    }
+    output = JSON.parse(_rep);
+  }
   // DEBUG: log parsed output for GB profile
   if (isGbProfile) {
-    console.log('[GB DEBUG] COMPANY_1:', output.COMPANY_1_NAME, output.COMPANY_1_ROLE, output.COMPANY_1_DATES);
-    console.log('[GB DEBUG] COMPANY_2:', output.COMPANY_2_NAME, output.COMPANY_2_ROLE, output.COMPANY_2_DATES);
-    console.log('[GB DEBUG] COMPANY_3:', output.COMPANY_3_NAME, output.COMPANY_3_ROLE, output.COMPANY_3_DATES);
-    console.log('[GB DEBUG] COMPANY_4:', output.COMPANY_4_NAME, output.COMPANY_4_ROLE, output.COMPANY_4_DATES);
+
+
+
   }
 } catch(e) {
   console.error('JSON Parse Error:', e);
@@ -2521,10 +2589,10 @@ function hideProgress(msg) {
   list.innerHTML = history.map(function(item, index) {
     return `
     <div class="hist-row">
-      <div class="hist-ico" style="background:${item.type==='combined'?'rgba(245,158,11,.15)':'rgba(43,124,211,.12)'};">${item.type==='combined'?'M':'W'}</div>
+      <div class="hist-ico" style="background:${item.type==='combined'?'rgba(245,158,11,.15)':item.fmt==='x'?'rgba(33,115,70,.15)':item.fmt==='p'?'rgba(210,71,38,.15)':item.fmt==='f'?'rgba(210,0,0,.12)':'rgba(43,124,211,.12)'};">${item.type==='combined'?'M':item.fmt==='x'?'E':item.fmt==='p'?'P':item.fmt==='f'?'F':'W'}</div>
       <div style="flex:1;">
         <div class="hist-name">${item.name}</div>
-        <div class="hist-meta">${item.date} &middot; ${item.type==='combined'?('Combined ('+item.content.length+' profiles)'):'Word'}</div>
+        <div class="hist-meta">${item.date} &middot; ${item.type==='combined'?('Combined ('+item.content.length+' profiles)'):(item.fmt==='x'?'Excel':item.fmt==='p'?'PowerPoint':item.fmt==='f'?'PDF':'Word')}</div>
       </div>
       <span class="badge" style="background:#dcfce7;color:#166534;">Done</span>
       <div class="ico-btn" onclick="downloadHistory(${index})">&#11015;</div>
@@ -2856,8 +2924,7 @@ async function downloadHistory(index) {
   if (!item) return;
   var fmt = item.fmt || 'd';
   // Override: project-report always downloads as xlsx
-  if (item.template === 'project-report') fmt = 'x';
-  console.log('[DL DEBUG] index:', index, 'template:', item.template, 'fmt:', fmt, 'name:', item.name);
+  if (item.template === 'project-report' || item.template === 'project-report-ext') fmt = 'x';
   var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : 'No Scorecard';
   var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : 'Global';
   var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
@@ -3287,9 +3354,11 @@ async function downloadHistory(index) {
 
     } else if (fmt === 'x') {
       // --- Project Report: fill xlsx template preserving ALL styles/images ---
-      if (item.template === 'services-profile' || item.template === 'project-report') {
+      if (item.template === 'services-profile' || item.template === 'project-report' || item.template === 'project-report-ext') {
         var projData2 = item.content;
-        var _projTplFile = (item.template === 'project-report')
+        var _projTplFile = (item.template === 'project-report-ext')
+          ? 'templates/SH_Project_Report_Extended_v1.xlsx'
+          : (item.template === 'project-report')
           ? 'templates/SH_Project_Report_Template_v4.xlsx'
           : 'Service%20Team%20-%20Project%20Report%20(with%20Notes).xlsx';
         var _RAW_BASE = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
@@ -3351,13 +3420,19 @@ async function downloadHistory(index) {
         var _newRows = '';
         _cands.forEach(function(cand, ri) {
           var _r = 3 + ri;
+          var _isExtReport = (item.template === 'project-report-ext');
           var _vals = [cand.fullname||'', cand.company||'', cand.title||'', cand.location||'', cand.pipelineTag||'', cand.gender||'', cand.notes||''];
           var _cols = ['A','B','C','D','E','F','G'];
+          if (_isExtReport) {
+            _vals.push(cand.linkedin||'', cand.bio||'', cand.summary||'');
+            _cols.push('H','I','J');
+          }
           var _cells = '';
           _vals.forEach(function(v, ci) {
             _cells += '<c r="' + _cols[ci] + _r + '" t="s"><v>' + _ssIdx(v) + '</v></c>';
           });
-          _newRows += '<row r="' + _r + '" spans="1:7" ht="15.75" customHeight="1">' + _cells + '</row>';
+          var _spanEnd = _cols.length;
+          _newRows += '<row r="' + _r + '" spans="1:' + _spanEnd + '" ht="15.75" customHeight="1">' + _cells + '</row>';
         });
         // Build deduped shared strings XML
         var _newSS = _ssArr.map(function(v){ return '<si><t xml:space="preserve">' + _xe(v) + '</t></si>'; }).join('');
@@ -3370,7 +3445,7 @@ async function downloadHistory(index) {
         // Update shared strings count
         // Update shared strings count with deduped array
         var _totalSS = _ssCount + _ssArr.length;
-        _ssXml = _ssXml.replace(/count="[^"]*"/, 'count="' + _totalSS + '"').replace(/uniqueCount="[^"]*"/, 'uniqueCount="' + _ssArr.length + '"');
+        _ssXml = _ssXml.replace(/count="[^"]*"/, 'count="' + _totalSS + '"').replace(/uniqueCount="[^"]*"/, 'uniqueCount="' + _totalSS + '"');
         _ssXml = _ssXml.replace('</sst>', _newSS + '</sst>');
 
         _projZip.file('xl/worksheets/sheet1.xml', _sh1);
