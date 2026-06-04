@@ -1746,7 +1746,10 @@ async function generate() {
                 + '&fields%5B%5D=links'
                 + '&fields%5B%5D=summary'
                 + '&fields%5B%5D=profile'
-                + '&fields%5B%5D=addresses');
+                + '&fields%5B%5D=addresses'
+                + '&fields%5B%5D=firstName'
+                + '&fields%5B%5D=lastName'
+                + '&fields%5B%5D=fullName');
               if (_pResp.ok) {
                 var _pJson = await _pResp.json();
                 var _fullCand = _pJson.data || _pJson;
@@ -1880,7 +1883,7 @@ async function generate() {
               var _summary = (cand.summary || (cand.profile && cand.profile.summary) || '').replace(/<[^>]+>/g,'').trim();
 
               return {
-                fullname: cand.fullName || cand.name || ((cand.firstName||'') + ' ' + (cand.lastName||'')).trim(),
+                fullname: cand.fullName || cand.name || ((cand.firstName||'') + ' ' + (cand.lastName||'')).trim() || _bc.fullName || _bc.name || '',
                 company:  _co.name || cand.current_company || '',
                 title:    _pos.title || cand.current_title || '',
                 location: _loc,
