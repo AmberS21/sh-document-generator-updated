@@ -1516,7 +1516,7 @@ async function generate() {
   var tpl = document.getElementById('tplSel').value;
   var btn = document.getElementById('genBtn');
   if (!tpl) { notify('Please select a template first'); return; }
-  logUsage(tpl, activeType, 'attempted');
+  logUsage(tpl, activeType, 'started');
 
   var inputText = '';
   var activeTab = document.querySelector('.itab.on');
@@ -2057,6 +2057,7 @@ async function generate() {
 
 
 if (activeType === 'file') return;   showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn);
+  logUsage(tpl, activeType, 'success');
   hideProgress('Done! Your profile is ready ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ check My History');
 }
 
@@ -2557,6 +2558,7 @@ try {
     console.error(err);
     btn.classList.remove('loading');
     btn.innerHTML = '\u274c Error \u2014 Try Again';
+    logUsage(tpl, activeType, 'failed');
     notify('Generation failed. Check console.');
   });
 }
