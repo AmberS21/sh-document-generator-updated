@@ -3240,25 +3240,16 @@ async function downloadHistory(index) {
           _csZip.file('word/header4.xml', _csHdr4);
         }
 
-        // Step 3b — Remove EDU_2 rows if no second education entry
+        // Step 3b — Remove EDU_2 rows entirely if no second education entry
         (function() {
           var _cv2 = item.content;
           if (!_cv2.EDU_2_INSTITUTION && !_cv2.EDU_2_START && !_cv2.EDU_2_DEGREE) {
             var _d2 = _csZip.files['word/document.xml'].asText();
-            // Replace the EDU_2 date/institution paragraph static text tokens with empty runs
-            // Pattern: paragraph containing {{EDU_2_START}} – {{EDU_2_END}}: etc.
-            _d2 = _d2.replace(/\{\{EDU_2_START\}\}[^<]*\{\{EDU_2_END\}\}[^<]*<\/w:t>/g, '</w:t>');
-            _d2 = _d2.replace(/\{\{EDU_2_INSTITUTION\}\}/g, '');
-            _d2 = _d2.replace(/\{\{EDU_2_LOCATION\}\}/g, '');
-            _d2 = _d2.replace(/\{\{EDU_2_DEGREE\}\}/g, '');
-            _d2 = _d2.replace(/\{\{EDU_2_EXTRA\}\}/g, '');
-            // Also blank out any static " – " or ":" that remain in the EDU_2 date paragraph
-            // by finding the paragraph with paraId 140F0114 and clearing its text runs
-            var _edu2ParaMatch = _d2.match(/<w:p[^>]*paraId="140F0114"[^>]*>[\s\S]*?<\/w:p>/);
-            if (_edu2ParaMatch) {
-              var _edu2Para = _edu2ParaMatch[0];
-              var _edu2Blank = _edu2Para.replace(/<w:r>[\s\S]*?<\/w:r>/g, '');
-              _d2 = _d2.replace(_edu2Para, _edu2Blank);
+            // Remove all 5 EDU_2 paragraphs by paraId (fixed in template)
+            var _edu2Ids = ['3C61EEB2', '140F0114', '1EA90AA6', '560A467D', '633F0E7D'];
+            for (var _ei = 0; _ei < _edu2Ids.length; _ei++) {
+              var _re2 = new RegExp('<w:p\\s[^>]*w14:paraId="' + _edu2Ids[_ei] + '"[^>]*>[\\s\\S]*?<\/w:p>\\s*');
+              _d2 = _d2.replace(_re2, '');
             }
             _csZip.file('word/document.xml', _d2);
           }
