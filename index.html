@@ -1391,6 +1391,14 @@ function buildEaIndiaBizExp(companies) {
 function buildCareerSummaryBizExp(companies) {
   if (!companies || companies.length === 0) return '';
   var xml = '';
+  function csPeriod(s) {
+    // Append period if sentence doesn't already end with punctuation
+    if (!s) return s;
+    var t = s.trimRight();
+    var last = t.slice(-1);
+    if (last === '.' || last === '?' || last === '!' || last === ')' || last === ':') return s;
+    return t + '.';
+  }
 
   for (var ci = 0; ci < companies.length; ci++) {
     var company = companies[ci];
@@ -1447,10 +1455,10 @@ function buildCareerSummaryBizExp(companies) {
           xml += '<w:p><w:pPr><w:pStyle w:val="12CV"/>'
                + '<w:tabs><w:tab w:val="num" w:pos="360"/></w:tabs>'
                + '<w:ind w:left="810"/></w:pPr>'
-               + '<w:r><w:t>' + csXmlEsc(bullet) + '</w:t></w:r></w:p>';
+               + '<w:r><w:t>' + csXmlEsc(csPeriod(bullet)) + '</w:t></w:r></w:p>';
         } else {
           xml += '<w:p><w:pPr><w:pStyle w:val="10CV"/></w:pPr>'
-               + '<w:r><w:t>' + csXmlEsc(bullet) + '</w:t></w:r></w:p>';
+               + '<w:r><w:t>' + csXmlEsc(csPeriod(bullet)) + '</w:t></w:r></w:p>';
         }
       }
 
@@ -2345,7 +2353,7 @@ COMPANIES ARRAY — CRITICAL RULES:
 - Each role is a separate object in the roles array.
 - company.name: Full legal company name — use IDENTICAL string for all roles at same company.
 - company.location: City, Country (leave empty if not stated).
-- company.dates: Overall tenure at company (e.g. "Mar 2019 – Present"). Most recent company first.
+- company.dates: Overall tenure at company (e.g. "Mar 2019 – Present"). ALWAYS include month — never year-only. Most recent company first.
 - role.role: Exact job title as written in CV.
 - role.role_dates: Dates for THIS specific role only (e.g. "Jul 2021 – Jul 2023"). Leave "" if the company has only ONE role (dates already shown in company header).
 - role.bullets: ALL bullet points written directly under THAT specific role, VERBATIM. NEVER mix bullets from different roles. Every single bullet must be captured — no limit, no skipping.
@@ -2412,7 +2420,7 @@ JSON STRUCTURE — return exactly this, filled with real data:
     {
       "name": "Full company legal name",
       "location": "City, Country",
-      "dates": "YYYY – Present",
+      "dates": "Mon YYYY – Present",
       "roles": [
         {
           "role": "Exact job title as written in CV",
@@ -2711,6 +2719,11 @@ try {
           var _now = new Date();
           var _mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
           output.PROFILE_MONTH = _mNames[_now.getMonth()] + ' ' + _now.getFullYear();
+          // Default placeholders for CS so template style renders correctly
+          if (isCareerSummary) {
+            if (!output.CLIENT_COMPANY) output.CLIENT_COMPANY = '[Client Company]';
+            if (!output.SEARCH_TITLE)   output.SEARCH_TITLE   = '[Job Title]';
+          }
           // Safety check: if companies is empty, warn the user clearly
           if (!output.companies || output.companies.length === 0) {
             notify('Warning: No work history was extracted. Please try again — the CV may have been too long.');
