@@ -1296,26 +1296,42 @@ function buildSvcQuals(cv) {
 
 function buildEaIndiaBizExp(companies) {
   // Builds Business Experience XML for EA India template
-  // Matches the output format: bold company name + tab-aligned dates,
-  // role title line (with dates only when multi-role),
-  // bullet list (ListParagraph, numId=4, Raleway Medium, color 2C2E82)
   if (!companies || companies.length === 0) return '';
   var xml = '';
   function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-  var CO_RPR  = '<w:rPr><w:b/><w:bCs/><w:color w:val="2C2E82" w:themeColor="accent1"/></w:rPr>';
-  var ROL_RPR = '<w:rPr><w:color w:val="2C2E82" w:themeColor="accent1"/></w:rPr>';
-  var BUL_PPR = '<w:pStyle w:val="ListParagraph"/>'
-              + '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="4"/></w:numPr>'
-              + '<w:tabs><w:tab w:val="left" w:pos="1483"/></w:tabs>'
-              + '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>'
-              + '<w:jc w:val="both"/>';
-  var BUL_RPR = '<w:rPr>'
-              + '<w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/>'
-              + '<w:color w:val="2C2E82" w:themeColor="accent1"/>'
-              + '<w:lang w:eastAsia="en-US"/>'
-              + '</w:rPr>';
-  var SPACER  = '<w:p><w:pPr><w:spacing w:after="0"/><w:rPr><w:color w:val="2C2E82" w:themeColor="accent1"/></w:rPr></w:pPr></w:p>';
+  // Normalise date format: "2023 Sept" -> "Sept 2023" (year before month)
+  function normDate(s) {
+    if (!s) return '';
+    return s.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*/gi, function(m, yr, mo) {
+      return mo.charAt(0).toUpperCase() + mo.slice(1) + ' ' + yr;
+    });
+  }
+  function normDateRange(s) {
+    if (!s) return '';
+    var parts = s.split(/\s*[–—-]+\s*/);
+    if (parts.length === 2) return normDate(parts[0].trim()) + ' \u2013 ' + normDate(parts[1].trim());
+    return normDate(s);
+  }
+
+  // Right-aligned tab stop at 9072 twips
+  var TAB_STOP  = '<w:tabs><w:tab w:val="right" w:pos="9072"/></w:tabs>';
+  var CO_PPR    = '<w:pPr><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
+  var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:color w:val="2C2E82" w:themeColor="accent1"/></w:rPr>';
+  var ROL_PPR_D = '<w:pPr><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
+  var ROL_PPR_P = '<w:pPr><w:spacing w:after="0"/></w:pPr>';
+  var ROL_RPR   = '<w:rPr><w:color w:val="2C2E82" w:themeColor="accent1"/></w:rPr>';
+  var BUL_PPR   = '<w:pStyle w:val="ListParagraph"/>'
+                + '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="4"/></w:numPr>'
+                + '<w:tabs><w:tab w:val="left" w:pos="1483"/></w:tabs>'
+                + '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>'
+                + '<w:jc w:val="both"/>';
+  var BUL_RPR   = '<w:rPr>'
+                + '<w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/>'
+                + '<w:color w:val="2C2E82" w:themeColor="accent1"/>'
+                + '<w:lang w:eastAsia="en-US"/>'
+                + '</w:rPr>';
+  var SPACER    = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
 
   for (var ci = 0; ci < companies.length; ci++) {
     var co = companies[ci];
@@ -1326,11 +1342,11 @@ function buildEaIndiaBizExp(companies) {
     // Spacer before company (except first)
     if (ci > 0) { xml += SPACER; xml += SPACER; }
 
-    // Company line: BOLD name (+ location if present), tabs, BOLD dates right-aligned
-    xml += '<w:p><w:pPr><w:spacing w:after="0"/>' + CO_RPR + '</w:pPr>'
-        +  '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(co.name) + (co.location ? ', ' + xe(co.location) : '') + '</w:t>'
-        +  '<w:tab/><w:tab/><w:tab/><w:tab/><w:tab/><w:tab/>'
-        +  '<w:t xml:space="preserve">' + xe(co.dates || '') + '</w:t></w:r>'
+    // Company line: BOLD name + location, TAB right-aligned, BOLD dates
+    var coDates = normDateRange(co.dates || '');
+    xml += '<w:p>' + CO_PPR
+        +  '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(co.name) + (co.location ? ', ' + xe(co.location) : '') + '</w:t></w:r>'
+        +  (coDates ? '<w:r>' + CO_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>' : '')
         +  '</w:p>';
 
     // Empty line after company heading
@@ -1339,20 +1355,22 @@ function buildEaIndiaBizExp(companies) {
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
       if (!role || !role.role) continue;
-      var roleDates = multiRole ? (role.role_dates || '') : '';
+      var roleDates = multiRole ? normDateRange(role.role_dates || '') : '';
 
-      // Role title line (with dates right-aligned only when multi-role)
+      // Role title line: left title, TAB right-aligned, dates (only multi-role)
       if (roleDates) {
-        xml += '<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/>' + ROL_RPR + '</w:pPr>'
-            +  '<w:r>' + ROL_RPR + '<w:t xml:space="preserve">' + xe(role.role) + '</w:t>'
-            +  '<w:tab/><w:tab/><w:tab/><w:tab/><w:tab/><w:tab/>'
-            +  '<w:t xml:space="preserve">' + xe(roleDates) + '</w:t></w:r>'
+        xml += '<w:p>' + ROL_PPR_D
+            +  '<w:r>' + ROL_RPR + '<w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
+            +  '<w:r>' + ROL_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(roleDates) + '</w:t></w:r>'
             +  '</w:p>';
       } else {
-        xml += '<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/>' + ROL_RPR + '</w:pPr>'
+        xml += '<w:p>' + ROL_PPR_P
             +  '<w:r>' + ROL_RPR + '<w:t>' + xe(role.role) + '</w:t></w:r>'
             +  '</w:p>';
       }
+
+      // ONE blank line between role title and bullets
+      xml += SPACER;
 
       // Bullets
       var bullets = role.bullets || [];
@@ -1370,8 +1388,6 @@ function buildEaIndiaBizExp(companies) {
   }
   return xml;
 }
-
-
 function buildCareerSummaryBizExp(companies) {
   if (!companies || companies.length === 0) return '';
   var xml = '';
