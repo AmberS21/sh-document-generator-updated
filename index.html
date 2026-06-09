@@ -3486,7 +3486,12 @@ async function downloadHistory(index) {
         var _eiVolTokens = {};
         for (var _vi = 0; _vi < 3; _vi++) {
           var _vEntry = _eiVol[_vi] || {};
-          _eiVolTokens['VOL_' + (_vi+1) + '_DATES']       = _vEntry.dates || '';
+          // Normalise vol dates: "2024 Dec" -> "Dec 2024"
+          var _vDates = _vEntry.dates || '';
+          _vDates = _vDates.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*/gi, function(m, yr, mo) {
+            return mo.charAt(0).toUpperCase() + mo.slice(1) + ' ' + yr;
+          });
+          _eiVolTokens['VOL_' + (_vi+1) + '_DATES']       = _vDates;
           _eiVolTokens['VOL_' + (_vi+1) + '_ROLE']        = _vEntry.role || '';
           _eiVolTokens['VOL_' + (_vi+1) + '_DESCRIPTION'] = _vEntry.description || '';
         }
