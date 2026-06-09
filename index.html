@@ -2405,6 +2405,7 @@ COMPANIES ARRAY RULES:
 - Group ALL roles held at the same company under ONE company entry.
 - Each role is a separate object in the roles array with its own bullets.
 - role_dates: always fill for EVERY role — e.g. "Mar 2019 – Nov 2025". Only leave "" if the company has exactly ONE role (dates already shown in company header).
+- company.dates: ALWAYS use "Mon YYYY – Mon YYYY" format including month e.g. "Jan 2019 – Present" or "Mar 2018 – Dec 2019". NEVER year-only.
 - "Results:" lines: include as their own bullet string. Sub-results follow as separate bullet strings immediately after.
 - Most recent company first.
 
@@ -2444,6 +2445,12 @@ JSON STRUCTURE — return exactly this, filled with real data:
   "LANGUAGES_LEVEL": "",
   "INTERESTS": ""
 }
+
+FIELD INSTRUCTIONS FOR PERSONAL DETAILS:
+- QUAL_1: Extract ALL professional qualifications, licences, certifications and accreditations as a single string, VERBATIM from the CV. Include in-progress qualifications with their expected dates. Copy the FULL text exactly as written (e.g. "Series 7 complete & 63 in progress (expected 06/2026)"). Do NOT truncate or split.
+- TECH_SKILLS: Extract all technical/software skills as a comma-separated string.
+- AFFILIATION_1: Extract all professional memberships, affiliations and industry groups.
+- NATIONALITY, LANGUAGES, INTERESTS: Extract exactly as stated; leave empty if not found.
 
 CANDIDATE SOURCE:
 
@@ -3232,6 +3239,30 @@ async function downloadHistory(index) {
           _csHdr4 = _csHdr4.replace('{{CANDIDATE_NAME}}', csXmlEsc(item.content.CANDIDATE_NAME || ''));
           _csZip.file('word/header4.xml', _csHdr4);
         }
+
+        // Step 3b — Remove EDU_2 rows if no second education entry
+        (function() {
+          var _cv2 = item.content;
+          if (!_cv2.EDU_2_INSTITUTION && !_cv2.EDU_2_START && !_cv2.EDU_2_DEGREE) {
+            var _d2 = _csZip.files['word/document.xml'].asText();
+            // Replace the EDU_2 date/institution paragraph static text tokens with empty runs
+            // Pattern: paragraph containing {{EDU_2_START}} – {{EDU_2_END}}: etc.
+            _d2 = _d2.replace(/\{\{EDU_2_START\}\}[^<]*\{\{EDU_2_END\}\}[^<]*<\/w:t>/g, '</w:t>');
+            _d2 = _d2.replace(/\{\{EDU_2_INSTITUTION\}\}/g, '');
+            _d2 = _d2.replace(/\{\{EDU_2_LOCATION\}\}/g, '');
+            _d2 = _d2.replace(/\{\{EDU_2_DEGREE\}\}/g, '');
+            _d2 = _d2.replace(/\{\{EDU_2_EXTRA\}\}/g, '');
+            // Also blank out any static " – " or ":" that remain in the EDU_2 date paragraph
+            // by finding the paragraph with paraId 140F0114 and clearing its text runs
+            var _edu2ParaMatch = _d2.match(/<w:p[^>]*paraId="140F0114"[^>]*>[\s\S]*?<\/w:p>/);
+            if (_edu2ParaMatch) {
+              var _edu2Para = _edu2ParaMatch[0];
+              var _edu2Blank = _edu2Para.replace(/<w:r>[\s\S]*?<\/w:r>/g, '');
+              _d2 = _d2.replace(_edu2Para, _edu2Blank);
+            }
+            _csZip.file('word/document.xml', _d2);
+          }
+        })();
 
         // Step 4 — docxtemplater fills all remaining flat {{tokens}}
         var _csDoc = new window.docxtemplater(_csZip, {
