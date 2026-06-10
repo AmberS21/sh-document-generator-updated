@@ -2556,6 +2556,7 @@ var isEaIndia = (tpl === 'ea-india-profile');
 var isChangeCons = (tpl === 'change-consulting-profile');
 var isApacEy = (tpl === 'apac-ey-profile');
 var isApacV2 = (tpl === 'apac-profile-v2');
+if (isApacV2) { isApac = true; isApacUpdated = true; }
 var apacEyJsonStr = '{"CANDIDATE_NAME":"","CURRENT_TITLE":"","CURRENT_EMPLOYER":"","PROFILE_DATE":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_INSTITUTION":"","EDU_1_START":"","EDU_1_END":"","EDU_1_DEGREE":"","EDU_2_INSTITUTION":"","EDU_2_START":"","EDU_2_END":"","EDU_2_DEGREE":"","EDU_1_BULLETS":"","EDU_2_BULLETS":"","QUAL_1_TEXT":"","QUAL_1_START":"","QUAL_1_END":"","QUAL_1_DETAIL":"","QUAL_2_TEXT":"","QUAL_2_START":"","QUAL_2_END":"","QUAL_2_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","CANDIDATE_SUMMARY":""}';
 var changeConsJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_1_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","INTERESTS_DETAIL":""}';
 var eaIndiaJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY_INTRO":"","KEY_SKILLS":"","EXEC_OVERVIEW_BULLET_1":"","EXEC_OVERVIEW_BULLET_2":"","EXEC_OVERVIEW_BULLET_3":"","EXEC_OVERVIEW_BULLET_4":"","EXEC_OVERVIEW_BULLET_5":"","EXEC_OVERVIEW_BULLET_6":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_YEAR":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_1_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_2_YEAR":"","QUAL_2_TEXT":"","QUAL_3_YEAR":"","QUAL_3_TEXT":"","QUAL_4_YEAR":"","QUAL_4_TEXT":"","QUAL_5_YEAR":"","QUAL_5_TEXT":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","volunteering":[{"dates":"","role":"","description":""}]}';
@@ -2735,9 +2736,7 @@ CANDIDATE SOURCE:
 
 ` + inputText;
 
-var prompt = isApacV2
-  ? (isApacUpdated ? apacUpdatedPrompt : apacPrompt)
-  : isApacEy
+var prompt = isApacEy
   ? apacEyPrompt
   : isChangeCons
   ? changeConsPrompt
