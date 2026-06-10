@@ -3464,12 +3464,41 @@ async function downloadHistory(index) {
           }
         }
       }
-      var _isApacTpl = (item.template === 'apac-profile');
+      var _isApacTpl = false;
       var out;
       if (_isApacTpl) {
         var _apacZip = await JSZip.loadAsync(ab);
         var _apacXml = await _apacZip.files['word/document.xml'].async('string');
-        var _apacFilled = apacFillTemplate(_apacXml, item.content);
+
+        // Convert companies[] array to flat COMPANY_N_* keys that apacFillTemplate expects
+        var _apacCv = Object.assign({}, item.content);
+        var _apacCos = _apacCv.companies || [];
+        var _apacN = 0;
+        for (var _aci = 0; _aci < _apacCos.length; _aci++) {
+          var _aco = _apacCos[_aci];
+          if (!_aco || !_aco.name) continue;
+          var _aRoles = _aco.roles || [];
+          var _multiRole = _aRoles.length > 1;
+          for (var _ari = 0; _ari < _aRoles.length; _ari++) {
+            var _ar = _aRoles[_ari];
+            if (!_ar) continue;
+            _apacN++;
+            var _prefix = 'COMPANY_' + _apacN + '_';
+            _apacCv[_prefix + 'NAME']       = _aco.name || '';
+            _apacCv[_prefix + 'LOCATION']   = _aco.location || '';
+            _apacCv[_prefix + 'DATES']      = _aco.dates || '';
+            _apacCv[_prefix + 'ROLE']       = _ar.role || '';
+            _apacCv[_prefix + 'ROLE_DATES'] = _multiRole ? (_ar.role_dates || '') : '';
+            var _aBullets = _ar.bullets || [];
+            for (var _abi = 0; _abi < _aBullets.length; _abi++) {
+              if (_aBullets[_abi]) _apacCv[_prefix + 'BULLET_' + (_abi + 1)] = _aBullets[_abi];
+            }
+          }
+        }
+        // Also set MONTH_YEAR from PROFILE_MONTH if present
+        if (!_apacCv.MONTH_YEAR && _apacCv.PROFILE_MONTH) _apacCv.MONTH_YEAR = _apacCv.PROFILE_MONTH;
+
+        var _apacFilled = apacFillTemplate(_apacXml, _apacCv);
         _apacZip.file('word/document.xml', _apacFilled);
         out = await _apacZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       } else if (item.template === 'global-career-summary') {
@@ -4000,6 +4029,50 @@ async function downloadHistory(index) {
         } catch(_eiErr) {
           console.error('[EA India] docxtemplater error:', _eiErr.message);
           out = _eiZip.generate({type: 'blob', mimeType: _docMimeSingle});
+        }
+
+      } else if (item.template === 'apac-profile') {
+        // ── APAC English Profile — uses native docxtemplater loop syntax ──
+        var _apZip = new PizZip(ab);
+        var _apCv = Object.assign({}, item.content);
+        // Map PROFILE_MONTH → MONTH_YEAR if needed
+        if (!_apCv.MONTH_YEAR && _apCv.PROFILE_MONTH) _apCv.MONTH_YEAR = _apCv.PROFILE_MONTH;
+        // Ensure companies array is present (docxtemplater loops over it)
+        _apCv.companies = _apCv.companies || [];
+        // education array — build from flat EDU fields if not present
+        if (!_apCv.education || !_apCv.education.length) {
+          _apCv.education = [];
+          if (_apCv.EDU_1_INSTITUTION) {
+            _apCv.education.push({
+              years: (_apCv.EDU_1_START && _apCv.EDU_1_END) ? (_apCv.EDU_1_START + ' – ' + _apCv.EDU_1_END) : (_apCv.EDU_1_START || ''),
+              institution: _apCv.EDU_1_INSTITUTION + (_apCv.EDU_1_LOCATION ? ', ' + _apCv.EDU_1_LOCATION : ''),
+              degree: _apCv.EDU_1_DEGREE || ''
+            });
+          }
+          if (_apCv.EDU_2_INSTITUTION) {
+            _apCv.education.push({
+              years: (_apCv.EDU_2_START && _apCv.EDU_2_END) ? (_apCv.EDU_2_START + ' – ' + _apCv.EDU_2_END) : (_apCv.EDU_2_START || ''),
+              institution: _apCv.EDU_2_INSTITUTION + (_apCv.EDU_2_LOCATION ? ', ' + _apCv.EDU_2_LOCATION : ''),
+              degree: _apCv.EDU_2_DEGREE || ''
+            });
+          }
+        }
+        // projects array — empty if not present
+        _apCv.projects = _apCv.projects || [];
+        // Qual fields
+        if (!_apCv.QUAL_1 && _apCv.QUAL_1_TEXT) _apCv.QUAL_1 = _apCv.QUAL_1_TEXT;
+        if (!_apCv.QUAL_YEAR && _apCv.QUAL_1_START) _apCv.QUAL_YEAR = _apCv.QUAL_1_START;
+        try {
+          var _apDoc = new window.docxtemplater(_apZip, {
+            paragraphLoop: true, linebreaks: true,
+            delimiters: {start: '{{', end: '}}'},
+            nullGetter: function() { return ''; }
+          });
+          _apDoc.render(_apCv);
+          out = _apDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+        } catch(_apErr) {
+          console.error('[APAC] docxtemplater error:', _apErr.message);
+          out = _apZip.generate({type: 'blob', mimeType: _docMimeSingle});
         }
 
       } else {
