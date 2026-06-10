@@ -1379,9 +1379,9 @@ function buildApacV2BizExp(companies) {
   var CO_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:hanging="284"/><w:rPr><w:b/><w:bCs/></w:rPr></w:pPr>';
   var CO_RPR = '<w:rPr><w:b/><w:bCs/></w:rPr>';
   var ROL_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:hanging="284"/></w:pPr>';
-  var ROL_RPR = '<w:rPr></w:rPr>';
+  var ROL_RPR = '';
   var BUL_PPR = '<w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0"/></w:pPr>';
-  var BUL_RPR = '<w:rPr></w:rPr>';
+  var BUL_RPR = '';
   var SPACER  = '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:ind w:hanging="284"/></w:pPr></w:p>';
   var TABS6   = '<w:tab/><w:tab/><w:tab/><w:tab/><w:tab/><w:tab/>';
 
@@ -1397,7 +1397,8 @@ function buildApacV2BizExp(companies) {
     var coName = xe(co.name) + (co.location ? ', ' + xe(co.location) : '');
     xml += '<w:p>' + CO_PPR
         + '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + coName + '</w:t></w:r>'
-        + '<w:r>' + CO_RPR + TABS6 + '<w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>'
+        + '<w:r>' + TABS6 + '</w:r>'
+        + '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>'
         + '</w:p>';
 
     for (var ri = 0; ri < roles.length; ri++) {
@@ -1408,7 +1409,8 @@ function buildApacV2BizExp(companies) {
       // Role line: title, 6 tabs, dates (same run matching template)
       xml += '<w:p>' + ROL_PPR
           + '<w:r><w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
-          + '<w:r>' + TABS6 + '<w:t xml:space="preserve">' + xe(rdates) + '</w:t></w:r>'
+          + '<w:r>' + TABS6 + '</w:r>'
+          + '<w:r><w:t xml:space="preserve">' + xe(rdates) + '</w:t></w:r>'
           + '</w:p>';
 
       // Bullets
@@ -2842,7 +2844,7 @@ FIELD-BY-FIELD INSTRUCTIONS:
    - EDU_1_INSTITUTION...: Full institution name
    - EDU_1_DEGREE...: Degree or qualification name
 
-10. QUAL_1: CRITICAL — extract the COMPLETE qualifications/certifications string VERBATIM including ALL items separated by pipes. The CV may list them at the top (e.g. "CPIM | Six Sigma Black Belt") AND again in a certifications section. Extract the MOST COMPLETE version. E.g. "CPIM (Certified in Production and Inventory Management) | Six Sigma Black Belt". Do NOT truncate after the first item. Do NOT split on pipes. Copy EVERYTHING into QUAL_1.
+10. QUAL_1: CRITICAL — The pipe character | is NOT a separator — it is PART of the qualification string. Copy the ENTIRE qualifications/certifications string VERBATIM including everything after each pipe. The CV may list qualifications at the top AND again in a certifications section — always extract the MOST COMPLETE version. E.g. input "CPIM (Certified in Production and Inventory Management) | Six Sigma Black Belt" → output EXACTLY "CPIM (Certified in Production and Inventory Management) | Six Sigma Black Belt". Do NOT stop at the pipe. Do NOT truncate.
 11. NATIONALITY: Exact nationality as stated; leave empty if not provided.
 12. LANGUAGES: Languages with proficiency levels as stated; leave empty if not provided.
 13. INTERESTS: As stated; leave empty if not provided.
@@ -4213,6 +4215,37 @@ async function downloadHistory(index) {
         // Qual fields
         if (!_apCv.QUAL_1 && _apCv.QUAL_1_TEXT) _apCv.QUAL_1 = _apCv.QUAL_1_TEXT;
         if (!_apCv.QUAL_YEAR && _apCv.QUAL_1_START) _apCv.QUAL_YEAR = _apCv.QUAL_1_START;
+        // Inject QUAL_1 as bold SHBullets paragraphs split on '|'
+        (function() {
+          var _qd = _apZip.files['word/document.xml'].asText();
+          var _q1 = (_apCv.QUAL_1 || '').trim();
+          if (_q1) {
+            var _qItems = _q1.split('|').map(function(s){return s.trim();}).filter(Boolean);
+            var _qXml = _qItems.map(function(item){
+              return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0"/></w:pPr>'
+                   + '<w:r><w:rPr><w:b/><w:bCs/></w:rPr>'
+                   + '<w:t xml:space="preserve">' + item.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</w:t>'
+                   + '</w:r></w:p>';
+            }).join('');
+            // Find the QUAL paragraph (contains {{QUAL_1}}) and replace with bullets
+            var _qi = _qd.indexOf('{{QUAL_1}}');
+            if (_qi !== -1) {
+              var _qps = _qi, _qsf = _qi;
+              while (_qsf > 0) {
+                var _qc = _qd.lastIndexOf('<w:p', _qsf - 1);
+                if (_qc < 0) break;
+                if (_qd.charAt(_qc+4)==='>'||_qd.charAt(_qc+4)===' '){_qps=_qc;break;}
+                _qsf = _qc;
+              }
+              var _qpe = _qd.indexOf('</w:p>', _qi) + 6;
+              _qd = _qd.substring(0, _qps) + _qXml + _qd.substring(_qpe);
+              // Null out QUAL_1 so docxtemplater doesn't try to fill it
+              _apCv.QUAL_1 = '';
+            }
+            _apZip.file('word/document.xml', _qd);
+          }
+        })();
+
         try {
           var _apDoc = new window.docxtemplater(_apZip, {
             paragraphLoop: true, linebreaks: true,
