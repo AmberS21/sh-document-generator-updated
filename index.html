@@ -1362,7 +1362,7 @@ function buildApacEyBizExp(companies) {
     return normDate(s);
   }
 
-  var TAB_STOP   = '<w:tabs><w:tab w:val="right" w:pos="9072"/></w:tabs>';
+  var TAB_STOP   = '<w:tabs><w:tab w:val="right" w:pos="9720"/></w:tabs>';
   var CO_PPR     = '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:right="26"/><w:jc w:val="both"/>' + TAB_STOP + '</w:pPr>';
   var CO_RPR     = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium"/><w:b/><w:color w:val="222229"/></w:rPr>';
   var ROL_PPR    = '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:right="26"/><w:jc w:val="both"/>' + TAB_STOP + '</w:pPr>';
@@ -1383,11 +1383,11 @@ function buildApacEyBizExp(companies) {
     var multiRole = roles.length > 1;
     if (ci > 0) { xml += SPACER; xml += SPACER; }
 
-    // Company line: BOLD name (no location - already in name), tab, BOLD dates
+    // Company line: BOLD name, tab, BOLD dates — tab and date in separate run
     var coDates = normDateRange(co.dates || '');
     xml += '<w:p>' + CO_PPR
         +  '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(co.name) + '</w:t></w:r>'
-        +  (coDates ? '<w:r>' + CO_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>' : '')
+        +  (coDates ? '<w:r>' + CO_RPR + '<w:tab/></w:r><w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>' : '')
         +  '</w:p>';
 
     xml += SPACER;
@@ -1397,11 +1397,12 @@ function buildApacEyBizExp(companies) {
       if (!role || !role.role) continue;
       var rdates = multiRole ? normDateRange(role.role_dates || '') : '';
 
-      // Role title
+      // Role title — title and date MUST be separate runs so date right-aligns
       if (rdates) {
         xml += '<w:p>' + ROL_PPR
             +  '<w:r>' + ROL_RPR + '<w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
-            +  '<w:r>' + ROL_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(rdates) + '</w:t></w:r>'
+            +  '<w:r>' + ROL_RPR + '<w:tab/></w:r>'
+            +  '<w:r>' + ROL_RPR + '<w:t xml:space="preserve">' + xe(rdates) + '</w:t></w:r>'
             +  '</w:p>';
       } else {
         xml += '<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:right="26"/><w:jc w:val="both"/></w:pPr>'
@@ -3819,12 +3820,16 @@ async function downloadHistory(index) {
           function _xe(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
           function _buls(s){if(!s)return'';return s.split('|').map(function(b){b=b.trim();if(!b)return'';return'<w:p><w:pPr>'+_BPR+'</w:pPr><w:r>'+_BRR+'<w:t xml:space="preserve">'+_xe(b)+'</w:t></w:r></w:p>';}).join('');}
           function _remPid(xml,pid){return xml.replace(new RegExp('<w:p\\s[^>]*w14:paraId="'+pid+'"[^>]*>[\\s\\S]*?<\/w:p>\\s*'),'');}
+          var _SPACER='<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:p>';
           ['EDU_1_BULLETS','EDU_2_BULLETS'].forEach(function(tok){
             var ts='{{'+tok+'}}',bi=_eyD.indexOf(ts);if(bi===-1)return;
             var ps=bi,sf=bi;
             while(sf>0){var c=_eyD.lastIndexOf('<w:p',sf-1);if(c<0)break;var ch=_eyD.charAt(c+4);if(ch==='>'||ch===' '){ps=c;break;}sf=c;}
             var pe=_eyD.indexOf('</w:p>',bi)+6;
-            _eyD=_eyD.substring(0,ps)+_buls(_eyCv[tok]||'')+_eyD.substring(pe);
+            var bulXml=_buls(_eyCv[tok]||'');
+            // Add spacer after bullets if there are any
+            if(bulXml) bulXml+=_SPACER;
+            _eyD=_eyD.substring(0,ps)+bulXml+_eyD.substring(pe);
           });
           if(!_eyCv.EDU_2_INSTITUTION&&!_eyCv.EDU_2_START&&!_eyCv.EDU_2_DEGREE){
             _eyD=_remPid(_eyD,'206FA6B7');_eyD=_remPid(_eyD,'6AAD2538');_eyD=_remPid(_eyD,'1E100002');
