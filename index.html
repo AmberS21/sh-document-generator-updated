@@ -831,6 +831,27 @@ const TEMPLATES = {
 
   },
 
+  'apac-profile-deal-list': {
+
+    label: 'APAC Candidate Profile — with Deal List',
+
+    file: 'templates/APAC_Candidate_Profile_with_Deal_List.docx',
+
+    patchFiles: ['word/document.xml'],
+
+    promptType: 'apac'
+
+  },
+
+  'apac-profile-deal-list': {
+    name: 'APAC Candidate Profile',
+    sub: 'with Deal List',
+    ico: 'doc',
+    bg: 'rgba(20,118,137,.15)',
+    fmt: 'd',
+    reg: 'APAC',
+    flds: ['Candidate Name','Current Employer','Summary','Business Experience','Education','Qualifications','Nationality','Languages','Interests','Deal List (manual)']
+  },
   'apac-profile-v2': {
 
     label: 'APAC Candidate Profile — English (v2)',
@@ -880,7 +901,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
 (function() {
   var sel = document.getElementById('tplSel');
   if (!sel) return;
-  var profileKeys = ['global-no-scorecard','global-with-scorecard','global-career-summary','apac-profile','apac-profile-v2','services-profile','gb-profile','ea-india-profile','change-consulting-profile','apac-ey-profile'];
+  var profileKeys = ['global-no-scorecard','global-with-scorecard','global-career-summary','apac-profile','apac-profile-deal-list','apac-profile-v2','services-profile','gb-profile','ea-india-profile','change-consulting-profile','apac-ey-profile'];
   var reportKeys  = ['project-report','project-report-ext'];
 
   var grp1 = document.createElement('optgroup');
@@ -2557,6 +2578,8 @@ var isServicesProfile = (tpl === 'services-profile');
 var isEaIndia = (tpl === 'ea-india-profile');
 var isChangeCons = (tpl === 'change-consulting-profile');
 var isApacEy = (tpl === 'apac-ey-profile');
+var isApacDealList = (tpl === 'apac-profile-deal-list');
+if (isApacDealList) { isApac = true; isApacUpdated = true; }
 var isApacV2 = (tpl === 'apac-profile-v2');
 if (isApacV2) { isApac = true; isApacUpdated = true; }
 var apacEyJsonStr = '{"CANDIDATE_NAME":"","CURRENT_TITLE":"","CURRENT_EMPLOYER":"","PROFILE_DATE":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_INSTITUTION":"","EDU_1_START":"","EDU_1_END":"","EDU_1_DEGREE":"","EDU_2_INSTITUTION":"","EDU_2_START":"","EDU_2_END":"","EDU_2_DEGREE":"","EDU_1_BULLETS":"","EDU_2_BULLETS":"","QUAL_1_TEXT":"","QUAL_1_START":"","QUAL_1_END":"","QUAL_1_DETAIL":"","QUAL_2_TEXT":"","QUAL_2_START":"","QUAL_2_END":"","QUAL_2_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","CANDIDATE_SUMMARY":""}';
@@ -3489,7 +3512,7 @@ async function downloadHistory(index) {
   var fmt = item.fmt || 'd';
   // Override: project-report always downloads as xlsx
   if (item.template === 'project-report' || item.template === 'project-report-ext') fmt = 'x';
-  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile' ? 'EA India' : item.template === 'change-consulting-profile' ? 'Change Consulting' : item.template === 'apac-profile-v2' ? 'APAC v2' : item.template === 'apac-ey-profile' ? 'EY Shortlisted' : 'No Scorecard';
+  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile' ? 'EA India' : item.template === 'change-consulting-profile' ? 'Change Consulting' : item.template === 'apac-profile-deal-list' ? 'APAC Deal List' : item.template === 'apac-profile-v2' ? 'APAC v2' : item.template === 'apac-ey-profile' ? 'EY Shortlisted' : 'No Scorecard';
   var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : item.template === 'ea-india-profile' ? 'Global' : 'Global';
   var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
