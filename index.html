@@ -3464,7 +3464,7 @@ async function downloadHistory(index) {
           }
         }
       }
-      var _isApacTpl = false;
+      var _isApacTpl = (item.template === 'apac-profile');
       var out;
       if (_isApacTpl) {
         var _apacZip = await JSZip.loadAsync(ab);
