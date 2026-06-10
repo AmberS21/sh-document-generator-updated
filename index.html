@@ -4069,13 +4069,7 @@ async function downloadHistory(index) {
             nullGetter: function() { return ''; }
           });
           _apDoc.render(_apCv);
-          // Post-render: split tab+date into separate run for right-alignment
-          var _apOutZip = _apDoc.getZip();
-          var _apOutXml = _apOutZip.files['word/document.xml'].asText();
-          _apOutXml = _apOutXml.replace(/<\/w:t>\s*<w:tab\/>\s*<w:t/g,
-            '</w:t></w:r><w:r><w:tab/></w:r><w:r><w:t');
-          _apOutZip.file('word/document.xml', _apOutXml);
-          out = _apOutZip.generate({type: 'blob', mimeType: _docMimeSingle});
+          out = _apDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
         } catch(_apErr) {
           console.error('[APAC] docxtemplater error:', _apErr.message);
           out = _apZip.generate({type: 'blob', mimeType: _docMimeSingle});
