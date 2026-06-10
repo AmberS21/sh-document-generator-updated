@@ -4069,21 +4069,46 @@ async function downloadHistory(index) {
             nullGetter: function() { return ''; }
           });
           _apDoc.render(_apCv);
-          // Post-render: split any run where <w:tab/> and date are in same run
-          // This ensures dates always right-align without breaking to next line
+          // Post-render: split tab+date into separate runs so dates right-align
           var _apOutZip = _apDoc.getZip();
           var _apOutXml = _apOutZip.files['word/document.xml'].asText();
-          // Pattern: <w:t...>text</w:t><w:tab/><w:t...>date</w:t> in same <w:r>
-          // Split into: run1: text | run2: tab | run3: date
-          _apOutXml = _apOutXml.replace(
-            /(<w:r>)([\s\S]*?)(<w:t[^>]*>[^<]*<\/w:t>)(\s*<w:tab\/>)(\s*<w:t[^>]*>[^<]*<\/w:t>)([\s\S]*?<\/w:r>)/g,
-            function(m, ro, rpr, text1, tab, text2, close) {
-              var rprStr = rpr.match(/<w:rPr>[\s\S]*?<\/w:rPr>/) ? rpr.match(/<w:rPr>[\s\S]*?<\/w:rPr>/)[0] : '';
-              return '<w:r>' + rprStr + text1 + '</w:r>'
-                   + '<w:r>' + rprStr + '<w:tab/></w:r>'
-                   + '<w:r>' + rprStr + text2 + '</w:r>';
+          // For each <w:r>...</w:r> that contains both <w:t>...</w:t> and <w:tab/>
+          // split into: run(text) | run(tab) | run(date)
+          // We do this by finding the pattern <w:t>text</w:t> ... <w:tab/> ... <w:t>date</w:t>
+          // inside a single run, and splitting it into 3 runs
+          var _apParts = _apOutXml.split(/<\/w:r>/);
+          var _apFixed = [];
+          for (var _api = 0; _api < _apParts.length; _api++) {
+            var _apPart = _apParts[_api];
+            // Only process if this run has both a <w:t> and a <w:tab/>
+            if (_apPart.indexOf('<w:tab/>') !== -1 && _apPart.indexOf('<w:t') !== -1) {
+              // Get rPr if any
+              var _apRprM = _apPart.match(/<w:rPr[\s\S]*?<\/w:rPr>/);
+              var _apRpr = _apRprM ? _apRprM[0] : '';
+              // Find all <w:t>...</w:t> segments and tabs in order
+              var _apRunOpen = _apPart.match(/^[\s\S]*?(?=<w:rPr|<w:t|<w:tab)/);
+              var _apOpen = _apRunOpen ? _apRunOpen[0] : '<w:r>';
+              // Split on <w:tab/>
+              var _apBeforeTab = _apPart.substring(0, _apPart.indexOf('<w:tab/>'));
+              var _apAfterTab  = _apPart.substring(_apPart.indexOf('<w:tab/>') + 8);
+              // Extract text from before and after
+              var _apT1m = _apBeforeTab.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/);
+              var _apT2m = _apAfterTab.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/);
+              if (_apT1m && _apT2m) {
+                var _apXe = function(s){return s;};
+                var _apT1attr = (_apBeforeTab.match(/<w:t([^>]*)>/) || ['',''])[1];
+                var _apT2attr = (_apAfterTab.match(/<w:t([^>]*)>/) || ['',''])[1];
+                _apFixed.push(
+                  _apOpen + _apRpr + '<w:t' + _apT1attr + '>' + _apT1m[1] + '</w:t></w:r>',
+                  '<w:r>' + _apRpr + '<w:tab/></w:r>',
+                  '<w:r>' + _apRpr + '<w:t' + _apT2attr + '>' + _apT2m[1] + '</w:t>'
+                );
+                continue;
+              }
             }
-          );
+            _apFixed.push(_apPart);
+          }
+          _apOutXml = _apFixed.join('</w:r>');
           _apOutZip.file('word/document.xml', _apOutXml);
           out = _apOutZip.generate({type: 'blob', mimeType: _docMimeSingle});
         } catch(_apErr) {
