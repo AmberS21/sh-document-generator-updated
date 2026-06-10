@@ -3811,6 +3811,29 @@ async function downloadHistory(index) {
           INTERESTS:         _eyCv.INTERESTS || ''
         });
 
+        // Step 3c — inject EDU bullets + remove empty EDU_2/QUAL blocks
+        (function() {
+          var _eyD = _eyZip.files['word/document.xml'].asText();
+          var _BPR = '<w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="28"/></w:numPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="360" w:right="26"/><w:jc w:val="both"/>';
+          var _BRR = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium"/><w:color w:val="222229"/></w:rPr>';
+          function _xe(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+          function _buls(s){if(!s)return'';return s.split('|').map(function(b){b=b.trim();if(!b)return'';return'<w:p><w:pPr>'+_BPR+'</w:pPr><w:r>'+_BRR+'<w:t xml:space="preserve">'+_xe(b)+'</w:t></w:r></w:p>';}).join('');}
+          function _remPid(xml,pid){return xml.replace(new RegExp('<w:p\\s[^>]*w14:paraId="'+pid+'"[^>]*>[\\s\\S]*?<\/w:p>\\s*'),'');}
+          ['EDU_1_BULLETS','EDU_2_BULLETS'].forEach(function(tok){
+            var ts='{{'+tok+'}}',bi=_eyD.indexOf(ts);if(bi===-1)return;
+            var ps=bi,sf=bi;
+            while(sf>0){var c=_eyD.lastIndexOf('<w:p',sf-1);if(c<0)break;var ch=_eyD.charAt(c+4);if(ch==='>'||ch===' '){ps=c;break;}sf=c;}
+            var pe=_eyD.indexOf('</w:p>',bi)+6;
+            _eyD=_eyD.substring(0,ps)+_buls(_eyCv[tok]||'')+_eyD.substring(pe);
+          });
+          if(!_eyCv.EDU_2_INSTITUTION&&!_eyCv.EDU_2_START&&!_eyCv.EDU_2_DEGREE){
+            _eyD=_remPid(_eyD,'206FA6B7');_eyD=_remPid(_eyD,'6AAD2538');_eyD=_remPid(_eyD,'1E100002');
+          }
+          if(!_eyCv.QUAL_1_TEXT&&!_eyCv.QUAL_1_START){_eyD=_remPid(_eyD,'1C60AB12');_eyD=_remPid(_eyD,'07BE638D');}
+          if(!_eyCv.QUAL_2_TEXT&&!_eyCv.QUAL_2_START){_eyD=_remPid(_eyD,'2DFDBF69');_eyD=_remPid(_eyD,'6248C9E1');}
+          _eyZip.file('word/document.xml',_eyD);
+        })();
+
         try {
           var _eyDoc = new window.docxtemplater(_eyZip, {
             paragraphLoop: true, linebreaks: true,
