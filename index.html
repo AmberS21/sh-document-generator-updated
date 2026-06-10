@@ -817,6 +817,18 @@ const TEMPLATES = {
 
     promptType: 'ea-india'
 
+  },
+
+  'change-consulting-profile': {
+
+    label: 'Change Consulting Candidate Profile',
+
+    file: 'templates/Change_Consulting_Candidate_Profile_Template.docx',
+
+    patchFiles: ['word/document.xml'],
+
+    promptType: 'change-consulting'
+
   }
 
 };
@@ -844,7 +856,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
 (function() {
   var sel = document.getElementById('tplSel');
   if (!sel) return;
-  var profileKeys = ['global-no-scorecard','global-with-scorecard','global-career-summary','apac-profile','services-profile','gb-profile','ea-india-profile'];
+  var profileKeys = ['global-no-scorecard','global-with-scorecard','global-career-summary','apac-profile','services-profile','gb-profile','ea-india-profile','change-consulting-profile'];
   var reportKeys  = ['project-report','project-report-ext'];
 
   var grp1 = document.createElement('optgroup');
@@ -933,6 +945,15 @@ var TPL = {
     fmt: 'd',
     reg: 'Global',
     flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Key Skills','Executive Overview','Business Experience','Education','Professional Qualifications','Nationality','Languages','Interests','Volunteering']
+  },
+  'change-consulting-profile': {
+    name: 'Change Consulting',
+    sub: 'Candidate Profile',
+    ico: 'doc',
+    bg: 'rgba(43,124,211,.12)',
+    fmt: 'd',
+    reg: 'Global',
+    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Core Competencies (manual)','Technical Skills (manual)','Business Experience','Education','Professional Qualifications','Nationality','Languages','Interests']
   }
 };
 
@@ -2321,6 +2342,8 @@ var isChineseApac = false;
 var isGbProfile = (tpl === 'gb-profile');
 var isServicesProfile = (tpl === 'services-profile');
 var isEaIndia = (tpl === 'ea-india-profile');
+var isChangeCons = (tpl === 'change-consulting-profile');
+var changeConsJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_1_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","INTERESTS_DETAIL":""}';
 var eaIndiaJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY_INTRO":"","KEY_SKILLS":"","EXEC_OVERVIEW_BULLET_1":"","EXEC_OVERVIEW_BULLET_2":"","EXEC_OVERVIEW_BULLET_3":"","EXEC_OVERVIEW_BULLET_4":"","EXEC_OVERVIEW_BULLET_5":"","EXEC_OVERVIEW_BULLET_6":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_YEAR":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_1_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_2_YEAR":"","QUAL_2_TEXT":"","QUAL_3_YEAR":"","QUAL_3_TEXT":"","QUAL_4_YEAR":"","QUAL_4_TEXT":"","QUAL_5_YEAR":"","QUAL_5_TEXT":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","volunteering":[{"dates":"","role":"","description":""}]}';
 var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"projects":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_1":"","QUAL_2":"","QUAL_3":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","PROJECT_1_TITLE":"","PROJECT_1_CLIENT":"","PROJECT_1_DATE":"","PROJECT_1_DESCRIPTION":"","PROJECT_2_TITLE":"","PROJECT_2_CLIENT":"","PROJECT_2_DATE":"","PROJECT_2_DESCRIPTION":"","PROJECT_3_TITLE":"","PROJECT_3_CLIENT":"","PROJECT_3_DATE":"","PROJECT_3_DESCRIPTION":"","PROJECT_4_TITLE":"","PROJECT_4_CLIENT":"","PROJECT_4_DATE":"","PROJECT_4_DESCRIPTION":"","PROJECT_5_TITLE":"","PROJECT_5_CLIENT":"","PROJECT_5_DATE":"","PROJECT_5_DESCRIPTION":"","PROJECT_6_TITLE":"","PROJECT_6_CLIENT":"","PROJECT_6_DATE":"","PROJECT_6_DESCRIPTION":"","PROJECT_7_TITLE":"","PROJECT_7_CLIENT":"","PROJECT_7_DATE":"","PROJECT_7_DESCRIPTION":"","PROJECT_8_TITLE":"","PROJECT_8_CLIENT":"","PROJECT_8_DATE":"","PROJECT_8_DESCRIPTION":"","PROJECT_9_TITLE":"","PROJECT_9_CLIENT":"","PROJECT_9_DATE":"","PROJECT_9_DESCRIPTION":"","PROJECT_10_TITLE":"","PROJECT_10_CLIENT":"","PROJECT_10_DATE":"","PROJECT_10_DESCRIPTION":""}';
 var csJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
@@ -2388,7 +2411,65 @@ CANDIDATE SOURCE:
 
 ` + inputText;
 
-var prompt = isEaIndia
+var _ccMonthYear = (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})();
+var changeConsPrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate source below and extract ALL information into a structured JSON object for the Change Consulting Candidate Profile template.
+
+ABSOLUTE RULES:
+- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
+- CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
+- Copy all text VERBATIM — never summarise, rephrase, or add content not in the source.
+- Extract EVERY work history entry WITHOUT EXCEPTION.
+
+FIELD INSTRUCTIONS:
+
+CANDIDATE_NAME: Full name exactly as written.
+CURRENT_EMPLOYER: Most recent employer name only.
+CLIENT_COMPANY: Always empty string "".
+SEARCH_TITLE: Always empty string "".
+PROFILE_MONTH: "` + _ccMonthYear + `". Always use this value.
+
+SUMMARY: Copy the candidate's opening personal profile / executive summary paragraph VERBATIM — word for word, no changes. If no summary exists, leave empty.
+
+COMPANIES ARRAY — CRITICAL RULES:
+- Group ALL roles held at the same company under ONE company entry.
+- company.name: Full legal company name — IDENTICAL string for all roles at same company.
+- company.location: City, Country (leave empty if not stated).
+- company.dates: ALWAYS use "Mon YYYY – Mon YYYY" format including month e.g. "Jan 2019 – Present". NEVER year-only.
+- role.role: Exact job title as written in CV.
+- role.role_dates: Dates for THIS specific role only. Leave "" if company has only ONE role.
+- role.bullets: ALL bullet points for that role VERBATIM. Every single one — no limit, no skipping.
+- Most recent company first. Most recent role first within each company.
+
+EDUCATION:
+- EDU_1_START / EDU_1_END: Start and end year (e.g. "2005", "2009").
+- EDU_1_INSTITUTION: Full institution name.
+- EDU_1_LOCATION: City or campus name.
+- EDU_1_DEGREE: Full degree/qualification name.
+- EDU_2_* same pattern for second entry. Leave all EDU_2 fields as "" if only one education entry.
+- EDU_2_EXTRA: Any extra detail line (e.g. results, honours). Leave "" if none.
+
+PROFESSIONAL QUALIFICATIONS:
+- QUAL_1_YEAR: Year range (e.g. "2010 – 2013") or year only.
+- QUAL_1_TEXT: Full qualification name and awarding body VERBATIM.
+- QUAL_1_DETAIL: Any detail line (e.g. pass results, prizes) VERBATIM. Leave "" if none.
+
+NATIONALITY: Exact nationality as stated. Leave "" if not found.
+LANGUAGES: Languages with proficiency levels as stated. Leave "" if not found.
+INTERESTS: First line of interests VERBATIM. Leave "" if not found.
+INTERESTS_DETAIL: Second line of interests if present (e.g. additional hobbies). Leave "" if not found.
+
+NOTE: Core Competencies and Technical Skills are filled manually by the consultant — do NOT extract them.
+
+JSON STRUCTURE — return exactly this schema filled with real data:
+` + changeConsJsonStr + `
+
+CANDIDATE SOURCE:
+
+` + inputText;
+
+var prompt = isChangeCons
+  ? changeConsPrompt
+  : isEaIndia
   ? eaIndiaPrompt
   : isCareerSummary
   ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
@@ -2722,12 +2803,12 @@ try {
   return;
 }
 
-        var _dn=new Date();var _dmo=['January','February','March','April','May','June','July','August','September','October','November','December'];if(output){output.MONTH_YEAR=_dmo[_dn.getMonth()]+' '+_dn.getFullYear();if(output){var _certMatch=inputText.match(/certifications?\s*:\s*([^\n\r]+)/i);if(_certMatch){var _rawCerts=_certMatch[1].trim();var _cparts=_rawCerts.split(/\s*[|]\s*/).map(function(q){return q.trim();}).filter(Boolean);if(_cparts.length>1){output.QUAL_1=_cparts[0]||output.QUAL_1||'';output.QUAL_2=_cparts[1]||output.QUAL_2||'';if(_cparts[2])output.QUAL_3=_cparts[2]||output.QUAL_3||'';}}if(output.QUAL_1){var _q1=output.QUAL_1||'';_q1=_q1.replace(/^certifications?\s*:\s*/i,'');var _quals=_q1.split(/[|;\n]/).map(function(q){return q.trim();}).filter(Boolean);output.QUAL_1=_quals[0]||'';if(!output.QUAL_2&&_quals[1])output.QUAL_2=_quals[1];if(!output.QUAL_3&&_quals[2])output.QUAL_3=_quals[2];}}}  if (output && (isCareerSummary || isEaIndia)) {
+        var _dn=new Date();var _dmo=['January','February','March','April','May','June','July','August','September','October','November','December'];if(output){output.MONTH_YEAR=_dmo[_dn.getMonth()]+' '+_dn.getFullYear();if(output){var _certMatch=inputText.match(/certifications?\s*:\s*([^\n\r]+)/i);if(_certMatch){var _rawCerts=_certMatch[1].trim();var _cparts=_rawCerts.split(/\s*[|]\s*/).map(function(q){return q.trim();}).filter(Boolean);if(_cparts.length>1){output.QUAL_1=_cparts[0]||output.QUAL_1||'';output.QUAL_2=_cparts[1]||output.QUAL_2||'';if(_cparts[2])output.QUAL_3=_cparts[2]||output.QUAL_3||'';}}if(output.QUAL_1){var _q1=output.QUAL_1||'';_q1=_q1.replace(/^certifications?\s*:\s*/i,'');var _quals=_q1.split(/[|;\n]/).map(function(q){return q.trim();}).filter(Boolean);output.QUAL_1=_quals[0]||'';if(!output.QUAL_2&&_quals[1])output.QUAL_2=_quals[1];if(!output.QUAL_3&&_quals[2])output.QUAL_3=_quals[2];}}}  if (output && (isCareerSummary || isEaIndia || isChangeCons)) {
           var _now = new Date();
           var _mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
           output.PROFILE_MONTH = _mNames[_now.getMonth()] + ' ' + _now.getFullYear();
           // Default placeholders for CS so template style renders correctly
-          if (isCareerSummary) {
+          if (isCareerSummary || isChangeCons) {
             if (!output.CLIENT_COMPANY) output.CLIENT_COMPANY = '[Client Company]';
             if (!output.SEARCH_TITLE)   output.SEARCH_TITLE   = '[Job Title]';
           }
@@ -3129,7 +3210,7 @@ async function downloadHistory(index) {
   var fmt = item.fmt || 'd';
   // Override: project-report always downloads as xlsx
   if (item.template === 'project-report' || item.template === 'project-report-ext') fmt = 'x';
-  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile' ? 'EA India' : 'No Scorecard';
+  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile' ? 'EA India' : item.template === 'change-consulting-profile' ? 'Change Consulting' : 'No Scorecard';
   var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : item.template === 'ea-india-profile' ? 'Global' : 'Global';
   var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
@@ -3490,6 +3571,72 @@ async function downloadHistory(index) {
             console.error('[SVC] docxtemplater error:', _svcErr.message);
             out = _gbZip.generate({type: 'blob', mimeType: _docMimeSingle});
           }
+        }
+
+      } else if (item.template === 'change-consulting-profile') {
+        // ── Change Consulting Profile render path ──
+        var _ccZip = new PizZip(ab);
+        var _ccCv = item.content;
+
+        // Step 1: build business experience XML (same style as EA India)
+        var _ccBizXml = buildEaIndiaBizExp(_ccCv.companies || []);
+
+        // Step 2: inject BUSINESS_EXPERIENCE_BLOCK
+        var _ccDocXml = _ccZip.files['word/document.xml'].asText();
+        var _ccBeIdx = _ccDocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
+        if (_ccBeIdx !== -1) {
+          var _ccPStart = _ccBeIdx, _ccSearchFrom = _ccBeIdx;
+          while (_ccSearchFrom > 0) {
+            var _ccCand = _ccDocXml.lastIndexOf('<w:p', _ccSearchFrom - 1);
+            if (_ccCand < 0) break;
+            if (_ccDocXml.charAt(_ccCand + 4) === '>' || _ccDocXml.charAt(_ccCand + 4) === ' ') { _ccPStart = _ccCand; break; }
+            _ccSearchFrom = _ccCand;
+          }
+          var _ccPEnd = _ccDocXml.indexOf('</w:p>', _ccBeIdx) + 6;
+          _ccDocXml = _ccDocXml.substring(0, _ccPStart) + _ccBizXml + _ccDocXml.substring(_ccPEnd);
+        }
+        _ccZip.file('word/document.xml', _ccDocXml);
+
+        // Step 3: build render object with all flat tokens
+        var _ccRender = Object.assign({}, _ccCv, {
+          CANDIDATE_NAME:   _ccCv.CANDIDATE_NAME || '',
+          CURRENT_EMPLOYER: _ccCv.CURRENT_EMPLOYER || '',
+          CLIENT_COMPANY:   _ccCv.CLIENT_COMPANY || '[Client Company]',
+          SEARCH_TITLE:     _ccCv.SEARCH_TITLE   || '[Job Title]',
+          PROFILE_MONTH:    _ccCv.PROFILE_MONTH  || (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})(),
+          SUMMARY:          _ccCv.SUMMARY || '',
+          EDU_1_START:      _ccCv.EDU_1_START || '',
+          EDU_1_END:        _ccCv.EDU_1_END || '',
+          EDU_1_INSTITUTION:_ccCv.EDU_1_INSTITUTION || '',
+          EDU_1_LOCATION:   _ccCv.EDU_1_LOCATION || '',
+          EDU_1_DEGREE:     _ccCv.EDU_1_DEGREE || '',
+          EDU_2_START:      _ccCv.EDU_2_START || '',
+          EDU_2_END:        _ccCv.EDU_2_END || '',
+          EDU_2_INSTITUTION:_ccCv.EDU_2_INSTITUTION || '',
+          EDU_2_LOCATION:   _ccCv.EDU_2_LOCATION || '',
+          EDU_2_DEGREE:     _ccCv.EDU_2_DEGREE || '',
+          EDU_2_EXTRA:      _ccCv.EDU_2_EXTRA || '',
+          QUAL_1_YEAR:      _ccCv.QUAL_1_YEAR || '',
+          QUAL_1_TEXT:      _ccCv.QUAL_1_TEXT || '',
+          QUAL_1_DETAIL:    _ccCv.QUAL_1_DETAIL || '',
+          NATIONALITY:      _ccCv.NATIONALITY || '',
+          LANGUAGES:        _ccCv.LANGUAGES || '',
+          INTERESTS:        _ccCv.INTERESTS || '',
+          INTERESTS_DETAIL: _ccCv.INTERESTS_DETAIL || ''
+        });
+
+        // Step 4: docxtemplater fills all remaining {{tokens}}
+        try {
+          var _ccDoc = new window.docxtemplater(_ccZip, {
+            paragraphLoop: true, linebreaks: true,
+            delimiters: {start: '{{', end: '}}'},
+            nullGetter: function() { return ''; }
+          });
+          _ccDoc.render(_ccRender);
+          out = _ccDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+        } catch(_ccErr) {
+          console.error('[CC] docxtemplater error:', _ccErr.message);
+          out = _ccZip.generate({type: 'blob', mimeType: _docMimeSingle});
         }
 
       } else if (item.template === 'ea-india-profile') {
