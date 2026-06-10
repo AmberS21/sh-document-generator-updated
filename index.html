@@ -2609,7 +2609,7 @@ COMPANIES ARRAY — CRITICAL RULES:
 - Group ALL roles held at the same company under ONE company entry.
 - company.name: Company name + location as it appears in the CV header (e.g. "McKinsey & Co., Singapore, Thailand, India"). Do NOT repeat the location — copy the name+location string exactly once as written.
 - company.dates: ALWAYS include month where available e.g. "Jan 2016 – Present". Use year-only if months not stated.
-- role.role: Exact job title as written.
+- role.role: Job title ONLY — do NOT include location, country, or region in the role title. Location belongs in company.name or company.location only. E.g. "Tata Steel, Marketing Manager (Energy & Pipelines)" NOT "Tata Steel, Marketing Manager (Energy & Pipelines) UK".
 - role.role_dates: Dates for THIS specific role. Leave "" if company has only ONE role.
 - role.bullets: ALL bullet points VERBATIM for that role — every single one, no limit, no skipping.
 - Most recent company first.
@@ -3827,8 +3827,8 @@ async function downloadHistory(index) {
             while(sf>0){var c=_eyD.lastIndexOf('<w:p',sf-1);if(c<0)break;var ch=_eyD.charAt(c+4);if(ch==='>'||ch===' '){ps=c;break;}sf=c;}
             var pe=_eyD.indexOf('</w:p>',bi)+6;
             var bulXml=_buls(_eyCv[tok]||'');
-            // Add spacer after bullets if there are any
-            if(bulXml) bulXml+=_SPACER;
+            // Add spacer before AND after bullets
+            if(bulXml) bulXml=_SPACER+bulXml+_SPACER;
             _eyD=_eyD.substring(0,ps)+bulXml+_eyD.substring(pe);
           });
           if(!_eyCv.EDU_2_INSTITUTION&&!_eyCv.EDU_2_START&&!_eyCv.EDU_2_DEGREE){
