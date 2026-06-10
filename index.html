@@ -2750,7 +2750,7 @@ FIELD-BY-FIELD INSTRUCTIONS:
    - EDU_1_INSTITUTION...: Full institution name
    - EDU_1_DEGREE...: Degree or qualification name
 
-10. QUAL_1: Put the ENTIRE qualifications string exactly as written (e.g. "CPIM (Certified in Production and Inventory Management) | Six Sigma Black Belt"). Do NOT split it. Do NOT strip the pipe. Copy the full string verbatim into QUAL_1. Leave QUAL_2 and QUAL_3 empty — the system will split automatically.
+10. QUAL_1: CRITICAL — extract the COMPLETE qualifications/certifications string VERBATIM including ALL items separated by pipes. The CV may list them at the top (e.g. "CPIM | Six Sigma Black Belt") AND again in a certifications section. Extract the MOST COMPLETE version. E.g. "CPIM (Certified in Production and Inventory Management) | Six Sigma Black Belt". Do NOT truncate after the first item. Do NOT split on pipes. Copy EVERYTHING into QUAL_1.
 11. NATIONALITY: Exact nationality as stated; leave empty if not provided.
 12. LANGUAGES: Languages with proficiency levels as stated; leave empty if not provided.
 13. INTERESTS: As stated; leave empty if not provided.
@@ -4069,7 +4069,23 @@ async function downloadHistory(index) {
             nullGetter: function() { return ''; }
           });
           _apDoc.render(_apCv);
-          out = _apDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+          // Post-render: split any run where <w:tab/> and date are in same run
+          // This ensures dates always right-align without breaking to next line
+          var _apOutZip = _apDoc.getZip();
+          var _apOutXml = _apOutZip.files['word/document.xml'].asText();
+          // Pattern: <w:t...>text</w:t><w:tab/><w:t...>date</w:t> in same <w:r>
+          // Split into: run1: text | run2: tab | run3: date
+          _apOutXml = _apOutXml.replace(
+            /(<w:r>)([\s\S]*?)(<w:t[^>]*>[^<]*<\/w:t>)(\s*<w:tab\/>)(\s*<w:t[^>]*>[^<]*<\/w:t>)([\s\S]*?<\/w:r>)/g,
+            function(m, ro, rpr, text1, tab, text2, close) {
+              var rprStr = rpr.match(/<w:rPr>[\s\S]*?<\/w:rPr>/) ? rpr.match(/<w:rPr>[\s\S]*?<\/w:rPr>/)[0] : '';
+              return '<w:r>' + rprStr + text1 + '</w:r>'
+                   + '<w:r>' + rprStr + '<w:tab/></w:r>'
+                   + '<w:r>' + rprStr + text2 + '</w:r>';
+            }
+          );
+          _apOutZip.file('word/document.xml', _apOutXml);
+          out = _apOutZip.generate({type: 'blob', mimeType: _docMimeSingle});
         } catch(_apErr) {
           console.error('[APAC] docxtemplater error:', _apErr.message);
           out = _apZip.generate({type: 'blob', mimeType: _docMimeSingle});
