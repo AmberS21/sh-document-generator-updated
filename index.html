@@ -1396,9 +1396,8 @@ function buildApacV2BizExp(companies) {
     var coDates = normDR(co.dates || '');
     var coName = xe(co.name) + (co.location ? ', ' + xe(co.location) : '');
     xml += '<w:p>' + CO_PPR
-        + '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + coName + '</w:t>'
-        + TABS6
-        + '<w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>'
+        + '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + coName + '</w:t></w:r>'
+        + '<w:r>' + CO_RPR + TABS6 + '<w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>'
         + '</w:p>';
 
     for (var ri = 0; ri < roles.length; ri++) {
@@ -1408,9 +1407,8 @@ function buildApacV2BizExp(companies) {
 
       // Role line: title, 6 tabs, dates (same run matching template)
       xml += '<w:p>' + ROL_PPR
-          + '<w:r><w:t xml:space="preserve">' + xe(role.role) + '</w:t>'
-          + TABS6
-          + '<w:t xml:space="preserve">' + xe(rdates) + '</w:t></w:r>'
+          + '<w:r><w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
+          + '<w:r>' + TABS6 + '<w:t xml:space="preserve">' + xe(rdates) + '</w:t></w:r>'
           + '</w:p>';
 
       // Bullets
@@ -2738,7 +2736,7 @@ CANDIDATE SOURCE:
 ` + inputText;
 
 var prompt = isApacV2
-  ? apacEyPrompt
+  ? (isApacUpdated ? apacUpdatedPrompt : apacPrompt)
   : isApacEy
   ? apacEyPrompt
   : isChangeCons
