@@ -831,6 +831,18 @@ const TEMPLATES = {
 
   },
 
+  'apac-profile-v2': {
+
+    label: 'APAC Candidate Profile — English (v2)',
+
+    file: 'templates/APAC_Candidate_Profile_English_v2.docx',
+
+    patchFiles: ['word/document.xml'],
+
+    promptType: 'apac'
+
+  },
+
   'apac-ey-profile': {
 
     label: 'APAC - EY Shortlisted Candidate Profile - with Candidate Summary',
@@ -868,7 +880,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
 (function() {
   var sel = document.getElementById('tplSel');
   if (!sel) return;
-  var profileKeys = ['global-no-scorecard','global-with-scorecard','global-career-summary','apac-profile','services-profile','gb-profile','ea-india-profile','change-consulting-profile','apac-ey-profile'];
+  var profileKeys = ['global-no-scorecard','global-with-scorecard','global-career-summary','apac-profile','apac-profile-v2','services-profile','gb-profile','ea-india-profile','change-consulting-profile','apac-ey-profile'];
   var reportKeys  = ['project-report','project-report-ext'];
 
   var grp1 = document.createElement('optgroup');
@@ -966,6 +978,15 @@ var TPL = {
     fmt: 'd',
     reg: 'Global',
     flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Core Competencies (manual)','Technical Skills (manual)','Business Experience','Education','Professional Qualifications','Nationality','Languages','Interests']
+  },
+  'apac-profile-v2': {
+    name: 'APAC Candidate Profile',
+    sub: 'English (v2)',
+    ico: 'doc',
+    bg: 'rgba(20,118,137,.15)',
+    fmt: 'd',
+    reg: 'APAC',
+    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Month Year','Summary','Business Experience','Education','Qualifications','Nationality','Languages','Interests']
   },
   'apac-ey-profile': {
     name: 'APAC - EY Shortlisted',
@@ -1332,6 +1353,77 @@ function buildSvcQuals(cv) {
     xml += '<w:p><w:pPr>' + SPACING + IND + '</w:pPr>'
         + '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:t>' + xe(q) + '</w:t></w:r></w:p>';
   });
+  return xml;
+}
+
+
+function buildApacV2BizExp(companies) {
+  // Business Experience for APAC English v2 template
+  // Matches blank template exactly: SHText + SHBullets styles, hanging 284, 6 tabs
+  if (!companies || companies.length === 0) return '';
+  var xml = '';
+  function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function normD(s) {
+    if (!s) return '';
+    s = s.replace(/[-\u2013]\s*(date|present)/gi, ' \u2013 Present');
+    s = s.replace(/\s*-\s*/g, ' \u2013 ');
+    return s;
+  }
+  function normDR(s) {
+    if (!s) return '';
+    var p = s.split(/\s*[\u2013\u2014-]+\s*/);
+    return p.length === 2 ? normD(p[0].trim()) + ' \u2013 ' + normD(p[1].trim()) : normD(s);
+  }
+
+  // Styles matching blank template exactly
+  var CO_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:hanging="284"/><w:rPr><w:b/><w:bCs/></w:rPr></w:pPr>';
+  var CO_RPR = '<w:rPr><w:b/><w:bCs/></w:rPr>';
+  var ROL_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:hanging="284"/></w:pPr>';
+  var ROL_RPR = '<w:rPr></w:rPr>';
+  var BUL_PPR = '<w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0"/></w:pPr>';
+  var BUL_RPR = '<w:rPr></w:rPr>';
+  var SPACER  = '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:ind w:hanging="284"/></w:pPr></w:p>';
+  var TABS6   = '<w:tab/><w:tab/><w:tab/><w:tab/><w:tab/><w:tab/>';
+
+  for (var ci = 0; ci < companies.length; ci++) {
+    var co = companies[ci];
+    if (!co || !co.name) continue;
+    var roles = co.roles || [];
+    var multiRole = roles.length > 1;
+    if (ci > 0) { xml += SPACER; }
+
+    // Company line: BOLD name+location, 6 tabs, BOLD dates (all in same run matching template)
+    var coDates = normDR(co.dates || '');
+    var coName = xe(co.name) + (co.location ? ', ' + xe(co.location) : '');
+    xml += '<w:p>' + CO_PPR
+        + '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + coName + '</w:t>'
+        + TABS6
+        + '<w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>'
+        + '</w:p>';
+
+    for (var ri = 0; ri < roles.length; ri++) {
+      var role = roles[ri];
+      if (!role || !role.role) continue;
+      var rdates = multiRole ? normDR(role.role_dates || '') : '';
+
+      // Role line: title, 6 tabs, dates (same run matching template)
+      xml += '<w:p>' + ROL_PPR
+          + '<w:r><w:t xml:space="preserve">' + xe(role.role) + '</w:t>'
+          + TABS6
+          + '<w:t xml:space="preserve">' + xe(rdates) + '</w:t></w:r>'
+          + '</w:p>';
+
+      // Bullets
+      var bullets = role.bullets || [];
+      for (var bi = 0; bi < bullets.length; bi++) {
+        var b = (bullets[bi] || '').trim();
+        if (!b) continue;
+        xml += '<w:p>' + BUL_PPR
+            + '<w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(b) + '</w:t></w:r>'
+            + '</w:p>';
+      }
+    }
+  }
   return xml;
 }
 
@@ -2465,6 +2557,7 @@ var isServicesProfile = (tpl === 'services-profile');
 var isEaIndia = (tpl === 'ea-india-profile');
 var isChangeCons = (tpl === 'change-consulting-profile');
 var isApacEy = (tpl === 'apac-ey-profile');
+var isApacV2 = (tpl === 'apac-profile-v2');
 var apacEyJsonStr = '{"CANDIDATE_NAME":"","CURRENT_TITLE":"","CURRENT_EMPLOYER":"","PROFILE_DATE":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_INSTITUTION":"","EDU_1_START":"","EDU_1_END":"","EDU_1_DEGREE":"","EDU_2_INSTITUTION":"","EDU_2_START":"","EDU_2_END":"","EDU_2_DEGREE":"","EDU_1_BULLETS":"","EDU_2_BULLETS":"","QUAL_1_TEXT":"","QUAL_1_START":"","QUAL_1_END":"","QUAL_1_DETAIL":"","QUAL_2_TEXT":"","QUAL_2_START":"","QUAL_2_END":"","QUAL_2_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","CANDIDATE_SUMMARY":""}';
 var changeConsJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_1_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","INTERESTS_DETAIL":""}';
 var eaIndiaJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY_INTRO":"","KEY_SKILLS":"","EXEC_OVERVIEW_BULLET_1":"","EXEC_OVERVIEW_BULLET_2":"","EXEC_OVERVIEW_BULLET_3":"","EXEC_OVERVIEW_BULLET_4":"","EXEC_OVERVIEW_BULLET_5":"","EXEC_OVERVIEW_BULLET_6":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_YEAR":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_1_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_2_YEAR":"","QUAL_2_TEXT":"","QUAL_3_YEAR":"","QUAL_3_TEXT":"","QUAL_4_YEAR":"","QUAL_4_TEXT":"","QUAL_5_YEAR":"","QUAL_5_TEXT":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","volunteering":[{"dates":"","role":"","description":""}]}';
@@ -2644,7 +2737,9 @@ CANDIDATE SOURCE:
 
 ` + inputText;
 
-var prompt = isApacEy
+var prompt = isApacV2
+  ? apacEyPrompt
+  : isApacEy
   ? apacEyPrompt
   : isChangeCons
   ? changeConsPrompt
@@ -2982,7 +3077,7 @@ try {
   return;
 }
 
-        var _dn=new Date();var _dmo=['January','February','March','April','May','June','July','August','September','October','November','December'];if(output){output.MONTH_YEAR=_dmo[_dn.getMonth()]+' '+_dn.getFullYear();if(output){var _certMatch=inputText.match(/certifications?\s*:\s*([^\n\r]+)/i);if(_certMatch){var _rawCerts=_certMatch[1].trim();var _cparts=_rawCerts.split(/\s*[|]\s*/).map(function(q){return q.trim();}).filter(Boolean);if(_cparts.length>1){output.QUAL_1=_cparts[0]||output.QUAL_1||'';output.QUAL_2=_cparts[1]||output.QUAL_2||'';if(_cparts[2])output.QUAL_3=_cparts[2]||output.QUAL_3||'';}}if(output.QUAL_1){var _q1=output.QUAL_1||'';_q1=_q1.replace(/^certifications?\s*:\s*/i,'');var _quals=_q1.split(/[|;\n]/).map(function(q){return q.trim();}).filter(Boolean);output.QUAL_1=_quals[0]||'';if(!output.QUAL_2&&_quals[1])output.QUAL_2=_quals[1];if(!output.QUAL_3&&_quals[2])output.QUAL_3=_quals[2];}}}  if (output && (isCareerSummary || isEaIndia || isChangeCons || isApacEy)) {
+        var _dn=new Date();var _dmo=['January','February','March','April','May','June','July','August','September','October','November','December'];if(output){output.MONTH_YEAR=_dmo[_dn.getMonth()]+' '+_dn.getFullYear();if(output){var _certMatch=inputText.match(/certifications?\s*:\s*([^\n\r]+)/i);if(_certMatch){var _rawCerts=_certMatch[1].trim();var _cparts=_rawCerts.split(/\s*[|]\s*/).map(function(q){return q.trim();}).filter(Boolean);if(_cparts.length>1){output.QUAL_1=_cparts[0]||output.QUAL_1||'';output.QUAL_2=_cparts[1]||output.QUAL_2||'';if(_cparts[2])output.QUAL_3=_cparts[2]||output.QUAL_3||'';}}if(output.QUAL_1){var _q1=output.QUAL_1||'';_q1=_q1.replace(/^certifications?\s*:\s*/i,'');var _quals=_q1.split(/[|;\n]/).map(function(q){return q.trim();}).filter(Boolean);output.QUAL_1=_quals[0]||'';if(!output.QUAL_2&&_quals[1])output.QUAL_2=_quals[1];if(!output.QUAL_3&&_quals[2])output.QUAL_3=_quals[2];}}}  if (output && (isCareerSummary || isEaIndia || isChangeCons || isApacEy || isApacV2)) {
           var _now = new Date();
           var _mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
           output.PROFILE_MONTH = _mNames[_now.getMonth()] + ' ' + _now.getFullYear();
@@ -3395,7 +3490,7 @@ async function downloadHistory(index) {
   var fmt = item.fmt || 'd';
   // Override: project-report always downloads as xlsx
   if (item.template === 'project-report' || item.template === 'project-report-ext') fmt = 'x';
-  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile' ? 'EA India' : item.template === 'change-consulting-profile' ? 'Change Consulting' : item.template === 'apac-ey-profile' ? 'EY Shortlisted' : 'No Scorecard';
+  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile' ? 'EA India' : item.template === 'change-consulting-profile' ? 'Change Consulting' : item.template === 'apac-profile-v2' ? 'APAC v2' : item.template === 'apac-ey-profile' ? 'EY Shortlisted' : 'No Scorecard';
   var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : item.template === 'ea-india-profile' ? 'Global' : 'Global';
   var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
@@ -3785,6 +3880,65 @@ async function downloadHistory(index) {
             console.error('[SVC] docxtemplater error:', _svcErr.message);
             out = _gbZip.generate({type: 'blob', mimeType: _docMimeSingle});
           }
+        }
+
+      } else if (item.template === 'apac-profile-v2') {
+        // ── APAC English v2 — clean template, flat tokens + BUSINESS_EXPERIENCE_BLOCK ──
+        var _av2Zip = new PizZip(ab);
+        var _av2Cv  = item.content;
+
+        // Build business experience XML using buildApacV2BizExp (SHText+SHBullets, hanging 284, 6 tabs)
+        var _av2BizXml = buildApacV2BizExp(_av2Cv.companies || []);
+
+        // Inject BUSINESS_EXPERIENCE_BLOCK
+        var _av2DocXml = _av2Zip.files['word/document.xml'].asText();
+        var _av2Idx = _av2DocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
+        if (_av2Idx !== -1) {
+          var _av2PS = _av2Idx, _av2SF = _av2Idx;
+          while (_av2SF > 0) {
+            var _av2C = _av2DocXml.lastIndexOf('<w:p', _av2SF - 1);
+            if (_av2C < 0) break;
+            if (_av2DocXml.charAt(_av2C+4)==='>'||_av2DocXml.charAt(_av2C+4)===' '){_av2PS=_av2C;break;}
+            _av2SF = _av2C;
+          }
+          var _av2PE = _av2DocXml.indexOf('</w:p>', _av2Idx) + 6;
+          _av2DocXml = _av2DocXml.substring(0, _av2PS) + _av2BizXml + _av2DocXml.substring(_av2PE);
+        }
+        _av2Zip.file('word/document.xml', _av2DocXml);
+
+        // Render flat tokens
+        var _av2Render = {
+          CANDIDATE_NAME:    _av2Cv.CANDIDATE_NAME || '',
+          CURRENT_EMPLOYER:  _av2Cv.CURRENT_EMPLOYER || '',
+          CLIENT_COMPANY:    _av2Cv.CLIENT_COMPANY || '[Client Company]',
+          SEARCH_TITLE:      _av2Cv.SEARCH_TITLE || '[Job Title]',
+          MONTH_YEAR:        _av2Cv.MONTH_YEAR || _av2Cv.PROFILE_MONTH || (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})(),
+          SUMMARY:           _av2Cv.SUMMARY || '',
+          SUMMARY_BULLET_1:  '',
+          SUMMARY_BULLET_2:  '',
+          EDU_1_START:       _av2Cv.EDU_1_START || '',
+          EDU_1_END:         _av2Cv.EDU_1_END || '',
+          EDU_1_INSTITUTION: _av2Cv.EDU_1_INSTITUTION || '',
+          EDU_1_LOCATION:    _av2Cv.EDU_1_LOCATION || '',
+          EDU_1_DEGREE:      _av2Cv.EDU_1_DEGREE || '',
+          QUAL_YEAR:         _av2Cv.QUAL_YEAR || _av2Cv.QUAL_1_START || '',
+          QUAL_1:            _av2Cv.QUAL_1 || _av2Cv.QUAL_1_TEXT || '',
+          NATIONALITY:       _av2Cv.NATIONALITY || '',
+          LANGUAGES:         _av2Cv.LANGUAGES || '',
+          INTERESTS:         _av2Cv.INTERESTS || ''
+        };
+
+        try {
+          var _av2Doc = new window.docxtemplater(_av2Zip, {
+            paragraphLoop: true, linebreaks: true,
+            delimiters: {start: '{{', end: '}}'},
+            nullGetter: function() { return ''; }
+          });
+          _av2Doc.render(_av2Render);
+          out = _av2Doc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+        } catch(_av2Err) {
+          console.error('[APACv2] error:', _av2Err.message);
+          out = _av2Zip.generate({type: 'blob', mimeType: _docMimeSingle});
         }
 
       } else if (item.template === 'apac-ey-profile') {
