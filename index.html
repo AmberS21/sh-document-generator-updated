@@ -4198,7 +4198,7 @@ async function downloadHistory(index) {
           out = _eiZip.generate({type: 'blob', mimeType: _docMimeSingle});
         }
 
-      } else if (item.template === 'apac-profile') {
+      } else if (item.template === 'apac-profile' || item.template === 'apac-profile-deal-list' || item.template === 'apac-profile-v2') {
         // ── APAC English Profile — uses native docxtemplater loop syntax ──
         var _apZip = new PizZip(ab);
         var _apCv = Object.assign({}, item.content);
