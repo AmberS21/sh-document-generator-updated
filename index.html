@@ -475,8 +475,8 @@ table.usage tr:last-child td{border-bottom:none;}
 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ -->
 <div class="page hidden" id="sec-prev">
   <div class="card" style="padding:28px 32px;">
-    <div style="font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px;">Template Preview</div>
-    <div style="font-size:14px;color:var(--mut);margin-bottom:28px;">Click any template card to see what it produces. Upload sample PDFs to <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:12px;">templates/previews/{key}.pdf</code> to activate previews.</div>
+    <div class="card-title"><div class="step-dot" style="background:var(--acc);">&#128196;</div> Template Preview</div>
+    <div style="font-size:13px;color:var(--mut);margin-bottom:24px;margin-top:-6px;">Click any template to preview its output format before generating.</div>
     <div id="prevGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;"></div>
   </div>
   <div id="prevModal" onclick="if(event.target===this)closePrevModal()" style="display:none;position:fixed;inset:0;background:rgba(11,31,58,.65);z-index:9999;align-items:center;justify-content:center;">
@@ -5151,7 +5151,8 @@ function renderPrevGrid() {
   var grid = document.getElementById('prevGrid');
   if (!grid) return;
   grid.innerHTML = '';
-  profileKeys.forEach(function(key) {
+  var _keys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','global-no-scorecard','global-with-scorecard','global-career-summary','services-profile'];
+  _keys.forEach(function(key) {
     var tpl = TEMPLATES[key];
     var meta = TPL[key];
     if (!tpl || !meta) return;
@@ -5200,7 +5201,8 @@ function openPrevModal(key) {
   document.getElementById('prevModalSub').textContent = (meta.reg||'') + ' · ' + (meta.flds||[]).join(' · ');
 
   var body = document.getElementById('prevModalBody');
-  var previewUrl = TPL_PREVIEWS[key];
+  var _ghBase2 = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+  var previewUrl = TPL_PREVIEWS[key] ? _ghBase2 + TPL_PREVIEWS[key] : null;
 
   if (previewUrl) {
     if (previewUrl.endsWith('.pdf')) {
