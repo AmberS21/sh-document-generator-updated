@@ -2589,7 +2589,54 @@ var isGbProfile = (tpl === 'gb-profile');
 var isServicesProfile = (tpl === 'services-profile');
 var isEaIndia = (tpl === 'ea-india-profile');
 var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
-if (isEaIndiaV2) { isApac = true; isApacUpdated = true; }  // use APAC prompt which fills SUMMARY
+var _ei2Now2 = new Date();
+var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
+
+ABSOLUTE RULES:
+- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
+- CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
+- Copy all text VERBATIM — never summarise or rephrase.
+
+FIELD INSTRUCTIONS:
+
+CANDIDATE_NAME: Full name exactly as written.
+CURRENT_EMPLOYER: Most recent employer name only.
+CLIENT_COMPANY: Always "".
+SEARCH_TITLE: Always "".
+MONTH_YEAR: "` + _ei2M2[_ei2Now2.getMonth()] + ' ' + _ei2Now2.getFullYear() + `"
+
+SUMMARY: Extract the candidate's opening prose paragraphs VERBATIM. Separate each paragraph with a newline character \n. Do NOT include bullet points or skills lists — prose only.
+
+SUMMARY_BULLETS: Extract the candidate's "Core Leadership Strengths" / "Key Skills" / "Core Competencies" section. Return as a pipe-separated string of items exactly as written e.g. "Investment Platform Strategy & Execution | Private Equity & Public Markets Technology | Deal Lifecycle & Portfolio Analytics Systems". If no such section exists, leave "".
+
+COMPANIES ARRAY:
+- company.name: Company name only (no location).
+- company.dates: ALWAYS include month where available e.g. "Jan 2016 – Present".
+- role.role: Exact job title.
+- role.role_dates: Dates for this role only. Leave "" if company has ONE role.
+- role.bullets: ALL bullets for that role VERBATIM.
+- Most recent company first.
+
+EDUCATION:
+- education[]: Array of {years, institution, degree}
+- years: "YYYY – YYYY" format e.g. "1988 – 1992"
+- institution: Full institution name including location
+- degree: Full degree description
+- Most recent first. Include ALL entries.
+
+QUAL_1: Full professional qualifications/certifications VERBATIM including all items. Do NOT truncate.
+TECH_SKILLS: Extract ALL technical skills, tools, languages, frameworks etc as a single string exactly as written in the CV.
+NATIONALITY: Exact nationality. Leave "" if not found.
+LANGUAGES: Languages with levels. Leave "" if not found.
+INTERESTS: Interests as stated. Leave "" if not found.
+
+Return this JSON structure:
+{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_1":"","TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}
+
+CANDIDATE SOURCE:
+
+` + inputText;
 var isChangeCons = (tpl === 'change-consulting-profile');
 var isApacEy = (tpl === 'apac-ey-profile');
 var isApacDealList = (tpl === 'apac-profile-deal-list');
@@ -2777,6 +2824,8 @@ CANDIDATE SOURCE:
 
 var prompt = isApacEy
   ? apacEyPrompt
+  : isEaIndiaV2
+  ? eaIndiaV2Prompt
   : isChangeCons
   ? changeConsPrompt
   : isEaIndia
@@ -4167,21 +4216,14 @@ async function downloadHistory(index) {
           function _x(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
           // Find split point: 'Core Leadership Strengths', 'Key Skills', 'KEY ', 'CORE ' etc
-          var _splitMatch = _s.match(/\n[\s•\-]*(?:Core Leadership Strengths|Key Skills|KEY SKILLS|CORE LEADERSHIP|Key Strengths)[:\s]*/i);
-          var _proseStr = _splitMatch ? _s.substring(0, _splitMatch.index).trim() : _s;
-          var _bulletsStr = _splitMatch ? _s.substring(_splitMatch.index + _splitMatch[0].length).trim() : '';
-          var _bulletLabel = _splitMatch ? _splitMatch[0].trim().replace(/:$/, '') : '';
+          // Use SUMMARY_BULLETS field directly from dedicated prompt
+          var _proseStr = _s;
+          var _rawBullets = (_ei2Cv.SUMMARY_BULLETS || '').trim();
+          var _bulletsStr = _rawBullets;
+          var _bulletLabel = _rawBullets ? 'Core Leadership Strengths' : '';
 
-          // Prose paragraphs - split on newlines first, then on '. ' + capital
-          var _proseSplit = _proseStr.split(/\n/).map(function(s){return s.trim();}).filter(Boolean);
-          var _proseParas = [];
-          _proseSplit.forEach(function(line){
-            // Further split long paragraphs on '. ' + capital
-            var subs = line.split(/\.\s+(?=[A-Z])/).map(function(s){
-              s=s.trim(); if(!s)return null; if(!s.endsWith('.'))s+='.'; return s;
-            }).filter(Boolean);
-            _proseParas = _proseParas.concat(subs);
-          });
+          // Prose paragraphs - split on newlines only (each \n = separate paragraph)
+          var _proseParas = _proseStr.split(/\n/).map(function(s){return s.trim();}).filter(Boolean);
 
           // Build prose XML with spacer between each paragraph
           var _SPACER = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
@@ -4215,9 +4257,7 @@ async function downloadHistory(index) {
               _bulletsStr = _bulLines.join('\n');
             }
           }
-          var _bulItems = _bulletsStr ? _bulletsStr.split(/\n/).map(function(s){
-            return s.replace(/^[\u2022\u2023\u25E6\-\*\d\.]+\s*/,'').trim();
-          }).filter(Boolean) : [];
+          var _bulItems = _bulletsStr ? _bulletsStr.split('|').map(function(s){return s.trim();}).filter(Boolean) : [];
           var _bulXml = '';
           if (_bulletLabel) {
             _bulXml += '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t>'+_x(_bulletLabel)+'</w:t></w:r></w:p>';
@@ -4258,7 +4298,7 @@ async function downloadHistory(index) {
           EDU_1_LOCATION:    _ei2Cv.EDU_1_LOCATION || '',
           EDU_1_DEGREE:      _ei2Cv.EDU_1_DEGREE || ((_ei2Cv.education||[])[0] ? (_ei2Cv.education[0].degree||'') : '') || '',
           QUAL_YEAR:         _ei2Cv.QUAL_YEAR || _ei2Cv.QUAL_1_START || '',
-          QUAL_1:            (_ei2Cv.QUAL_1 || _ei2Cv.QUAL_1_TEXT || '') + (_ei2Cv.TECH_SKILLS ? ' | ' + _ei2Cv.TECH_SKILLS : ''),
+          QUAL_1:            [_ei2Cv.QUAL_1 || '', _ei2Cv.TECH_SKILLS ? 'Technical Skills: ' + _ei2Cv.TECH_SKILLS : ''].filter(Boolean).join('\n'),
           NATIONALITY:       _ei2Cv.NATIONALITY || '',
           LANGUAGES:         _ei2Cv.LANGUAGES || '',
           INTERESTS:         _ei2Cv.INTERESTS || ''
