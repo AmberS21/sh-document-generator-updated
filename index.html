@@ -805,6 +805,78 @@ const TEMPLATES = {
 
     promptType: 'none'
 
+  },
+
+  'ea-india-profile-v2': {
+
+    label: 'Global Candidate Profile — EA India (Reg)',
+
+    file: 'templates/Global_Candidate_Profile_EA_India_v2.docx',
+
+    patchFiles: ['word/document.xml', 'word/header2.xml'],
+
+    promptType: 'ea-india'
+
+  },
+
+  'ea-india-profile': {
+
+    label: 'Global Candidate Profile — EA India',
+
+    file: 'templates/Global_Candidate_Profile_EA_India.docx',
+
+    patchFiles: ['word/document.xml'],
+
+    promptType: 'ea-india'
+
+  },
+
+  'change-consulting-profile': {
+
+    label: 'Change Consulting Candidate Profile',
+
+    file: 'templates/Change_Consulting_Candidate_Profile_Template.docx',
+
+    patchFiles: ['word/document.xml'],
+
+    promptType: 'change-consulting'
+
+  },
+
+  'apac-profile-deal-list': {
+
+    label: 'APAC Candidate Profile — with Deal List',
+
+    file: 'templates/APAC_Candidate_Profile_with_Deal_List.docx',
+
+    patchFiles: ['word/document.xml'],
+
+    promptType: 'apac'
+
+  },
+
+  'apac-profile-v2': {
+
+    label: 'APAC Candidate Profile — English (v2)',
+
+    file: 'templates/APAC_Candidate_Profile_English_v2.docx',
+
+    patchFiles: ['word/document.xml'],
+
+    promptType: 'apac'
+
+  },
+
+  'apac-ey-profile': {
+
+    label: 'APAC - EY Shortlisted Candidate Profile - with Candidate Summary',
+
+    file: 'templates/APAC_EY_Shortlisted_Candidate_Profile_Template.docx',
+
+    patchFiles: ['word/document.xml', 'word/header1.xml'],
+
+    promptType: 'apac-ey'
+
   }
 
 };
@@ -832,7 +904,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
 (function() {
   var sel = document.getElementById('tplSel');
   if (!sel) return;
-  var profileKeys = ['global-no-scorecard','global-with-scorecard','global-career-summary','apac-profile','services-profile','gb-profile'];
+  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','global-no-scorecard','global-with-scorecard','global-career-summary','services-profile'];
   var reportKeys  = ['project-report','project-report-ext'];
 
   var grp1 = document.createElement('optgroup');
@@ -912,6 +984,51 @@ var TPL = {
     fmt: 'd',
     reg: 'Global',
     flds: ['Candidate Name','Business Experience','Education','Qualifications','Nationality','Languages','Interests']
+  },
+  'ea-india-profile-v2': {
+    name: 'Global Candidate Profile',
+    sub: 'EA India (Reg)',
+    ico: 'doc',
+    bg: 'rgba(43,124,211,.12)',
+    fmt: 'd',
+    reg: 'Global',
+    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Month Year','Summary','Summary Bullets','Business Experience','Education','Qualifications','Nationality','Languages','Interests']
+  },
+  'ea-india-profile': {
+    name: 'Global Candidate Profile',
+    sub: 'EA India',
+    ico: 'doc',
+    bg: 'rgba(43,124,211,.12)',
+    fmt: 'd',
+    reg: 'Global',
+    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Key Skills','Executive Overview','Business Experience','Education','Professional Qualifications','Nationality','Languages','Interests','Volunteering']
+  },
+  'change-consulting-profile': {
+    name: 'Change Consulting',
+    sub: 'Candidate Profile',
+    ico: 'doc',
+    bg: 'rgba(43,124,211,.12)',
+    fmt: 'd',
+    reg: 'Global',
+    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Core Competencies (manual)','Technical Skills (manual)','Business Experience','Education','Professional Qualifications','Nationality','Languages','Interests']
+  },
+  'apac-profile-v2': {
+    name: 'APAC Candidate Profile',
+    sub: 'English (v2)',
+    ico: 'doc',
+    bg: 'rgba(20,118,137,.15)',
+    fmt: 'd',
+    reg: 'APAC',
+    flds: ['Candidate Name','Current Employer','Client Company','Search Title','Month Year','Summary','Business Experience','Education','Qualifications','Nationality','Languages','Interests']
+  },
+  'apac-ey-profile': {
+    name: 'APAC - EY Shortlisted',
+    sub: 'Candidate Profile with Summary',
+    ico: 'doc',
+    bg: 'rgba(20,118,137,.15)',
+    fmt: 'd',
+    reg: 'APAC',
+    flds: ['Candidate Name','Current Title','Current Employer','Profile Date','Business Experience','Education','Professional Qualifications','Nationality','Languages','Interests','SH Summary (manual)','Assignment Name (manual)','Prepared By (manual)']
   }
 };
 
@@ -1273,9 +1390,282 @@ function buildSvcQuals(cv) {
 }
 
 
+function buildApacV2BizExp(companies) {
+  // Business Experience for APAC English v2 template
+  // Matches blank template exactly: SHText + SHBullets styles, hanging 284, 6 tabs
+  if (!companies || companies.length === 0) return '';
+  var xml = '';
+  function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function normD(s) {
+    if (!s) return '';
+    s = s.replace(/[-\u2013]\s*(date|present)/gi, ' \u2013 Present');
+    s = s.replace(/\s*-\s*/g, ' \u2013 ');
+    return s;
+  }
+  function normDR(s) {
+    if (!s) return '';
+    var p = s.split(/\s*[\u2013\u2014-]+\s*/);
+    return p.length === 2 ? normD(p[0].trim()) + ' \u2013 ' + normD(p[1].trim()) : normD(s);
+  }
+
+  // Styles matching blank template exactly
+  var CO_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:hanging="284"/><w:rPr><w:b/><w:bCs/></w:rPr></w:pPr>';
+  var CO_RPR = '<w:rPr><w:b/><w:bCs/></w:rPr>';
+  var ROL_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:hanging="284"/></w:pPr>';
+  var ROL_RPR = '';
+  var BUL_PPR = '<w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0"/></w:pPr>';
+  var BUL_RPR = '';
+  var SPACER  = '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:ind w:hanging="284"/></w:pPr></w:p>';
+  var TABS6   = '<w:tab/><w:tab/><w:tab/><w:tab/><w:tab/><w:tab/>';
+
+  for (var ci = 0; ci < companies.length; ci++) {
+    var co = companies[ci];
+    if (!co || !co.name) continue;
+    var roles = co.roles || [];
+    var multiRole = roles.length > 1;
+    if (ci > 0) { xml += SPACER; }
+
+    // Company line: BOLD name+location, 6 tabs, BOLD dates (all in same run matching template)
+    var coDates = normDR(co.dates || '');
+    var coName = xe(co.name) + (co.location ? ', ' + xe(co.location) : '');
+    xml += '<w:p>' + CO_PPR
+        + '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + coName + '</w:t></w:r>'
+        + '<w:r>' + TABS6 + '</w:r>'
+        + '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>'
+        + '</w:p>';
+
+    for (var ri = 0; ri < roles.length; ri++) {
+      var role = roles[ri];
+      if (!role || !role.role) continue;
+      var rdates = multiRole ? normDR(role.role_dates || '') : '';
+
+      // Role line: title, 6 tabs, dates (same run matching template)
+      xml += '<w:p>' + ROL_PPR
+          + '<w:r><w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
+          + '<w:r>' + TABS6 + '</w:r>'
+          + '<w:r><w:t xml:space="preserve">' + xe(rdates) + '</w:t></w:r>'
+          + '</w:p>';
+
+      // Bullets
+      var bullets = role.bullets || [];
+      for (var bi = 0; bi < bullets.length; bi++) {
+        var b = (bullets[bi] || '').trim();
+        if (!b) continue;
+        xml += '<w:p>' + BUL_PPR
+            + '<w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(b) + '</w:t></w:r>'
+            + '</w:p>';
+      }
+    }
+  }
+  return xml;
+}
+
+
+function buildApacEyBizExp(companies) {
+  // Business Experience builder for APAC EY template
+  // Colours: 222229 (dark/body), 012249 (SH navy headings)
+  // numId=28 matches template's existing bullet list
+  if (!companies || companies.length === 0) return '';
+  var xml = '';
+  function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function normDate(s) {
+    if (!s) return '';
+    // "2016-date" or "2016-present" → "2016 – Present"
+    s = s.replace(/[-–]\s*(date|present)/gi, ' \u2013 Present');
+    // "2016 - 2020" → "2016 – 2020"
+    s = s.replace(/\s*-\s*/g, ' \u2013 ');
+    // "2013-16" → "2013 – 2016"  
+    s = s.replace(/\b(\d{4})\s*\u2013\s*(\d{2})\b/g, function(m, y1, y2) {
+      return y1 + ' \u2013 ' + y1.slice(0,2) + y2;
+    });
+    return s;
+  }
+  function normDateRange(s) {
+    if (!s) return '';
+    var parts = s.split(/\s*[–—]\s*/);
+    if (parts.length === 2) return normDate(parts[0].trim()) + ' \u2013 ' + normDate(parts[1].trim());
+    return normDate(s);
+  }
+
+  var TAB_STOP   = '<w:tabs><w:tab w:val="right" w:pos="9720"/></w:tabs>';
+  var CO_PPR     = '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:right="26"/><w:jc w:val="both"/>' + TAB_STOP + '</w:pPr>';
+  var CO_RPR     = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium"/><w:b/><w:color w:val="222229"/></w:rPr>';
+  var ROL_PPR    = '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:right="26"/><w:jc w:val="both"/>' + TAB_STOP + '</w:pPr>';
+  var ROL_RPR    = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium"/><w:color w:val="222229"/></w:rPr>';
+  var OVW_PPR    = '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:right="26"/><w:jc w:val="both"/></w:pPr>';
+  var OVW_RPR    = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium"/><w:i/><w:color w:val="222229"/></w:rPr>';
+  var BUL_PPR    = '<w:pStyle w:val="ListParagraph"/>'
+                 + '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="28"/></w:numPr>'
+                 + '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>'
+                 + '<w:ind w:left="360" w:right="26"/><w:jc w:val="both"/>';
+  var BUL_RPR    = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium"/><w:color w:val="222229"/></w:rPr>';
+  var SPACER     = '<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:p>';
+
+  for (var ci = 0; ci < companies.length; ci++) {
+    var co = companies[ci];
+    if (!co || !co.name) continue;
+    var roles = co.roles || [];
+    var multiRole = roles.length > 1;
+    if (ci > 0) { xml += SPACER; xml += SPACER; }
+
+    // Company line: BOLD name, tab, BOLD dates — tab and date in separate run
+    var coDates = normDateRange(co.dates || '');
+    xml += '<w:p>' + CO_PPR
+        +  '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(co.name) + '</w:t></w:r>'
+        +  (coDates ? '<w:r>' + CO_RPR + '<w:tab/></w:r><w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>' : '')
+        +  '</w:p>';
+
+    xml += SPACER;
+
+    for (var ri = 0; ri < roles.length; ri++) {
+      var role = roles[ri];
+      if (!role || !role.role) continue;
+      var rdates = multiRole ? normDateRange(role.role_dates || '') : '';
+
+      // Role title — title and date MUST be separate runs so date right-aligns
+      if (rdates) {
+        xml += '<w:p>' + ROL_PPR
+            +  '<w:r>' + ROL_RPR + '<w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
+            +  '<w:r>' + ROL_RPR + '<w:tab/></w:r>'
+            +  '<w:r>' + ROL_RPR + '<w:t xml:space="preserve">' + xe(rdates) + '</w:t></w:r>'
+            +  '</w:p>';
+      } else {
+        xml += '<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:right="26"/><w:jc w:val="both"/></w:pPr>'
+            +  '<w:r>' + ROL_RPR + '<w:t>' + xe(role.role) + '</w:t></w:r>'
+            +  '</w:p>';
+      }
+      xml += SPACER;
+
+      // Bullets — first bullet may be italic overview description
+      var bullets = role.bullets || [];
+      var firstBulletIsOverview = bullets.length > 0 && !/^select eng/i.test(bullets[0]) && bullets[0].length > 60 && bullets[0].indexOf(':') === -1;
+      for (var bi = 0; bi < bullets.length; bi++) {
+        var b = (bullets[bi] || '').trim();
+        if (!b) continue;
+        if (bi === 0 && firstBulletIsOverview) {
+          // Render as italic overview paragraph, not bullet
+          xml += '<w:p>' + OVW_PPR
+              +  '<w:r>' + OVW_RPR + '<w:t xml:space="preserve">' + xe(b) + '</w:t></w:r>'
+              +  '</w:p>';
+          xml += SPACER;
+        } else {
+          xml += '<w:p><w:pPr>' + BUL_PPR + '</w:pPr>'
+              +  '<w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(b) + '</w:t></w:r>'
+              +  '</w:p>';
+        }
+      }
+      if (ri < roles.length - 1) { xml += SPACER; }
+    }
+  }
+  return xml;
+}
+
+
+function buildEaIndiaBizExp(companies) {
+  // Builds Business Experience XML for EA India template
+  if (!companies || companies.length === 0) return '';
+  var xml = '';
+  function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // Normalise date format: "2023 Sept" -> "Sept 2023" (year before month)
+  function normDate(s) {
+    if (!s) return '';
+    return s.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*/gi, function(m, yr, mo) {
+      return mo.charAt(0).toUpperCase() + mo.slice(1) + ' ' + yr;
+    });
+  }
+  function normDateRange(s) {
+    if (!s) return '';
+    var parts = s.split(/\s*[–—-]+\s*/);
+    if (parts.length === 2) return normDate(parts[0].trim()) + ' \u2013 ' + normDate(parts[1].trim());
+    return normDate(s);
+  }
+
+  // Right-aligned tab stop at 9072 twips
+  var TAB_STOP  = '<w:tabs><w:tab w:val="right" w:pos="9072"/></w:tabs>';
+  var CO_PPR    = '<w:pPr><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
+  var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:color w:val="2C2E82" w:themeColor="accent1"/></w:rPr>';
+  var ROL_PPR_D = '<w:pPr><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
+  var ROL_PPR_P = '<w:pPr><w:spacing w:after="0"/></w:pPr>';
+  var ROL_RPR   = '<w:rPr><w:color w:val="2C2E82" w:themeColor="accent1"/></w:rPr>';
+  var BUL_PPR   = '<w:pStyle w:val="ListParagraph"/>'
+                + '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="4"/></w:numPr>'
+                + '<w:tabs><w:tab w:val="left" w:pos="1483"/></w:tabs>'
+                + '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>'
+                + '<w:jc w:val="both"/>';
+  var BUL_RPR   = '<w:rPr>'
+                + '<w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/>'
+                + '<w:color w:val="2C2E82" w:themeColor="accent1"/>'
+                + '<w:lang w:eastAsia="en-US"/>'
+                + '</w:rPr>';
+  var SPACER    = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
+
+  for (var ci = 0; ci < companies.length; ci++) {
+    var co = companies[ci];
+    if (!co || !co.name) continue;
+    var roles = co.roles || [];
+    var multiRole = roles.length > 1;
+
+    // Spacer before company (except first)
+    if (ci > 0) { xml += SPACER; xml += SPACER; }
+
+    // Company line: BOLD name + location, TAB right-aligned, BOLD dates
+    var coDates = normDateRange(co.dates || '');
+    xml += '<w:p>' + CO_PPR
+        +  '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(co.name) + (co.location ? ', ' + xe(co.location) : '') + '</w:t></w:r>'
+        +  (coDates ? '<w:r>' + CO_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>' : '')
+        +  '</w:p>';
+
+    // Empty line after company heading
+    xml += SPACER;
+
+    for (var ri = 0; ri < roles.length; ri++) {
+      var role = roles[ri];
+      if (!role || !role.role) continue;
+      var roleDates = multiRole ? normDateRange(role.role_dates || '') : '';
+
+      // Role title line: left title, TAB right-aligned, dates (only multi-role)
+      if (roleDates) {
+        xml += '<w:p>' + ROL_PPR_D
+            +  '<w:r>' + ROL_RPR + '<w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
+            +  '<w:r>' + ROL_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(roleDates) + '</w:t></w:r>'
+            +  '</w:p>';
+      } else {
+        xml += '<w:p>' + ROL_PPR_P
+            +  '<w:r>' + ROL_RPR + '<w:t>' + xe(role.role) + '</w:t></w:r>'
+            +  '</w:p>';
+      }
+
+      // ONE blank line between role title and bullets
+      xml += SPACER;
+
+      // Bullets
+      var bullets = role.bullets || [];
+      for (var bi = 0; bi < bullets.length; bi++) {
+        var b = (bullets[bi] || '').trim();
+        if (!b) continue;
+        xml += '<w:p><w:pPr>' + BUL_PPR + BUL_RPR + '</w:pPr>'
+            +  '<w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(b) + '</w:t></w:r>'
+            +  '</w:p>';
+      }
+
+      // Spacer between roles (not after last)
+      if (ri < roles.length - 1) { xml += SPACER; }
+    }
+  }
+  return xml;
+}
 function buildCareerSummaryBizExp(companies) {
   if (!companies || companies.length === 0) return '';
   var xml = '';
+  function csPeriod(s) {
+    // Append period if sentence doesn't already end with punctuation
+    if (!s) return s;
+    var t = s.trimRight();
+    var last = t.slice(-1);
+    if (last === '.' || last === '?' || last === '!' || last === ')' || last === ':') return s;
+    return t + '.';
+  }
 
   for (var ci = 0; ci < companies.length; ci++) {
     var company = companies[ci];
@@ -1332,10 +1722,10 @@ function buildCareerSummaryBizExp(companies) {
           xml += '<w:p><w:pPr><w:pStyle w:val="12CV"/>'
                + '<w:tabs><w:tab w:val="num" w:pos="360"/></w:tabs>'
                + '<w:ind w:left="810"/></w:pPr>'
-               + '<w:r><w:t>' + csXmlEsc(bullet) + '</w:t></w:r></w:p>';
+               + '<w:r><w:t>' + csXmlEsc(csPeriod(bullet)) + '</w:t></w:r></w:p>';
         } else {
           xml += '<w:p><w:pPr><w:pStyle w:val="10CV"/></w:pPr>'
-               + '<w:r><w:t>' + csXmlEsc(bullet) + '</w:t></w:r></w:p>';
+               + '<w:r><w:t>' + csXmlEsc(csPeriod(bullet)) + '</w:t></w:r></w:p>';
         }
       }
 
@@ -1516,7 +1906,7 @@ async function generate() {
   var tpl = document.getElementById('tplSel').value;
   var btn = document.getElementById('genBtn');
   if (!tpl) { notify('Please select a template first'); return; }
-  logUsage(tpl, activeType, 'attempted');
+  logUsage(tpl, activeType, 'started');
 
   var inputText = '';
   var activeTab = document.querySelector('.itab.on');
@@ -2057,6 +2447,7 @@ async function generate() {
 
 
 if (activeType === 'file') return;   showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn);
+  logUsage(tpl, activeType, 'success');
   hideProgress('Done! Your profile is ready ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ check My History');
 }
 
@@ -2196,10 +2587,250 @@ var isApacUpdated = (tpl === 'apac-profile');
 var isChineseApac = false;
 var isGbProfile = (tpl === 'gb-profile');
 var isServicesProfile = (tpl === 'services-profile');
-var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"projects":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_1":"","QUAL_2":"","QUAL_3":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","PROJECT_1_TITLE":"","PROJECT_1_CLIENT":"","PROJECT_1_DATE":"","PROJECT_1_DESCRIPTION":"","PROJECT_2_TITLE":"","PROJECT_2_CLIENT":"","PROJECT_2_DATE":"","PROJECT_2_DESCRIPTION":"","PROJECT_3_TITLE":"","PROJECT_3_CLIENT":"","PROJECT_3_DATE":"","PROJECT_3_DESCRIPTION":"","PROJECT_4_TITLE":"","PROJECT_4_CLIENT":"","PROJECT_4_DATE":"","PROJECT_4_DESCRIPTION":"","PROJECT_5_TITLE":"","PROJECT_5_CLIENT":"","PROJECT_5_DATE":"","PROJECT_5_DESCRIPTION":"","PROJECT_6_TITLE":"","PROJECT_6_CLIENT":"","PROJECT_6_DATE":"","PROJECT_6_DESCRIPTION":"","PROJECT_7_TITLE":"","PROJECT_7_CLIENT":"","PROJECT_7_DATE":"","PROJECT_7_DESCRIPTION":"","PROJECT_8_TITLE":"","PROJECT_8_CLIENT":"","PROJECT_8_DATE":"","PROJECT_8_DESCRIPTION":"","PROJECT_9_TITLE":"","PROJECT_9_CLIENT":"","PROJECT_9_DATE":"","PROJECT_9_DESCRIPTION":"","PROJECT_10_TITLE":"","PROJECT_10_CLIENT":"","PROJECT_10_DATE":"","PROJECT_10_DESCRIPTION":""}';
+var isEaIndia = (tpl === 'ea-india-profile');
+var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
+var _ei2Now2 = new Date();
+var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
+
+ABSOLUTE RULES:
+- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
+- CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
+- Copy all text VERBATIM — never summarise or rephrase.
+
+FIELD INSTRUCTIONS:
+
+CANDIDATE_NAME: Full name exactly as written.
+CURRENT_EMPLOYER: Most recent employer name only.
+CLIENT_COMPANY: Always "".
+SEARCH_TITLE: Always "".
+MONTH_YEAR: "` + _ei2M2[_ei2Now2.getMonth()] + ' ' + _ei2Now2.getFullYear() + `"
+
+SUMMARY: Extract the candidate's opening prose paragraphs VERBATIM. Separate each paragraph with a newline character \n. Do NOT include bullet points or skills lists — prose only.
+
+SUMMARY_BULLETS: Extract the candidate's "Core Leadership Strengths" / "Key Skills" / "Core Competencies" section. Return as a pipe-separated string of items exactly as written e.g. "Investment Platform Strategy & Execution | Private Equity & Public Markets Technology | Deal Lifecycle & Portfolio Analytics Systems". If no such section exists, leave "".
+
+COMPANIES ARRAY:
+- company.name: Company name only (no location).
+- company.dates: ALWAYS include month where available e.g. "Jan 2016 – Present".
+- role.role: Exact job title.
+- role.role_dates: Dates for this role only. Leave "" if company has ONE role.
+- role.bullets: ALL bullets for that role VERBATIM.
+- Most recent company first.
+
+EDUCATION:
+- education[]: Array of {years, institution, degree}
+- years: "YYYY – YYYY" format e.g. "1988 – 1992"
+- institution: Full institution name including location
+- degree: Full degree description
+- Most recent first. Include ALL entries.
+
+QUAL_1: Full professional qualifications/certifications VERBATIM including all items. Do NOT truncate.
+TECH_SKILLS: Extract ALL technical skills, tools, languages, frameworks etc as a single string exactly as written in the CV.
+NATIONALITY: Exact nationality. Leave "" if not found.
+LANGUAGES: Languages with levels. Leave "" if not found.
+INTERESTS: Interests as stated. Leave "" if not found.
+
+Return this JSON structure:
+{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_1":"","TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}
+
+CANDIDATE SOURCE:
+
+` + inputText;
+var isChangeCons = (tpl === 'change-consulting-profile');
+var isApacEy = (tpl === 'apac-ey-profile');
+var isApacDealList = (tpl === 'apac-profile-deal-list');
+if (isApacDealList) { isApac = true; isApacUpdated = true; }
+var isApacV2 = (tpl === 'apac-profile-v2');
+if (isApacV2) { isApac = true; isApacUpdated = true; }
+var apacEyJsonStr = '{"CANDIDATE_NAME":"","CURRENT_TITLE":"","CURRENT_EMPLOYER":"","PROFILE_DATE":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_INSTITUTION":"","EDU_1_START":"","EDU_1_END":"","EDU_1_DEGREE":"","EDU_2_INSTITUTION":"","EDU_2_START":"","EDU_2_END":"","EDU_2_DEGREE":"","EDU_1_BULLETS":"","EDU_2_BULLETS":"","QUAL_1_TEXT":"","QUAL_1_START":"","QUAL_1_END":"","QUAL_1_DETAIL":"","QUAL_2_TEXT":"","QUAL_2_START":"","QUAL_2_END":"","QUAL_2_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","CANDIDATE_SUMMARY":""}';
+var changeConsJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_1_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","INTERESTS_DETAIL":""}';
+var eaIndiaJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY_INTRO":"","KEY_SKILLS":"","EXEC_OVERVIEW_BULLET_1":"","EXEC_OVERVIEW_BULLET_2":"","EXEC_OVERVIEW_BULLET_3":"","EXEC_OVERVIEW_BULLET_4":"","EXEC_OVERVIEW_BULLET_5":"","EXEC_OVERVIEW_BULLET_6":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_YEAR":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_1_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_2_YEAR":"","QUAL_2_TEXT":"","QUAL_3_YEAR":"","QUAL_3_TEXT":"","QUAL_4_YEAR":"","QUAL_4_TEXT":"","QUAL_5_YEAR":"","QUAL_5_TEXT":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","volunteering":[{"dates":"","role":"","description":""}]}';
+var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"projects":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_1":"e.g. CPIM | Six Sigma Black Belt — copy FULL string verbatim","QUAL_2":"","QUAL_3":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","PROJECT_1_TITLE":"","PROJECT_1_CLIENT":"","PROJECT_1_DATE":"","PROJECT_1_DESCRIPTION":"","PROJECT_2_TITLE":"","PROJECT_2_CLIENT":"","PROJECT_2_DATE":"","PROJECT_2_DESCRIPTION":"","PROJECT_3_TITLE":"","PROJECT_3_CLIENT":"","PROJECT_3_DATE":"","PROJECT_3_DESCRIPTION":"","PROJECT_4_TITLE":"","PROJECT_4_CLIENT":"","PROJECT_4_DATE":"","PROJECT_4_DESCRIPTION":"","PROJECT_5_TITLE":"","PROJECT_5_CLIENT":"","PROJECT_5_DATE":"","PROJECT_5_DESCRIPTION":"","PROJECT_6_TITLE":"","PROJECT_6_CLIENT":"","PROJECT_6_DATE":"","PROJECT_6_DESCRIPTION":"","PROJECT_7_TITLE":"","PROJECT_7_CLIENT":"","PROJECT_7_DATE":"","PROJECT_7_DESCRIPTION":"","PROJECT_8_TITLE":"","PROJECT_8_CLIENT":"","PROJECT_8_DATE":"","PROJECT_8_DESCRIPTION":"","PROJECT_9_TITLE":"","PROJECT_9_CLIENT":"","PROJECT_9_DATE":"","PROJECT_9_DESCRIPTION":"","PROJECT_10_TITLE":"","PROJECT_10_CLIENT":"","PROJECT_10_DATE":"","PROJECT_10_DESCRIPTION":""}';
 var csJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var globalJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CURRENT_TITLE":"","SEARCH_TITLE":"","CLIENT_COMPANY":"","MONTH_YEAR":"","SUMMARY":"","COMPANY_1_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_1_BULLET_1":"","COMPANY_1_BULLET_2":"","COMPANY_1_BULLET_3":"","COMPANY_1_BULLET_4":"","COMPANY_1_BULLET_5":"","COMPANY_1_BULLET_6":"","COMPANY_1_BULLET_7":"","COMPANY_1_BULLET_8":"","COMPANY_1_BULLET_9":"","COMPANY_1_BULLET_10":"","COMPANY_2_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_2_BULLET_1":"","COMPANY_2_BULLET_2":"","COMPANY_2_BULLET_3":"","COMPANY_2_BULLET_4":"","COMPANY_2_BULLET_5":"","COMPANY_2_BULLET_6":"","COMPANY_2_BULLET_7":"","COMPANY_2_BULLET_8":"","COMPANY_2_BULLET_9":"","COMPANY_2_BULLET_10":"","COMPANY_3_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_3_BULLET_1":"","COMPANY_3_BULLET_2":"","COMPANY_3_BULLET_3":"","COMPANY_3_BULLET_4":"","COMPANY_3_BULLET_5":"","COMPANY_3_BULLET_6":"","COMPANY_3_BULLET_7":"","COMPANY_3_BULLET_8":"","COMPANY_3_BULLET_9":"","COMPANY_3_BULLET_10":"","COMPANY_4_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_4_BULLET_1":"","COMPANY_4_BULLET_2":"","COMPANY_4_BULLET_3":"","COMPANY_4_BULLET_4":"","COMPANY_4_BULLET_5":"","COMPANY_4_BULLET_6":"","COMPANY_4_BULLET_7":"","COMPANY_4_BULLET_8":"","COMPANY_4_BULLET_9":"","COMPANY_4_BULLET_10":"","COMPANY_5_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_5_BULLET_1":"","COMPANY_5_BULLET_2":"","COMPANY_5_BULLET_3":"","COMPANY_5_BULLET_4":"","COMPANY_5_BULLET_5":"","COMPANY_5_BULLET_6":"","COMPANY_5_BULLET_7":"","COMPANY_5_BULLET_8":"","COMPANY_5_BULLET_9":"","COMPANY_5_BULLET_10":"","COMPANY_6_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_6_BULLET_1":"","COMPANY_6_BULLET_2":"","COMPANY_6_BULLET_3":"","COMPANY_6_BULLET_4":"","COMPANY_6_BULLET_5":"","COMPANY_6_BULLET_6":"","COMPANY_6_BULLET_7":"","COMPANY_6_BULLET_8":"","COMPANY_6_BULLET_9":"","COMPANY_6_BULLET_10":"","COMPANY_7_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_7_BULLET_1":"","COMPANY_7_BULLET_2":"","COMPANY_7_BULLET_3":"","COMPANY_7_BULLET_4":"","COMPANY_7_BULLET_5":"","COMPANY_7_BULLET_6":"","COMPANY_7_BULLET_7":"","COMPANY_7_BULLET_8":"","COMPANY_7_BULLET_9":"","COMPANY_7_BULLET_10":"","COMPANY_8_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_8_BULLET_1":"","COMPANY_8_BULLET_2":"","COMPANY_8_BULLET_3":"","COMPANY_8_BULLET_4":"","COMPANY_8_BULLET_5":"","COMPANY_8_BULLET_6":"","COMPANY_8_BULLET_7":"","COMPANY_8_BULLET_8":"","COMPANY_8_BULLET_9":"","COMPANY_8_BULLET_10":"","COMPANY_9_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_9_BULLET_1":"","COMPANY_9_BULLET_2":"","COMPANY_9_BULLET_3":"","COMPANY_9_BULLET_4":"","COMPANY_9_BULLET_5":"","COMPANY_9_BULLET_6":"","COMPANY_9_BULLET_7":"","COMPANY_9_BULLET_8":"","COMPANY_9_BULLET_9":"","COMPANY_9_BULLET_10":"","COMPANY_10_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_10_BULLET_1":"","COMPANY_10_BULLET_2":"","COMPANY_10_BULLET_3":"","COMPANY_10_BULLET_4":"","COMPANY_10_BULLET_5":"","COMPANY_10_BULLET_6":"","COMPANY_10_BULLET_7":"","COMPANY_10_BULLET_8":"","COMPANY_10_BULLET_9":"","COMPANY_10_BULLET_10":"","COMPANY_11_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_11_BULLET_1":"","COMPANY_11_BULLET_2":"","COMPANY_11_BULLET_3":"","COMPANY_11_BULLET_4":"","COMPANY_11_BULLET_5":"","COMPANY_11_BULLET_6":"","COMPANY_11_BULLET_7":"","COMPANY_11_BULLET_8":"","COMPANY_11_BULLET_9":"","COMPANY_11_BULLET_10":"","COMPANY_12_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_12_BULLET_1":"","COMPANY_12_BULLET_2":"","COMPANY_12_BULLET_3":"","COMPANY_12_BULLET_4":"","COMPANY_12_BULLET_5":"","COMPANY_12_BULLET_6":"","COMPANY_12_BULLET_7":"","COMPANY_12_BULLET_8":"","COMPANY_12_BULLET_9":"","COMPANY_12_BULLET_10":"","COMPANY_13_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_13_BULLET_1":"","COMPANY_13_BULLET_2":"","COMPANY_13_BULLET_3":"","COMPANY_13_BULLET_4":"","COMPANY_13_BULLET_5":"","COMPANY_13_BULLET_6":"","COMPANY_13_BULLET_7":"","COMPANY_13_BULLET_8":"","COMPANY_13_BULLET_9":"","COMPANY_13_BULLET_10":"","COMPANY_14_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_14_BULLET_1":"","COMPANY_14_BULLET_2":"","COMPANY_14_BULLET_3":"","COMPANY_14_BULLET_4":"","COMPANY_14_BULLET_5":"","COMPANY_14_BULLET_6":"","COMPANY_14_BULLET_7":"","COMPANY_14_BULLET_8":"","COMPANY_14_BULLET_9":"","COMPANY_14_BULLET_10":"","COMPANY_15_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_15_BULLET_1":"","COMPANY_15_BULLET_2":"","COMPANY_15_BULLET_3":"","COMPANY_15_BULLET_4":"","COMPANY_15_BULLET_5":"","COMPANY_15_BULLET_6":"","COMPANY_15_BULLET_7":"","COMPANY_15_BULLET_8":"","COMPANY_15_BULLET_9":"","COMPANY_15_BULLET_10":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","AFFILIATION_2":"","AFFILIATION_2_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
-var prompt = isCareerSummary
+var _eaIndiaMonthYear = (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})();
+var eaIndiaPrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate source below and extract ALL information into a structured JSON object for the Global Candidate Profile — EA India template.
+
+ABSOLUTE RULES:
+- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
+- CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
+- Copy all text VERBATIM — never summarise, rephrase, or add content not in the source.
+- Extract EVERY work history entry WITHOUT EXCEPTION.
+
+FIELD-BY-FIELD INSTRUCTIONS:
+
+CANDIDATE_NAME: Full name exactly as written.
+CURRENT_EMPLOYER: Most recent employer name only.
+CLIENT_COMPANY: Always empty string "".
+SEARCH_TITLE: Always empty string "".
+PROFILE_MONTH: Today's month and year: "` + _eaIndiaMonthYear + `". Always use this value.
+
+SUMMARY_INTRO: Copy the candidate's opening personal profile / executive summary paragraph VERBATIM — word for word, no changes. This is the short paragraph at the top of their CV. If it does not exist, leave empty.
+
+KEY_SKILLS: Extract the candidate's key skills or competencies list. Join as a single comma-separated string (e.g. "Leadership, Financial Advice, Investment Management, Creating & Driving Transformation Strategy"). If listed as bullets, join them with ", ".
+
+EXEC_OVERVIEW_BULLET_1 through EXEC_OVERVIEW_BULLET_6: Extract the Executive Overview / Professional Profile bullet points VERBATIM. Each bullet = one field. If there are fewer than 6 bullets, leave unused fields as "". If there is no Executive Overview section, leave all 6 as "".
+
+COMPANIES ARRAY — CRITICAL RULES:
+- Group ALL roles held at the same company under ONE company entry.
+- Each role is a separate object in the roles array.
+- company.name: Full legal company name — use IDENTICAL string for all roles at same company.
+- company.location: City, Country (leave empty if not stated).
+- company.dates: Overall tenure at company (e.g. "Mar 2019 – Present"). ALWAYS include month — never year-only. Most recent company first.
+- role.role: Exact job title as written in CV.
+- role.role_dates: Dates for THIS specific role only (e.g. "Jul 2021 – Jul 2023"). Leave "" if the company has only ONE role (dates already shown in company header).
+- role.bullets: ALL bullet points written directly under THAT specific role, VERBATIM. NEVER mix bullets from different roles. Every single bullet must be captured — no limit, no skipping.
+- Most recent company first. Most recent role first within each company.
+
+EDUCATION:
+- EDU_1_YEAR: Year (e.g. "2018") — just the year, no colon.
+- EDU_1_INSTITUTION: Full institution name (e.g. "Said Business School, Oxford").
+- EDU_1_DEGREE: Degree or course name (e.g. "Oxford Fintech Programme").
+- EDU_1_EXTRA: Any additional detail line (e.g. honours, specialisation). Leave "" if none.
+- Only extract the PRIMARY degree/education. Leave all EDU fields as "" if no education section found.
+
+PROFESSIONAL QUALIFICATIONS — up to 5 entries:
+- QUAL_N_YEAR: Year of qualification (e.g. "2015"). Extract year only.
+- QUAL_N_TEXT: Full qualification name (e.g. "Chartered Fellow of CISI").
+- List from most recent to oldest. Leave unused QUAL fields as "".
+- If qualifications are listed without years, put "" for the year.
+
+NATIONALITY: Exact nationality as stated. Leave "" if not found.
+LANGUAGES: Languages with proficiency levels as stated. Leave "" if not found.
+INTERESTS: Interests/hobbies as stated. Leave "" if not found.
+
+VOLUNTEERING ARRAY — extract if present, leave as empty array [] if not:
+- Each entry: {"dates": "Jun 2015 – Dec 2024", "role": "Chair of Investment Committee of St Peter's Hospice", "description": "Brief description verbatim"}
+- Extract up to 3 entries. Most recent first.
+- If no volunteering/charitable work section exists, return "volunteering": [].
+
+JSON STRUCTURE — return exactly this schema filled with real data:
+` + eaIndiaJsonStr + `
+
+CANDIDATE SOURCE:
+
+` + inputText;
+
+var _ccMonthYear = (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})();
+var changeConsPrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate source below and extract ALL information into a structured JSON object for the Change Consulting Candidate Profile template.
+
+ABSOLUTE RULES:
+- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
+- CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
+- Copy all text VERBATIM — never summarise, rephrase, or add content not in the source.
+- Extract EVERY work history entry WITHOUT EXCEPTION.
+
+FIELD INSTRUCTIONS:
+
+CANDIDATE_NAME: Full name exactly as written.
+CURRENT_EMPLOYER: Most recent employer name only.
+CLIENT_COMPANY: Always empty string "".
+SEARCH_TITLE: Always empty string "".
+PROFILE_MONTH: "` + _ccMonthYear + `". Always use this value.
+
+SUMMARY: Copy the candidate's opening personal profile / executive summary paragraph VERBATIM — word for word, no changes. If no summary exists, leave empty.
+
+COMPANIES ARRAY — CRITICAL RULES:
+- Group ALL roles held at the same company under ONE company entry.
+- company.name: Full legal company name — IDENTICAL string for all roles at same company.
+- company.location: City, Country (leave empty if not stated).
+- company.dates: ALWAYS use "Mon YYYY – Mon YYYY" format including month e.g. "Jan 2019 – Present". NEVER year-only.
+- role.role: Exact job title as written in CV.
+- role.role_dates: Dates for THIS specific role only. Leave "" if company has only ONE role.
+- role.bullets: ALL bullet points for that role VERBATIM. Every single one — no limit, no skipping.
+- Most recent company first. Most recent role first within each company.
+
+EDUCATION:
+- EDU_1_START / EDU_1_END: Start and end year (e.g. "2005", "2009").
+- EDU_1_INSTITUTION: Full institution name.
+- EDU_1_LOCATION: City or campus name.
+- EDU_1_DEGREE: Full degree/qualification name.
+- EDU_2_* same pattern for second entry. Leave all EDU_2 fields as "" if only one education entry.
+- EDU_2_EXTRA: Any extra detail line (e.g. results, honours). Leave "" if none.
+
+PROFESSIONAL QUALIFICATIONS:
+- QUAL_1_YEAR: Year range (e.g. "2010 – 2013") or year only.
+- QUAL_1_TEXT: Full qualification name and awarding body VERBATIM.
+- QUAL_1_DETAIL: Any detail line (e.g. pass results, prizes) VERBATIM. Leave "" if none.
+
+NATIONALITY: Exact nationality as stated. Leave "" if not found.
+LANGUAGES: Languages with proficiency levels as stated. Leave "" if not found.
+INTERESTS: First line of interests VERBATIM. Leave "" if not found.
+INTERESTS_DETAIL: Second line of interests if present (e.g. additional hobbies). Leave "" if not found.
+
+NOTE: Core Competencies and Technical Skills are filled manually by the consultant — do NOT extract them.
+
+JSON STRUCTURE — return exactly this schema filled with real data:
+` + changeConsJsonStr + `
+
+CANDIDATE SOURCE:
+
+` + inputText;
+
+var _apacEyDate = (function(){var d=new Date();var months=['January','February','March','April','May','June','July','August','September','October','November','December'];var day=d.getDate();var suffix=day===1||day===21||day===31?'st':day===2||day===22?'nd':day===3||day===23?'rd':'th';return day+''+suffix+' '+months[d.getMonth()]+' '+d.getFullYear();})();
+var apacEyPrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate source below and extract ALL information for the APAC EY Shortlisted Candidate Profile template.
+
+ABSOLUTE RULES:
+- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
+- Copy all text VERBATIM — never summarise, rephrase, or add content not in the source.
+- Extract EVERY work history entry WITHOUT EXCEPTION.
+
+FIELD INSTRUCTIONS:
+
+CANDIDATE_NAME: Full name exactly as written.
+CURRENT_TITLE: Most recent job title exactly as written (e.g. "Associate Partner").
+CURRENT_EMPLOYER: Most recent employer name only (e.g. "McKinsey & Co.").
+PROFILE_DATE: Today's date in format "4th June 2026" = "` + _apacEyDate + `". Always use this value.
+
+COMPANIES ARRAY — CRITICAL RULES:
+- Group ALL roles held at the same company under ONE company entry.
+- company.name: Company name + location as it appears in the CV header (e.g. "McKinsey & Co., Singapore, Thailand, India"). Do NOT repeat the location — copy the name+location string exactly once as written.
+- company.dates: ALWAYS include month where available e.g. "Jan 2016 – Present". Use year-only if months not stated.
+- role.role: Job title ONLY — do NOT include location, country, or region in the role title. Location belongs in company.name or company.location only. E.g. "Tata Steel, Marketing Manager (Energy & Pipelines)" NOT "Tata Steel, Marketing Manager (Energy & Pipelines) UK".
+- role.role_dates: Dates for THIS specific role. Leave "" if company has only ONE role.
+- role.bullets: ALL bullet points VERBATIM for that role — every single one, no limit, no skipping.
+- Most recent company first.
+
+NOTE: If the CV has a company-level description/overview paragraph (italic text under the company header describing overall responsibilities), include it as the FIRST bullet of the first role at that company, prefixed with nothing — just the text verbatim.
+NOTE: If engagements are listed as "Select engagements:" with sub-bullets, include "Select engagements:" as a bullet, then each engagement as its own bullet.
+
+EDUCATION:
+- EDU_1_INSTITUTION: Full institution name (e.g. "IIM Lucknow, India").
+- EDU_1_START / EDU_1_END: Start and end year.
+- EDU_1_DEGREE: Full degree/qualification name.
+- EDU_2_* same pattern. Leave all EDU_2 as "" if only one education entry.
+- EDU_1_DEGREE: Include ONLY the degree/qualification name on the first line. Any bullet points or additional details below the degree go into EDU_1_BULLETS as a single string with each bullet separated by " | " (pipe). Leave EDU_1_BULLETS "" if no bullets.
+- EDU_2_DEGREE: Same. Extra bullets → EDU_2_BULLETS.
+
+PROFESSIONAL QUALIFICATIONS:
+- QUAL_1_TEXT: Full qualification name and awarding body.
+- QUAL_1_START / QUAL_1_END: Year range.
+- QUAL_1_DETAIL: Any detail line. Leave "" if none.
+- QUAL_2_* same pattern. Leave as "" if not present.
+
+NATIONALITY / LANGUAGES / INTERESTS: Exactly as stated. Leave "" if not found.
+
+CANDIDATE_SUMMARY: Extract the candidate's opening career summary or profile overview paragraph VERBATIM — the short descriptive text summarising their background and expertise. Leave "" if none exists.
+
+NOTE: Do NOT extract SH Summary, Heading 1-5, or [SH Bullets] — these are filled manually.
+
+JSON STRUCTURE:
+` + apacEyJsonStr + `
+
+CANDIDATE SOURCE:
+
+` + inputText;
+
+var prompt = isApacEy
+  ? apacEyPrompt
+  : isEaIndiaV2
+  ? eaIndiaV2Prompt
+  : isChangeCons
+  ? changeConsPrompt
+  : isEaIndia
+  ? eaIndiaPrompt
+  : isCareerSummary
   ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
@@ -2214,6 +2845,7 @@ COMPANIES ARRAY RULES:
 - Group ALL roles held at the same company under ONE company entry.
 - Each role is a separate object in the roles array with its own bullets.
 - role_dates: always fill for EVERY role — e.g. "Mar 2019 – Nov 2025". Only leave "" if the company has exactly ONE role (dates already shown in company header).
+- company.dates: ALWAYS use "Mon YYYY – Mon YYYY" format including month e.g. "Jan 2019 – Present" or "Mar 2018 – Dec 2019". NEVER year-only.
 - "Results:" lines: include as their own bullet string. Sub-results follow as separate bullet strings immediately after.
 - Most recent company first.
 
@@ -2229,7 +2861,7 @@ JSON STRUCTURE — return exactly this, filled with real data:
     {
       "name": "Full company legal name",
       "location": "City, Country",
-      "dates": "YYYY – Present",
+      "dates": "Mon YYYY – Present",
       "roles": [
         {
           "role": "Exact job title as written in CV",
@@ -2253,6 +2885,12 @@ JSON STRUCTURE — return exactly this, filled with real data:
   "LANGUAGES_LEVEL": "",
   "INTERESTS": ""
 }
+
+FIELD INSTRUCTIONS FOR PERSONAL DETAILS:
+- QUAL_1: Extract ALL professional qualifications, licences, certifications and accreditations as a single string, VERBATIM from the CV. Include in-progress qualifications with their expected dates. Copy the FULL text exactly as written (e.g. "Series 7 complete & 63 in progress (expected 06/2026)"). Do NOT truncate or split.
+- TECH_SKILLS: Extract all technical/software skills as a comma-separated string.
+- AFFILIATION_1: Extract all professional memberships, affiliations and industry groups.
+- NATIONALITY, LANGUAGES, INTERESTS: Extract exactly as stated; leave empty if not found.
 
 CANDIDATE SOURCE:
 
@@ -2292,7 +2930,7 @@ FIELD-BY-FIELD INSTRUCTIONS:
    - EDU_1_INSTITUTION...: Full institution name
    - EDU_1_DEGREE...: Degree or qualification name
 
-10. QUAL_1: Put the ENTIRE qualifications string exactly as written (e.g. "CPIM (Certified in Production and Inventory Management) | Six Sigma Black Belt"). Do NOT split it. Do NOT strip the pipe. Copy the full string verbatim into QUAL_1. Leave QUAL_2 and QUAL_3 empty — the system will split automatically.
+10. QUAL_1: CRITICAL — The pipe character | is NOT a separator — it is PART of the qualification string. Copy the ENTIRE qualifications/certifications string VERBATIM including everything after each pipe. The CV may list qualifications at the top AND again in a certifications section — always extract the MOST COMPLETE version. E.g. input "CPIM (Certified in Production and Inventory Management) | Six Sigma Black Belt" → output EXACTLY "CPIM (Certified in Production and Inventory Management) | Six Sigma Black Belt". Do NOT stop at the pipe. Do NOT truncate.
 11. NATIONALITY: Exact nationality as stated; leave empty if not provided.
 12. LANGUAGES: Languages with proficiency levels as stated; leave empty if not provided.
 13. INTERESTS: As stated; leave empty if not provided.
@@ -2524,10 +3162,21 @@ try {
   return;
 }
 
-        var _dn=new Date();var _dmo=['January','February','March','April','May','June','July','August','September','October','November','December'];if(output){output.MONTH_YEAR=_dmo[_dn.getMonth()]+' '+_dn.getFullYear();if(output){var _certMatch=inputText.match(/certifications?\s*:\s*([^\n\r]+)/i);if(_certMatch){var _rawCerts=_certMatch[1].trim();var _cparts=_rawCerts.split(/\s*[|]\s*/).map(function(q){return q.trim();}).filter(Boolean);if(_cparts.length>1){output.QUAL_1=_cparts[0]||output.QUAL_1||'';output.QUAL_2=_cparts[1]||output.QUAL_2||'';if(_cparts[2])output.QUAL_3=_cparts[2]||output.QUAL_3||'';}}if(output.QUAL_1){var _q1=output.QUAL_1||'';_q1=_q1.replace(/^certifications?\s*:\s*/i,'');var _quals=_q1.split(/[|;\n]/).map(function(q){return q.trim();}).filter(Boolean);output.QUAL_1=_quals[0]||'';if(!output.QUAL_2&&_quals[1])output.QUAL_2=_quals[1];if(!output.QUAL_3&&_quals[2])output.QUAL_3=_quals[2];}}}  if (output && isCareerSummary) {
+        var _dn=new Date();var _dmo=['January','February','March','April','May','June','July','August','September','October','November','December'];if(output){output.MONTH_YEAR=_dmo[_dn.getMonth()]+' '+_dn.getFullYear();if(output){var _certMatch=inputText.match(/certifications?\s*:\s*([^\n\r]+)/i);if(_certMatch){var _rawCerts=_certMatch[1].trim();var _cparts=_rawCerts.split(/\s*[|]\s*/).map(function(q){return q.trim();}).filter(Boolean);if(_cparts.length>1){output.QUAL_1=_cparts[0]||output.QUAL_1||'';output.QUAL_2=_cparts[1]||output.QUAL_2||'';if(_cparts[2])output.QUAL_3=_cparts[2]||output.QUAL_3||'';}}if(output.QUAL_1){var _q1=output.QUAL_1||'';_q1=_q1.replace(/^certifications?\s*:\s*/i,'');var _quals=_q1.split(/[|;\n]/).map(function(q){return q.trim();}).filter(Boolean);output.QUAL_1=_quals[0]||'';if(!output.QUAL_2&&_quals[1])output.QUAL_2=_quals[1];if(!output.QUAL_3&&_quals[2])output.QUAL_3=_quals[2];}}}  if (output && (isCareerSummary || isEaIndia || isChangeCons || isApacEy || isApacV2)) {
           var _now = new Date();
           var _mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
           output.PROFILE_MONTH = _mNames[_now.getMonth()] + ' ' + _now.getFullYear();
+          // Default placeholders for CS so template style renders correctly
+          if (isCareerSummary || isChangeCons) {
+            if (!output.CLIENT_COMPANY) output.CLIENT_COMPANY = '[Client Company]';
+            if (!output.SEARCH_TITLE)   output.SEARCH_TITLE   = '[Job Title]';
+          }
+          if (isApacEy) {
+            if (!output.PROFILE_DATE) {
+              var _ed=new Date(),_em=['January','February','March','April','May','June','July','August','September','October','November','December'],_ed2=_ed.getDate(),_es=_ed2===1||_ed2===21||_ed2===31?'st':_ed2===2||_ed2===22?'nd':_ed2===3||_ed2===23?'rd':'th';
+              output.PROFILE_DATE=_ed2+_es+' '+_em[_ed.getMonth()]+' '+_ed.getFullYear();
+            }
+          }
           // Safety check: if companies is empty, warn the user clearly
           if (!output.companies || output.companies.length === 0) {
             notify('Warning: No work history was extracted. Please try again — the CV may have been too long.');
@@ -2557,6 +3206,7 @@ try {
     console.error(err);
     btn.classList.remove('loading');
     btn.innerHTML = '\u274c Error \u2014 Try Again';
+    logUsage(tpl, activeType, 'failed');
     notify('Generation failed. Check console.');
   });
 }
@@ -2925,8 +3575,8 @@ async function downloadHistory(index) {
   var fmt = item.fmt || 'd';
   // Override: project-report always downloads as xlsx
   if (item.template === 'project-report' || item.template === 'project-report-ext') fmt = 'x';
-  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : 'No Scorecard';
-  var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : 'Global';
+  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile-v2' ? 'EA India v2' : item.template === 'ea-india-profile' ? 'EA India' : item.template === 'change-consulting-profile' ? 'Change Consulting' : item.template === 'apac-profile-deal-list' ? 'APAC Deal List' : item.template === 'apac-profile-v2' ? 'APAC v2' : item.template === 'apac-ey-profile' ? 'EY Shortlisted' : 'No Scorecard';
+  var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : item.template === 'ea-india-profile' ? 'Global' : 'Global';
   var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
@@ -2999,7 +3649,36 @@ async function downloadHistory(index) {
       if (_isApacTpl) {
         var _apacZip = await JSZip.loadAsync(ab);
         var _apacXml = await _apacZip.files['word/document.xml'].async('string');
-        var _apacFilled = apacFillTemplate(_apacXml, item.content);
+
+        // Convert companies[] array to flat COMPANY_N_* keys that apacFillTemplate expects
+        var _apacCv = Object.assign({}, item.content);
+        var _apacCos = _apacCv.companies || [];
+        var _apacN = 0;
+        for (var _aci = 0; _aci < _apacCos.length; _aci++) {
+          var _aco = _apacCos[_aci];
+          if (!_aco || !_aco.name) continue;
+          var _aRoles = _aco.roles || [];
+          var _multiRole = _aRoles.length > 1;
+          for (var _ari = 0; _ari < _aRoles.length; _ari++) {
+            var _ar = _aRoles[_ari];
+            if (!_ar) continue;
+            _apacN++;
+            var _prefix = 'COMPANY_' + _apacN + '_';
+            _apacCv[_prefix + 'NAME']       = _aco.name || '';
+            _apacCv[_prefix + 'LOCATION']   = _aco.location || '';
+            _apacCv[_prefix + 'DATES']      = _aco.dates || '';
+            _apacCv[_prefix + 'ROLE']       = _ar.role || '';
+            _apacCv[_prefix + 'ROLE_DATES'] = _multiRole ? (_ar.role_dates || '') : '';
+            var _aBullets = _ar.bullets || [];
+            for (var _abi = 0; _abi < _aBullets.length; _abi++) {
+              if (_aBullets[_abi]) _apacCv[_prefix + 'BULLET_' + (_abi + 1)] = _aBullets[_abi];
+            }
+          }
+        }
+        // Also set MONTH_YEAR from PROFILE_MONTH if present
+        if (!_apacCv.MONTH_YEAR && _apacCv.PROFILE_MONTH) _apacCv.MONTH_YEAR = _apacCv.PROFILE_MONTH;
+
+        var _apacFilled = apacFillTemplate(_apacXml, _apacCv);
         _apacZip.file('word/document.xml', _apacFilled);
         out = await _apacZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       } else if (item.template === 'global-career-summary') {
@@ -3035,6 +3714,21 @@ async function downloadHistory(index) {
           _csHdr4 = _csHdr4.replace('{{CANDIDATE_NAME}}', csXmlEsc(item.content.CANDIDATE_NAME || ''));
           _csZip.file('word/header4.xml', _csHdr4);
         }
+
+        // Step 3b — Remove EDU_2 rows entirely if no second education entry
+        (function() {
+          var _cv2 = item.content;
+          if (!_cv2.EDU_2_INSTITUTION && !_cv2.EDU_2_START && !_cv2.EDU_2_DEGREE) {
+            var _d2 = _csZip.files['word/document.xml'].asText();
+            // Remove all 5 EDU_2 paragraphs by paraId (fixed in template)
+            var _edu2Ids = ['3C61EEB2', '140F0114', '1EA90AA6', '560A467D', '633F0E7D'];
+            for (var _ei = 0; _ei < _edu2Ids.length; _ei++) {
+              var _re2 = new RegExp('<w:p\\s[^>]*w14:paraId="' + _edu2Ids[_ei] + '"[^>]*>[\\s\\S]*?<\/w:p>\\s*');
+              _d2 = _d2.replace(_re2, '');
+            }
+            _csZip.file('word/document.xml', _d2);
+          }
+        })();
 
         // Step 4 — docxtemplater fills all remaining flat {{tokens}}
         var _csDoc = new window.docxtemplater(_csZip, {
@@ -3273,6 +3967,551 @@ async function downloadHistory(index) {
           }
         }
 
+      } else if (item.template === 'apac-profile-v2') {
+        // ── APAC English v2 — clean template, flat tokens + BUSINESS_EXPERIENCE_BLOCK ──
+        var _av2Zip = new PizZip(ab);
+        var _av2Cv  = item.content;
+
+        // Build business experience XML using buildApacV2BizExp (SHText+SHBullets, hanging 284, 6 tabs)
+        var _av2BizXml = buildApacV2BizExp(_av2Cv.companies || []);
+
+        // Inject BUSINESS_EXPERIENCE_BLOCK
+        var _av2DocXml = _av2Zip.files['word/document.xml'].asText();
+        var _av2Idx = _av2DocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
+        if (_av2Idx !== -1) {
+          var _av2PS = _av2Idx, _av2SF = _av2Idx;
+          while (_av2SF > 0) {
+            var _av2C = _av2DocXml.lastIndexOf('<w:p', _av2SF - 1);
+            if (_av2C < 0) break;
+            if (_av2DocXml.charAt(_av2C+4)==='>'||_av2DocXml.charAt(_av2C+4)===' '){_av2PS=_av2C;break;}
+            _av2SF = _av2C;
+          }
+          var _av2PE = _av2DocXml.indexOf('</w:p>', _av2Idx) + 6;
+          _av2DocXml = _av2DocXml.substring(0, _av2PS) + _av2BizXml + _av2DocXml.substring(_av2PE);
+        }
+        _av2Zip.file('word/document.xml', _av2DocXml);
+
+        // Render flat tokens
+        var _av2Render = {
+          CANDIDATE_NAME:    _av2Cv.CANDIDATE_NAME || '',
+          CURRENT_EMPLOYER:  _av2Cv.CURRENT_EMPLOYER || '',
+          CLIENT_COMPANY:    _av2Cv.CLIENT_COMPANY || '[Client Company]',
+          SEARCH_TITLE:      _av2Cv.SEARCH_TITLE || '[Job Title]',
+          MONTH_YEAR:        _av2Cv.MONTH_YEAR || _av2Cv.PROFILE_MONTH || (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})(),
+          SUMMARY:           _av2Cv.SUMMARY || '',
+          SUMMARY_BULLET_1:  '',
+          SUMMARY_BULLET_2:  '',
+          EDU_1_START:       _av2Cv.EDU_1_START || '',
+          EDU_1_END:         _av2Cv.EDU_1_END || '',
+          EDU_1_INSTITUTION: _av2Cv.EDU_1_INSTITUTION || '',
+          EDU_1_LOCATION:    _av2Cv.EDU_1_LOCATION || '',
+          EDU_1_DEGREE:      _av2Cv.EDU_1_DEGREE || '',
+          QUAL_YEAR:         _av2Cv.QUAL_YEAR || _av2Cv.QUAL_1_START || '',
+          QUAL_1:            _av2Cv.QUAL_1 || _av2Cv.QUAL_1_TEXT || '',
+          NATIONALITY:       _av2Cv.NATIONALITY || '',
+          LANGUAGES:         _av2Cv.LANGUAGES || '',
+          INTERESTS:         _av2Cv.INTERESTS || ''
+        };
+
+        try {
+          var _av2Doc = new window.docxtemplater(_av2Zip, {
+            paragraphLoop: true, linebreaks: true,
+            delimiters: {start: '{{', end: '}}'},
+            nullGetter: function() { return ''; }
+          });
+          _av2Doc.render(_av2Render);
+          out = _av2Doc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+        } catch(_av2Err) {
+          console.error('[APACv2] error:', _av2Err.message);
+          out = _av2Zip.generate({type: 'blob', mimeType: _docMimeSingle});
+        }
+
+      } else if (item.template === 'apac-ey-profile') {
+        // ── APAC EY Shortlisted Profile render path ──
+        var _eyZip = new PizZip(ab);
+        var _eyCv = item.content;
+
+        // Build business experience XML (EY-specific function: correct colours + numId)
+        var _eyBizXml = buildApacEyBizExp(_eyCv.companies || []);
+
+        // Inject BUSINESS_EXPERIENCE_BLOCK
+        var _eyDocXml = _eyZip.files['word/document.xml'].asText();
+        var _eyBeIdx = _eyDocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
+        if (_eyBeIdx !== -1) {
+          var _eyPS = _eyBeIdx, _eySF = _eyBeIdx;
+          while (_eySF > 0) {
+            var _eyC = _eyDocXml.lastIndexOf('<w:p', _eySF - 1);
+            if (_eyC < 0) break;
+            if (_eyDocXml.charAt(_eyC + 4) === '>' || _eyDocXml.charAt(_eyC + 4) === ' ') { _eyPS = _eyC; break; }
+            _eySF = _eyC;
+          }
+          var _eyPE = _eyDocXml.indexOf('</w:p>', _eyBeIdx) + 6;
+          _eyDocXml = _eyDocXml.substring(0, _eyPS) + _eyBizXml + _eyDocXml.substring(_eyPE);
+        }
+        _eyZip.file('word/document.xml', _eyDocXml);
+
+        // Build render object
+        var _eyRender = Object.assign({}, _eyCv, {
+          CANDIDATE_NAME:    _eyCv.CANDIDATE_NAME || '',
+          CURRENT_TITLE:     _eyCv.CURRENT_TITLE || '',
+          CURRENT_EMPLOYER:  _eyCv.CURRENT_EMPLOYER || '',
+          PROFILE_DATE:      _eyCv.PROFILE_DATE || (function(){var d=new Date();var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var day=d.getDate();var s=day===1||day===21||day===31?'st':day===2||day===22?'nd':day===3||day===23?'rd':'th';return day+s+' '+m[d.getMonth()]+' '+d.getFullYear();})(),
+          EDU_1_INSTITUTION: _eyCv.EDU_1_INSTITUTION || '',
+          EDU_1_START:       _eyCv.EDU_1_START || '',
+          EDU_1_END:         _eyCv.EDU_1_END || '',
+          EDU_1_DEGREE:      _eyCv.EDU_1_DEGREE || '',
+          EDU_2_INSTITUTION: _eyCv.EDU_2_INSTITUTION || '',
+          EDU_2_START:       _eyCv.EDU_2_START || '',
+          EDU_2_END:         _eyCv.EDU_2_END || '',
+          EDU_2_DEGREE:      _eyCv.EDU_2_DEGREE || '',
+          EDU_1_BULLETS:     _eyCv.EDU_1_BULLETS || '',
+          EDU_2_BULLETS:     _eyCv.EDU_2_BULLETS || '',
+          QUAL_1_TEXT:       _eyCv.QUAL_1_TEXT || '',
+          QUAL_1_START:      _eyCv.QUAL_1_START || '',
+          QUAL_1_END:        _eyCv.QUAL_1_END || '',
+          QUAL_1_DETAIL:     _eyCv.QUAL_1_DETAIL || '',
+          QUAL_2_TEXT:       _eyCv.QUAL_2_TEXT || '',
+          QUAL_2_START:      _eyCv.QUAL_2_START || '',
+          QUAL_2_END:        _eyCv.QUAL_2_END || '',
+          QUAL_2_DETAIL:     _eyCv.QUAL_2_DETAIL || '',
+          CANDIDATE_SUMMARY: _eyCv.CANDIDATE_SUMMARY || '',
+          NATIONALITY:       _eyCv.NATIONALITY || '',
+          LANGUAGES:         _eyCv.LANGUAGES || '',
+          INTERESTS:         _eyCv.INTERESTS || ''
+        });
+
+        // Step 3c — inject EDU bullets + remove empty EDU_2/QUAL blocks
+        (function() {
+          var _eyD = _eyZip.files['word/document.xml'].asText();
+          var _BPR = '<w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="28"/></w:numPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="360" w:right="26"/><w:jc w:val="both"/>';
+          var _BRR = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium"/><w:color w:val="222229"/></w:rPr>';
+          function _xe(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+          function _buls(s){if(!s)return'';return s.split('|').map(function(b){b=b.trim();if(!b)return'';return'<w:p><w:pPr>'+_BPR+'</w:pPr><w:r>'+_BRR+'<w:t xml:space="preserve">'+_xe(b)+'</w:t></w:r></w:p>';}).join('');}
+          function _remPid(xml,pid){return xml.replace(new RegExp('<w:p\\s[^>]*w14:paraId="'+pid+'"[^>]*>[\\s\\S]*?<\/w:p>\\s*'),'');}
+          var _SPACER='<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:p>';
+          ['EDU_1_BULLETS','EDU_2_BULLETS'].forEach(function(tok){
+            var ts='{{'+tok+'}}',bi=_eyD.indexOf(ts);if(bi===-1)return;
+            var ps=bi,sf=bi;
+            while(sf>0){var c=_eyD.lastIndexOf('<w:p',sf-1);if(c<0)break;var ch=_eyD.charAt(c+4);if(ch==='>'||ch===' '){ps=c;break;}sf=c;}
+            var pe=_eyD.indexOf('</w:p>',bi)+6;
+            var bulXml=_buls(_eyCv[tok]||'');
+            // Add spacer before AND after bullets
+            if(bulXml) bulXml=_SPACER+bulXml+_SPACER;
+            _eyD=_eyD.substring(0,ps)+bulXml+_eyD.substring(pe);
+          });
+          if(!_eyCv.EDU_2_INSTITUTION&&!_eyCv.EDU_2_START&&!_eyCv.EDU_2_DEGREE){
+            _eyD=_remPid(_eyD,'206FA6B7');_eyD=_remPid(_eyD,'6AAD2538');_eyD=_remPid(_eyD,'1E100002');
+          }
+          if(!_eyCv.QUAL_1_TEXT&&!_eyCv.QUAL_1_START){_eyD=_remPid(_eyD,'1C60AB12');_eyD=_remPid(_eyD,'07BE638D');}
+          if(!_eyCv.QUAL_2_TEXT&&!_eyCv.QUAL_2_START){_eyD=_remPid(_eyD,'2DFDBF69');_eyD=_remPid(_eyD,'6248C9E1');}
+          _eyZip.file('word/document.xml',_eyD);
+        })();
+
+        try {
+          var _eyDoc = new window.docxtemplater(_eyZip, {
+            paragraphLoop: true, linebreaks: true,
+            delimiters: {start: '{{', end: '}}'},
+            nullGetter: function() { return ''; }
+          });
+          _eyDoc.render(_eyRender);
+          out = _eyDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+        } catch(_eyErr) {
+          console.error('[EY] docxtemplater error:', _eyErr.message);
+          out = _eyZip.generate({type: 'blob', mimeType: _docMimeSingle});
+        }
+
+      } else if (item.template === 'change-consulting-profile') {
+        // ── Change Consulting Profile render path ──
+        var _ccZip = new PizZip(ab);
+        var _ccCv = item.content;
+
+        // Step 1: build business experience XML (same style as EA India)
+        var _ccBizXml = buildEaIndiaBizExp(_ccCv.companies || []);
+
+        // Step 2: inject BUSINESS_EXPERIENCE_BLOCK
+        var _ccDocXml = _ccZip.files['word/document.xml'].asText();
+        var _ccBeIdx = _ccDocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
+        if (_ccBeIdx !== -1) {
+          var _ccPStart = _ccBeIdx, _ccSearchFrom = _ccBeIdx;
+          while (_ccSearchFrom > 0) {
+            var _ccCand = _ccDocXml.lastIndexOf('<w:p', _ccSearchFrom - 1);
+            if (_ccCand < 0) break;
+            if (_ccDocXml.charAt(_ccCand + 4) === '>' || _ccDocXml.charAt(_ccCand + 4) === ' ') { _ccPStart = _ccCand; break; }
+            _ccSearchFrom = _ccCand;
+          }
+          var _ccPEnd = _ccDocXml.indexOf('</w:p>', _ccBeIdx) + 6;
+          _ccDocXml = _ccDocXml.substring(0, _ccPStart) + _ccBizXml + _ccDocXml.substring(_ccPEnd);
+        }
+        _ccZip.file('word/document.xml', _ccDocXml);
+
+        // Step 3: build render object with all flat tokens
+        var _ccRender = Object.assign({}, _ccCv, {
+          CANDIDATE_NAME:   _ccCv.CANDIDATE_NAME || '',
+          CURRENT_EMPLOYER: _ccCv.CURRENT_EMPLOYER || '',
+          CLIENT_COMPANY:   _ccCv.CLIENT_COMPANY || '[Client Company]',
+          SEARCH_TITLE:     _ccCv.SEARCH_TITLE   || '[Job Title]',
+          PROFILE_MONTH:    _ccCv.PROFILE_MONTH  || (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})(),
+          SUMMARY:          _ccCv.SUMMARY || '',
+          EDU_1_START:      _ccCv.EDU_1_START || '',
+          EDU_1_END:        _ccCv.EDU_1_END || '',
+          EDU_1_INSTITUTION:_ccCv.EDU_1_INSTITUTION || '',
+          EDU_1_LOCATION:   _ccCv.EDU_1_LOCATION || '',
+          EDU_1_DEGREE:     _ccCv.EDU_1_DEGREE || '',
+          EDU_2_START:      _ccCv.EDU_2_START || '',
+          EDU_2_END:        _ccCv.EDU_2_END || '',
+          EDU_2_INSTITUTION:_ccCv.EDU_2_INSTITUTION || '',
+          EDU_2_LOCATION:   _ccCv.EDU_2_LOCATION || '',
+          EDU_2_DEGREE:     _ccCv.EDU_2_DEGREE || '',
+          EDU_2_EXTRA:      _ccCv.EDU_2_EXTRA || '',
+          QUAL_1_YEAR:      _ccCv.QUAL_1_YEAR || '',
+          QUAL_1_TEXT:      _ccCv.QUAL_1_TEXT || '',
+          QUAL_1_DETAIL:    _ccCv.QUAL_1_DETAIL || '',
+          NATIONALITY:      _ccCv.NATIONALITY || '',
+          LANGUAGES:        _ccCv.LANGUAGES || '',
+          INTERESTS:        _ccCv.INTERESTS || '',
+          INTERESTS_DETAIL: _ccCv.INTERESTS_DETAIL || ''
+        });
+
+        // Step 4: docxtemplater fills all remaining {{tokens}}
+        try {
+          var _ccDoc = new window.docxtemplater(_ccZip, {
+            paragraphLoop: true, linebreaks: true,
+            delimiters: {start: '{{', end: '}}'},
+            nullGetter: function() { return ''; }
+          });
+          _ccDoc.render(_ccRender);
+          out = _ccDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+        } catch(_ccErr) {
+          console.error('[CC] docxtemplater error:', _ccErr.message);
+          out = _ccZip.generate({type: 'blob', mimeType: _docMimeSingle});
+        }
+
+      } else if (item.template === 'ea-india-profile-v2') {
+        // ── EA India v2 render path ──
+        var _ei2Zip = new PizZip(ab);
+        var _ei2Cv  = item.content;
+
+        // Build business experience using buildEaIndiaBizExp (same style)
+        var _ei2BizXml = buildEaIndiaBizExp(_ei2Cv.companies || []);
+
+        // Inject BUSINESS_EXPERIENCE_BLOCK
+        var _ei2DocXml = _ei2Zip.files['word/document.xml'].asText();
+        var _ei2Idx = _ei2DocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
+        if (_ei2Idx !== -1) {
+          var _ei2PS = _ei2Idx, _ei2SF = _ei2Idx;
+          while (_ei2SF > 0) {
+            var _ei2C = _ei2DocXml.lastIndexOf('<w:p', _ei2SF-1);
+            if (_ei2C < 0) break;
+            if (_ei2DocXml.charAt(_ei2C+4)==='>'||_ei2DocXml.charAt(_ei2C+4)===' '){_ei2PS=_ei2C;break;}
+            _ei2SF=_ei2C;
+          }
+          var _ei2PE = _ei2DocXml.indexOf('</w:p>', _ei2Idx) + 6;
+          _ei2DocXml = _ei2DocXml.substring(0, _ei2PS) + _ei2BizXml + _ei2DocXml.substring(_ei2PE);
+        }
+
+        // Split SUMMARY into: prose paragraphs ({{SUMMARY}}) + bullet list ({{SUMMARY_BULLETS}})
+        (function() {
+          var _s = (_ei2Cv.SUMMARY || '').trim();
+          if (!_s) return;
+          function _x(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+          // Find split point: 'Core Leadership Strengths', 'Key Skills', 'KEY ', 'CORE ' etc
+          // Use SUMMARY_BULLETS field directly from dedicated prompt
+          var _proseStr = _s;
+          var _rawBullets = (_ei2Cv.SUMMARY_BULLETS || '').trim();
+          var _bulletsStr = _rawBullets;
+          var _bulletLabel = _rawBullets ? 'Core Leadership Strengths' : '';
+
+          // Prose paragraphs - split on newlines only (each \n = separate paragraph)
+          var _proseParas = _proseStr.split(/\n/).map(function(s){return s.trim();}).filter(Boolean);
+
+          // Build prose XML with spacer between each paragraph
+          var _SPACER = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
+          var _proseXml = _proseParas.map(function(b){
+            return '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t xml:space="preserve">'+_x(b)+'</w:t></w:r></w:p>' + _SPACER;
+          }).join('');
+          var _si1 = _ei2DocXml.indexOf('{{SUMMARY}}');
+          if (_si1 !== -1) {
+            var _sp1=_si1,_sf1=_si1;
+            while(_sf1>0){var _sc1=_ei2DocXml.lastIndexOf('<w:p',_sf1-1);if(_sc1<0)break;if(_ei2DocXml.charAt(_sc1+4)==='>'||_ei2DocXml.charAt(_sc1+4)===' '){_sp1=_sc1;break;}_sf1=_sc1;}
+            var _se1=_ei2DocXml.indexOf('</w:p>',_si1)+6;
+            _ei2DocXml=_ei2DocXml.substring(0,_sp1)+_proseXml+_ei2DocXml.substring(_se1);
+          }
+
+          // Bullets XML - label + SHBullets items
+          // Also try to find bullets in SUMMARY if split didn't find the section header
+          if (!_bulletsStr && _s.indexOf('\u2022') !== -1) {
+            // Has bullet character - split on newlines, separate prose from bullets
+            var _allLines = _s.split(/\n/).map(function(s){return s.trim();}).filter(Boolean);
+            var _proseLines = [], _bulLines = [];
+            var _inBuls = false;
+            _allLines.forEach(function(line){
+              if (line.charAt(0) === '\u2022' || line.charAt(0) === '-' || line.charAt(0) === '\t') {
+                _inBuls = true;
+              }
+              if (_inBuls) _bulLines.push(line);
+              else _proseLines.push(line);
+            });
+            if (_bulLines.length) {
+              _proseStr = _proseLines.join('\n');
+              _bulletsStr = _bulLines.join('\n');
+            }
+          }
+          var _bulItems = _bulletsStr ? _bulletsStr.split('|').map(function(s){return s.trim();}).filter(Boolean) : [];
+          var _bulXml = '';
+          if (_bulletLabel) {
+            _bulXml += '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t>'+_x(_bulletLabel)+'</w:t></w:r></w:p>';
+          }
+          _bulXml += _bulItems.map(function(b){
+            return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr><w:r><w:t xml:space="preserve">'+_x(b)+'</w:t></w:r></w:p>';
+          }).join('');
+
+          // Replace {{SUMMARY_BULLETS}} paragraph
+          var _si2 = _ei2DocXml.indexOf('{{SUMMARY_BULLETS}}');
+          if (_si2 !== -1) {
+            var _sp2=_si2,_sf2=_si2;
+            while(_sf2>0){var _sc2=_ei2DocXml.lastIndexOf('<w:p',_sf2-1);if(_sc2<0)break;if(_ei2DocXml.charAt(_sc2+4)==='>'||_ei2DocXml.charAt(_sc2+4)===' '){_sp2=_sc2;break;}_sf2=_sc2;}
+            var _se2=_ei2DocXml.indexOf('</w:p>',_si2)+6;
+            _ei2DocXml=_ei2DocXml.substring(0,_sp2)+_bulXml+_ei2DocXml.substring(_se2);
+          }
+
+          _ei2Zip.file('word/document.xml', _ei2DocXml);
+          _ei2Cv.SUMMARY = ''; // already injected
+        })();
+
+        _ei2Zip.file('word/document.xml', _ei2DocXml);
+
+        // Render flat tokens
+        var _ei2Now = new Date();
+        var _ei2Months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        var _ei2Render = {
+          CANDIDATE_NAME:    _ei2Cv.CANDIDATE_NAME || '',
+          CURRENT_EMPLOYER:  _ei2Cv.CURRENT_EMPLOYER || '',
+          CLIENT_COMPANY:    _ei2Cv.CLIENT_COMPANY || '[Client Company]',
+          SEARCH_TITLE:      _ei2Cv.SEARCH_TITLE || '[Job Title]',
+          MONTH_YEAR:        _ei2Cv.MONTH_YEAR || _ei2Cv.PROFILE_MONTH || (_ei2Months[_ei2Now.getMonth()] + ' ' + _ei2Now.getFullYear()),
+          SUMMARY:           _ei2Cv.SUMMARY || '',
+          SUMMARY_BULLETS:   '',
+          EDU_1_START:       _ei2Cv.EDU_1_START || ((_ei2Cv.education||[])[0] ? ((_ei2Cv.education[0].years||'').split(/[-–]/)[0]||'').trim() : '') || '',
+          EDU_1_END:         _ei2Cv.EDU_1_END || ((_ei2Cv.education||[])[0] ? ((_ei2Cv.education[0].years||'').split(/[-–]/)[1]||'').trim() : '') || '',
+          EDU_1_INSTITUTION: _ei2Cv.EDU_1_INSTITUTION || ((_ei2Cv.education||[])[0] ? (_ei2Cv.education[0].institution||'') : '') || '',
+          EDU_1_LOCATION:    _ei2Cv.EDU_1_LOCATION || '',
+          EDU_1_DEGREE:      _ei2Cv.EDU_1_DEGREE || ((_ei2Cv.education||[])[0] ? (_ei2Cv.education[0].degree||'') : '') || '',
+          QUAL_YEAR:         _ei2Cv.QUAL_YEAR || _ei2Cv.QUAL_1_START || '',
+          QUAL_1:            [_ei2Cv.QUAL_1 || '', _ei2Cv.TECH_SKILLS ? 'Technical Skills: ' + _ei2Cv.TECH_SKILLS : ''].filter(Boolean).join('\n'),
+          NATIONALITY:       _ei2Cv.NATIONALITY || '',
+          LANGUAGES:         _ei2Cv.LANGUAGES || '',
+          INTERESTS:         _ei2Cv.INTERESTS || ''
+        };
+
+        try {
+          var _ei2Doc = new window.docxtemplater(_ei2Zip, {
+            paragraphLoop: true, linebreaks: true,
+            delimiters: {start: '{{', end: '}}'},
+            nullGetter: function() { return ''; }
+          });
+          _ei2Doc.render(_ei2Render);
+          out = _ei2Doc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+        } catch(_ei2Err) {
+          console.error('[EI2] error:', _ei2Err.message);
+          out = _ei2Zip.generate({type: 'blob', mimeType: _docMimeSingle});
+        }
+
+      } else if (item.template === 'ea-india-profile') {
+        // ── EA India Profile render path ──
+        var _eiZip = new PizZip(ab);
+        var _eiCv = item.content;
+
+        // Step 1: build business experience XML
+        var _eiBizXml = buildEaIndiaBizExp(_eiCv.companies || []);
+
+        // Step 2: inject BUSINESS_EXPERIENCE_BLOCK
+        var _eiDocXml = _eiZip.files['word/document.xml'].asText();
+        var _eiBeIdx = _eiDocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
+        if (_eiBeIdx !== -1) {
+          var _eiPStart = _eiBeIdx, _eiSearchFrom = _eiBeIdx;
+          while (_eiSearchFrom > 0) {
+            var _eiCand = _eiDocXml.lastIndexOf('<w:p', _eiSearchFrom - 1);
+            if (_eiCand < 0) break;
+            if (_eiDocXml.charAt(_eiCand + 4) === '>' || _eiDocXml.charAt(_eiCand + 4) === ' ') { _eiPStart = _eiCand; break; }
+            _eiSearchFrom = _eiCand;
+          }
+          var _eiPEnd = _eiDocXml.indexOf('</w:p>', _eiBeIdx) + 6;
+          _eiDocXml = _eiDocXml.substring(0, _eiPStart) + _eiBizXml + _eiDocXml.substring(_eiPEnd);
+        }
+        _eiZip.file('word/document.xml', _eiDocXml);
+
+        // Step 3: build volunteering tokens (up to 3 entries)
+        var _eiVol = _eiCv.volunteering || [];
+        var _eiVolTokens = {};
+        for (var _vi = 0; _vi < 3; _vi++) {
+          var _vEntry = _eiVol[_vi] || {};
+          // Normalise vol dates: "2024 Dec" -> "Dec 2024"
+          var _vDates = _vEntry.dates || '';
+          _vDates = _vDates.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*/gi, function(m, yr, mo) {
+            return mo.charAt(0).toUpperCase() + mo.slice(1) + ' ' + yr;
+          });
+          _eiVolTokens['VOL_' + (_vi+1) + '_DATES']       = _vDates;
+          _eiVolTokens['VOL_' + (_vi+1) + '_ROLE']        = _vEntry.role || '';
+          _eiVolTokens['VOL_' + (_vi+1) + '_DESCRIPTION'] = _vEntry.description || '';
+        }
+
+        // Step 4: flatten qual arrays (up to 5)
+        var _eiQuals = {};
+        for (var _qi = 1; _qi <= 5; _qi++) {
+          _eiQuals['QUAL_' + _qi + '_YEAR'] = _eiCv['QUAL_' + _qi + '_YEAR'] || '';
+          _eiQuals['QUAL_' + _qi + '_TEXT'] = _eiCv['QUAL_' + _qi + '_TEXT'] || '';
+        }
+
+        // Step 5: build render object — merge all flat tokens
+        var _eiRender = Object.assign({}, _eiCv, _eiVolTokens, _eiQuals, {
+          CANDIDATE_NAME:        _eiCv.CANDIDATE_NAME || '',
+          CURRENT_EMPLOYER:      _eiCv.CURRENT_EMPLOYER || '',
+          CLIENT_COMPANY:        _eiCv.CLIENT_COMPANY || '',
+          SEARCH_TITLE:          _eiCv.SEARCH_TITLE || '',
+          PROFILE_MONTH:         _eiCv.PROFILE_MONTH || (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})(),
+          SUMMARY_INTRO:         _eiCv.SUMMARY_INTRO || '',
+          KEY_SKILLS:            _eiCv.KEY_SKILLS || '',
+          EXEC_OVERVIEW_BULLET_1: _eiCv.EXEC_OVERVIEW_BULLET_1 || '',
+          EXEC_OVERVIEW_BULLET_2: _eiCv.EXEC_OVERVIEW_BULLET_2 || '',
+          EXEC_OVERVIEW_BULLET_3: _eiCv.EXEC_OVERVIEW_BULLET_3 || '',
+          EXEC_OVERVIEW_BULLET_4: _eiCv.EXEC_OVERVIEW_BULLET_4 || '',
+          EXEC_OVERVIEW_BULLET_5: _eiCv.EXEC_OVERVIEW_BULLET_5 || '',
+          EXEC_OVERVIEW_BULLET_6: _eiCv.EXEC_OVERVIEW_BULLET_6 || '',
+          EDU_1_YEAR:        _eiCv.EDU_1_YEAR || '',
+          EDU_1_INSTITUTION: _eiCv.EDU_1_INSTITUTION || '',
+          EDU_1_DEGREE:      _eiCv.EDU_1_DEGREE || '',
+          EDU_1_EXTRA:       _eiCv.EDU_1_EXTRA || '',
+          NATIONALITY:       _eiCv.NATIONALITY || '',
+          LANGUAGES:         _eiCv.LANGUAGES || '',
+          INTERESTS:         _eiCv.INTERESTS || ''
+        });
+
+        // Step 6: docxtemplater fills all remaining {{tokens}}
+        try {
+          var _eiDoc = new window.docxtemplater(_eiZip, {
+            paragraphLoop: true, linebreaks: true,
+            delimiters: {start: '{{', end: '}}'},
+            nullGetter: function() { return ''; }
+          });
+          _eiDoc.render(_eiRender);
+          out = _eiDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+        } catch(_eiErr) {
+          console.error('[EA India] docxtemplater error:', _eiErr.message);
+          out = _eiZip.generate({type: 'blob', mimeType: _docMimeSingle});
+        }
+
+      } else if (item.template === 'apac-profile' || item.template === 'apac-profile-deal-list' || item.template === 'apac-profile-v2') {
+        // ── APAC English Profile — uses native docxtemplater loop syntax ──
+        var _apZip = new PizZip(ab);
+        var _apCv = Object.assign({}, item.content);
+        // Map PROFILE_MONTH → MONTH_YEAR if needed
+        if (!_apCv.MONTH_YEAR && _apCv.PROFILE_MONTH) _apCv.MONTH_YEAR = _apCv.PROFILE_MONTH;
+        // Ensure companies array is present (docxtemplater loops over it)
+        _apCv.companies = _apCv.companies || [];
+        // education array — build from flat EDU fields if not present
+        if (!_apCv.education || !_apCv.education.length) {
+          _apCv.education = [];
+          if (_apCv.EDU_1_INSTITUTION) {
+            _apCv.education.push({
+              years: (_apCv.EDU_1_START && _apCv.EDU_1_END) ? (_apCv.EDU_1_START + ' – ' + _apCv.EDU_1_END) : (_apCv.EDU_1_START || ''),
+              institution: _apCv.EDU_1_INSTITUTION + (_apCv.EDU_1_LOCATION ? ', ' + _apCv.EDU_1_LOCATION : ''),
+              degree: _apCv.EDU_1_DEGREE || ''
+            });
+          }
+          if (_apCv.EDU_2_INSTITUTION) {
+            _apCv.education.push({
+              years: (_apCv.EDU_2_START && _apCv.EDU_2_END) ? (_apCv.EDU_2_START + ' – ' + _apCv.EDU_2_END) : (_apCv.EDU_2_START || ''),
+              institution: _apCv.EDU_2_INSTITUTION + (_apCv.EDU_2_LOCATION ? ', ' + _apCv.EDU_2_LOCATION : ''),
+              degree: _apCv.EDU_2_DEGREE || ''
+            });
+          }
+        }
+        // projects array — empty if not present
+        _apCv.projects = _apCv.projects || [];
+        // Qual fields
+        if (!_apCv.QUAL_1 && _apCv.QUAL_1_TEXT) _apCv.QUAL_1 = _apCv.QUAL_1_TEXT;
+        if (!_apCv.QUAL_YEAR && _apCv.QUAL_1_START) _apCv.QUAL_YEAR = _apCv.QUAL_1_START;
+        // Inject QUAL_1 as bold SHBullets paragraphs split on '|'
+        (function() {
+          var _qd = _apZip.files['word/document.xml'].asText();
+          var _q1 = (_apCv.QUAL_1 || '').trim();
+          if (_q1) {
+            var _qItems = _q1.split('|').map(function(s){return s.trim();}).filter(Boolean);
+            var _qXml = _qItems.map(function(item){
+              return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0"/></w:pPr>'
+                   + '<w:r><w:rPr><w:b/><w:bCs/></w:rPr>'
+                   + '<w:t xml:space="preserve">' + item.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</w:t>'
+                   + '</w:r></w:p>';
+            }).join('');
+            // Find the QUAL paragraph (contains {{QUAL_1}}) and replace with bullets
+            var _qi = _qd.indexOf('{{QUAL_1}}');
+            if (_qi !== -1) {
+              var _qps = _qi, _qsf = _qi;
+              while (_qsf > 0) {
+                var _qc = _qd.lastIndexOf('<w:p', _qsf - 1);
+                if (_qc < 0) break;
+                if (_qd.charAt(_qc+4)==='>'||_qd.charAt(_qc+4)===' '){_qps=_qc;break;}
+                _qsf = _qc;
+              }
+              var _qpe = _qd.indexOf('</w:p>', _qi) + 6;
+              _qd = _qd.substring(0, _qps) + _qXml + _qd.substring(_qpe);
+              // Null out QUAL_1 so docxtemplater doesn't try to fill it
+              _apCv.QUAL_1 = '';
+            }
+            _apZip.file('word/document.xml', _qd);
+          }
+        })();
+
+        // For Deal List template: split SUMMARY into multiple SHBullets paragraphs
+        if (item.template === 'apac-profile-deal-list' && _apCv.SUMMARY) {
+          var _dlD = _apZip.files['word/document.xml'].asText();
+          var _sumStr = _apCv.SUMMARY.trim();
+          // Split on bullet-like patterns or sentence breaks
+          var _sumBuls = _sumStr.split(/\.\s+(?=[A-Z])/).map(function(s){
+            s = s.trim();
+            if (!s) return null;
+            if (!s.endsWith('.')) s = s + '.';
+            return s;
+          }).filter(Boolean);
+          if (_sumBuls.length > 1) {
+            var _BPP = '<w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0"/></w:pPr>';
+            var _BRP = '';
+            function _xe(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+            var _sumXml = _sumBuls.map(function(b){
+              return '<w:p>' + _BPP + '<w:r>' + _BRP + '<w:t xml:space="preserve">' + _xe(b) + '</w:t></w:r></w:p>';
+            }).join('');
+            // Find SUMMARY token paragraph and replace
+            var _si = _dlD.indexOf('{{SUMMARY}}');
+            if (_si !== -1) {
+              var _sps = _si, _ssf = _si;
+              while (_ssf > 0) {
+                var _sc = _dlD.lastIndexOf('<w:p', _ssf-1);
+                if (_sc < 0) break;
+                if (_dlD.charAt(_sc+4)==='>'||_dlD.charAt(_sc+4)===' '){_sps=_sc;break;}
+                _ssf=_sc;
+              }
+              var _spe = _dlD.indexOf('</w:p>', _si) + 6;
+              _dlD = _dlD.substring(0, _sps) + _sumXml + _dlD.substring(_spe);
+              _apCv.SUMMARY = '';
+            }
+            _apZip.file('word/document.xml', _dlD);
+          }
+        }
+
+        try {
+          var _apDoc = new window.docxtemplater(_apZip, {
+            paragraphLoop: true, linebreaks: true,
+            delimiters: {start: '{{', end: '}}'},
+            nullGetter: function() { return ''; }
+          });
+          _apDoc.render(_apCv);
+          out = _apDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+        } catch(_apErr) {
+          console.error('[APAC] docxtemplater error:', _apErr.message);
+          out = _apZip.generate({type: 'blob', mimeType: _docMimeSingle});
+        }
+
       } else {
         var zip = new PizZip(ab);
 
@@ -3303,7 +4542,7 @@ async function downloadHistory(index) {
       var a = document.createElement('a'); a.href = URL.createObjectURL(out); a.download = baseName + '.' + _docExtSingle; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
     } else if (fmt === 'f') {
-      var tplUrl2 = item.template === 'global-with-scorecard' ? 'Global_Candidate_Profile_With_Scorecard_New.docx' : 'Global_Candidate_Profile_No Scorecard_New.docx';
+      var tplUrl2 = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/' + getTemplateFile(item.template);
       var resp2 = await fetch(tplUrl2);
       var ab2 = await resp2.arrayBuffer();
       var zip2 = new PizZip(ab2);
