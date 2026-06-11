@@ -813,7 +813,7 @@ const TEMPLATES = {
 
     file: 'templates/Global_Candidate_Profile_EA_India_v2.docx',
 
-    patchFiles: ['word/document.xml'],
+    patchFiles: ['word/document.xml', 'word/header2.xml'],
 
     promptType: 'ea-india'
 
@@ -4160,32 +4160,59 @@ async function downloadHistory(index) {
           _ei2DocXml = _ei2DocXml.substring(0, _ei2PS) + _ei2BizXml + _ei2DocXml.substring(_ei2PE);
         }
 
-        // Inject SUMMARY_BULLETS — split on '. ' boundaries
-        var _ei2Sum = (_ei2Cv.SUMMARY || '').trim();
-        if (_ei2Sum) {
-          var _ei2Buls = _ei2Sum.split(/\.\s+(?=[A-Z])/).map(function(s){
+        // Split SUMMARY into: prose paragraphs ({{SUMMARY}}) + bullet list ({{SUMMARY_BULLETS}})
+        (function() {
+          var _s = (_ei2Cv.SUMMARY || '').trim();
+          if (!_s) return;
+          function _x(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+          // Find split point: 'Core Leadership Strengths', 'Key Skills', 'KEY ', 'CORE ' etc
+          var _splitMatch = _s.match(/\n[\s•\-]*(?:Core Leadership Strengths|Key Skills|KEY SKILLS|CORE LEADERSHIP|Key Strengths)[:\s]*/i);
+          var _proseStr = _splitMatch ? _s.substring(0, _splitMatch.index).trim() : _s;
+          var _bulletsStr = _splitMatch ? _s.substring(_splitMatch.index + _splitMatch[0].length).trim() : '';
+          var _bulletLabel = _splitMatch ? _splitMatch[0].trim().replace(/:$/, '') : '';
+
+          // Prose paragraphs - split on '. ' + capital
+          var _proseParas = _proseStr.split(/\.\s+(?=[A-Z])/).map(function(s){
             s=s.trim(); if(!s)return null; if(!s.endsWith('.'))s+='.'; return s;
           }).filter(Boolean);
-          if (_ei2Buls.length > 0) {
-            var _ei2BPP = '<w:pPr><w:pStyle w:val="SHText"/></w:pPr>';
-            function _ei2xe(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-            var _ei2BulXml = _ei2Buls.map(function(b){
-              return '<w:p>'+_ei2BPP+'<w:r><w:t xml:space="preserve">'+_ei2xe(b)+'</w:t></w:r></w:p>';
-            }).join('');
-            var _ei2SumIdx = _ei2DocXml.indexOf('{{SUMMARY_BULLETS}}');
-            if (_ei2SumIdx !== -1) {
-              var _ei2SPS = _ei2SumIdx, _ei2SSF = _ei2SumIdx;
-              while (_ei2SSF > 0) {
-                var _ei2SC = _ei2DocXml.lastIndexOf('<w:p', _ei2SSF-1);
-                if (_ei2SC < 0) break;
-                if (_ei2DocXml.charAt(_ei2SC+4)==='>'||_ei2DocXml.charAt(_ei2SC+4)===' '){_ei2SPS=_ei2SC;break;}
-                _ei2SSF=_ei2SC;
-              }
-              var _ei2SPE = _ei2DocXml.indexOf('</w:p>', _ei2SumIdx) + 6;
-              _ei2DocXml = _ei2DocXml.substring(0, _ei2SPS) + _ei2BulXml + _ei2DocXml.substring(_ei2SPE);
-            }
+
+          // Build prose XML - replace {{SUMMARY}} paragraph
+          var _proseXml = _proseParas.map(function(b){
+            return '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t xml:space="preserve">'+_x(b)+'</w:t></w:r></w:p>';
+          }).join('');
+          var _si1 = _ei2DocXml.indexOf('{{SUMMARY}}');
+          if (_si1 !== -1) {
+            var _sp1=_si1,_sf1=_si1;
+            while(_sf1>0){var _sc1=_ei2DocXml.lastIndexOf('<w:p',_sf1-1);if(_sc1<0)break;if(_ei2DocXml.charAt(_sc1+4)==='>'||_ei2DocXml.charAt(_sc1+4)===' '){_sp1=_sc1;break;}_sf1=_sc1;}
+            var _se1=_ei2DocXml.indexOf('</w:p>',_si1)+6;
+            _ei2DocXml=_ei2DocXml.substring(0,_sp1)+_proseXml+_ei2DocXml.substring(_se1);
           }
-        }
+
+          // Bullets XML - label + SHBullets items
+          var _bulItems = _bulletsStr ? _bulletsStr.split(/\n/).map(function(s){
+            return s.replace(/^[•\-\*\d\.]+\s*/,'').trim();
+          }).filter(Boolean) : [];
+          var _bulXml = '';
+          if (_bulletLabel) {
+            _bulXml += '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t>'+_x(_bulletLabel)+'</w:t></w:r></w:p>';
+          }
+          _bulXml += _bulItems.map(function(b){
+            return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr><w:r><w:t xml:space="preserve">'+_x(b)+'</w:t></w:r></w:p>';
+          }).join('');
+
+          // Replace {{SUMMARY_BULLETS}} paragraph
+          var _si2 = _ei2DocXml.indexOf('{{SUMMARY_BULLETS}}');
+          if (_si2 !== -1) {
+            var _sp2=_si2,_sf2=_si2;
+            while(_sf2>0){var _sc2=_ei2DocXml.lastIndexOf('<w:p',_sf2-1);if(_sc2<0)break;if(_ei2DocXml.charAt(_sc2+4)==='>'||_ei2DocXml.charAt(_sc2+4)===' '){_sp2=_sc2;break;}_sf2=_sc2;}
+            var _se2=_ei2DocXml.indexOf('</w:p>',_si2)+6;
+            _ei2DocXml=_ei2DocXml.substring(0,_sp2)+_bulXml+_ei2DocXml.substring(_se2);
+          }
+
+          _ei2Zip.file('word/document.xml', _ei2DocXml);
+          _ei2Cv.SUMMARY = ''; // already injected
+        })();
 
         _ei2Zip.file('word/document.xml', _ei2DocXml);
 
