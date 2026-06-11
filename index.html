@@ -4260,6 +4260,42 @@ async function downloadHistory(index) {
           }
         })();
 
+        // For Deal List template: split SUMMARY into multiple SHBullets paragraphs
+        if (item.template === 'apac-profile-deal-list' && _apCv.SUMMARY) {
+          var _dlD = _apZip.files['word/document.xml'].asText();
+          var _sumStr = _apCv.SUMMARY.trim();
+          // Split on bullet-like patterns or sentence breaks
+          var _sumBuls = _sumStr.split(/\.\s+(?=[A-Z])/).map(function(s){
+            s = s.trim();
+            if (!s) return null;
+            if (!s.endsWith('.')) s = s + '.';
+            return s;
+          }).filter(Boolean);
+          if (_sumBuls.length > 1) {
+            var _BPP = '<w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0"/></w:pPr>';
+            var _BRP = '';
+            function _xe(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+            var _sumXml = _sumBuls.map(function(b){
+              return '<w:p>' + _BPP + '<w:r>' + _BRP + '<w:t xml:space="preserve">' + _xe(b) + '</w:t></w:r></w:p>';
+            }).join('');
+            // Find SUMMARY token paragraph and replace
+            var _si = _dlD.indexOf('{{SUMMARY}}');
+            if (_si !== -1) {
+              var _sps = _si, _ssf = _si;
+              while (_ssf > 0) {
+                var _sc = _dlD.lastIndexOf('<w:p', _ssf-1);
+                if (_sc < 0) break;
+                if (_dlD.charAt(_sc+4)==='>'||_dlD.charAt(_sc+4)===' '){_sps=_sc;break;}
+                _ssf=_sc;
+              }
+              var _spe = _dlD.indexOf('</w:p>', _si) + 6;
+              _dlD = _dlD.substring(0, _sps) + _sumXml + _dlD.substring(_spe);
+              _apCv.SUMMARY = '';
+            }
+            _apZip.file('word/document.xml', _dlD);
+          }
+        }
+
         try {
           var _apDoc = new window.docxtemplater(_apZip, {
             paragraphLoop: true, linebreaks: true,
