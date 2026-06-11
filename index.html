@@ -4172,14 +4172,21 @@ async function downloadHistory(index) {
           var _bulletsStr = _splitMatch ? _s.substring(_splitMatch.index + _splitMatch[0].length).trim() : '';
           var _bulletLabel = _splitMatch ? _splitMatch[0].trim().replace(/:$/, '') : '';
 
-          // Prose paragraphs - split on '. ' + capital
-          var _proseParas = _proseStr.split(/\.\s+(?=[A-Z])/).map(function(s){
-            s=s.trim(); if(!s)return null; if(!s.endsWith('.'))s+='.'; return s;
-          }).filter(Boolean);
+          // Prose paragraphs - split on newlines first, then on '. ' + capital
+          var _proseSplit = _proseStr.split(/\n/).map(function(s){return s.trim();}).filter(Boolean);
+          var _proseParas = [];
+          _proseSplit.forEach(function(line){
+            // Further split long paragraphs on '. ' + capital
+            var subs = line.split(/\.\s+(?=[A-Z])/).map(function(s){
+              s=s.trim(); if(!s)return null; if(!s.endsWith('.'))s+='.'; return s;
+            }).filter(Boolean);
+            _proseParas = _proseParas.concat(subs);
+          });
 
-          // Build prose XML - replace {{SUMMARY}} paragraph
+          // Build prose XML with spacer between each paragraph
+          var _SPACER = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
           var _proseXml = _proseParas.map(function(b){
-            return '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t xml:space="preserve">'+_x(b)+'</w:t></w:r></w:p>';
+            return '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t xml:space="preserve">'+_x(b)+'</w:t></w:r></w:p>' + _SPACER;
           }).join('');
           var _si1 = _ei2DocXml.indexOf('{{SUMMARY}}');
           if (_si1 !== -1) {
@@ -4190,8 +4197,26 @@ async function downloadHistory(index) {
           }
 
           // Bullets XML - label + SHBullets items
+          // Also try to find bullets in SUMMARY if split didn't find the section header
+          if (!_bulletsStr && _s.indexOf('\u2022') !== -1) {
+            // Has bullet character - split on newlines, separate prose from bullets
+            var _allLines = _s.split(/\n/).map(function(s){return s.trim();}).filter(Boolean);
+            var _proseLines = [], _bulLines = [];
+            var _inBuls = false;
+            _allLines.forEach(function(line){
+              if (line.charAt(0) === '\u2022' || line.charAt(0) === '-' || line.charAt(0) === '\t') {
+                _inBuls = true;
+              }
+              if (_inBuls) _bulLines.push(line);
+              else _proseLines.push(line);
+            });
+            if (_bulLines.length) {
+              _proseStr = _proseLines.join('\n');
+              _bulletsStr = _bulLines.join('\n');
+            }
+          }
           var _bulItems = _bulletsStr ? _bulletsStr.split(/\n/).map(function(s){
-            return s.replace(/^[•\-\*\d\.]+\s*/,'').trim();
+            return s.replace(/^[\u2022\u2023\u25E6\-\*\d\.]+\s*/,'').trim();
           }).filter(Boolean) : [];
           var _bulXml = '';
           if (_bulletLabel) {
@@ -4227,13 +4252,13 @@ async function downloadHistory(index) {
           MONTH_YEAR:        _ei2Cv.MONTH_YEAR || _ei2Cv.PROFILE_MONTH || (_ei2Months[_ei2Now.getMonth()] + ' ' + _ei2Now.getFullYear()),
           SUMMARY:           _ei2Cv.SUMMARY || '',
           SUMMARY_BULLETS:   '',
-          EDU_1_START:       _ei2Cv.EDU_1_START || '',
-          EDU_1_END:         _ei2Cv.EDU_1_END || '',
-          EDU_1_INSTITUTION: _ei2Cv.EDU_1_INSTITUTION || '',
+          EDU_1_START:       _ei2Cv.EDU_1_START || ((_ei2Cv.education||[])[0] ? ((_ei2Cv.education[0].years||'').split(/[-–]/)[0]||'').trim() : '') || '',
+          EDU_1_END:         _ei2Cv.EDU_1_END || ((_ei2Cv.education||[])[0] ? ((_ei2Cv.education[0].years||'').split(/[-–]/)[1]||'').trim() : '') || '',
+          EDU_1_INSTITUTION: _ei2Cv.EDU_1_INSTITUTION || ((_ei2Cv.education||[])[0] ? (_ei2Cv.education[0].institution||'') : '') || '',
           EDU_1_LOCATION:    _ei2Cv.EDU_1_LOCATION || '',
-          EDU_1_DEGREE:      _ei2Cv.EDU_1_DEGREE || '',
+          EDU_1_DEGREE:      _ei2Cv.EDU_1_DEGREE || ((_ei2Cv.education||[])[0] ? (_ei2Cv.education[0].degree||'') : '') || '',
           QUAL_YEAR:         _ei2Cv.QUAL_YEAR || _ei2Cv.QUAL_1_START || '',
-          QUAL_1:            _ei2Cv.QUAL_1 || _ei2Cv.QUAL_1_TEXT || '',
+          QUAL_1:            (_ei2Cv.QUAL_1 || _ei2Cv.QUAL_1_TEXT || '') + (_ei2Cv.TECH_SKILLS ? ' | ' + _ei2Cv.TECH_SKILLS : ''),
           NATIONALITY:       _ei2Cv.NATIONALITY || '',
           LANGUAGES:         _ei2Cv.LANGUAGES || '',
           INTERESTS:         _ei2Cv.INTERESTS || ''
