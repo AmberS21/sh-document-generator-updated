@@ -1917,7 +1917,6 @@ async function generate() {
   var tpl = document.getElementById('tplSel').value;
   var btn = document.getElementById('genBtn');
   if (!tpl) { notify('Please select a template first'); return; }
-  logUsage(tpl, activeType, 'started');
 
   var inputText = '';
   var activeTab = document.querySelector('.itab.on');
