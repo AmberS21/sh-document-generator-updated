@@ -3611,7 +3611,8 @@ async function downloadHistory(index) {
         var _isDocm = _tplUrlC.endsWith('.docm');
         var _docExt = _isDocm ? 'docm' : 'docx';
         var _docMime = _isDocm ? 'application/vnd.ms-word.document.macroEnabled.12' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-        var _respC = await fetch(_tplUrlC);
+        var _ghBaseC = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+        var _respC = await fetch(_tplUrlC.startsWith('http') ? _tplUrlC : _ghBaseC + _tplUrlC);
         var _abC = await _respC.arrayBuffer();
         var _zipC = new JSZip();
         for (var _ci = 0; _ci < item.content.length; _ci++) {
