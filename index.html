@@ -1608,7 +1608,7 @@ function buildEaIndiaBizExp(companies) {
                 + '<w:lang w:eastAsia="en-US"/>'
                 + '</w:rPr>';
   var BUL_PPR   = '<w:pStyle w:val="SHBullets"/>';
-  var SPACER    = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
+  var SPACER    = '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr></w:p>';
 
   for (var ci = 0; ci < companies.length; ci++) {
     var co = companies[ci];
@@ -4359,8 +4359,8 @@ async function downloadHistory(index) {
             }
           });
           // Replace P39 start to P40 end using paraId anchors
-          var _a39 = _ei2DocXml.indexOf('paraId="592671A7"');
-          var _a40 = _ei2DocXml.indexOf('paraId="0CD1C547"');
+          var _a39 = _ei2DocXml.indexOf('paraId="46209B29"');
+          var _a40 = _ei2DocXml.indexOf('paraId="6BED408B"');
           if (_a39 !== -1 && _a40 !== -1) {
             var _ps = _ei2DocXml.lastIndexOf('<w:p ', _a39);
             var _pe = _ei2DocXml.indexOf('</w:p>', _a40) + 6;
@@ -4405,7 +4405,7 @@ async function downloadHistory(index) {
               }
             });
           }
-          var _a46 = _ei2DocXml.indexOf('paraId="4BB10D82"');
+          var _a46 = _ei2DocXml.indexOf('paraId="26D4D308"');
           if (_a46 !== -1) {
             var _qps = _ei2DocXml.lastIndexOf('<w:p ', _a46);
             var _qpe = _ei2DocXml.indexOf('</w:p>', _a46) + 6;
