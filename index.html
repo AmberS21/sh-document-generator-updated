@@ -4300,6 +4300,7 @@ async function downloadHistory(index) {
           }
 
 
+        })();
         // ── Inject ALL education entries ──
         (function() {
           var _edu = _ei2Cv.education || [];
@@ -4366,11 +4367,8 @@ async function downloadHistory(index) {
             _ei2DocXml = _ei2DocXml.substring(0, _qps) + _qualXml + _ei2DocXml.substring(_qpe);
           }
         })();
-          _ei2Zip.file('word/document.xml', _ei2DocXml);
-          _ei2Cv.SUMMARY = ''; // already injected
-        })();
 
-        _ei2Zip.file('word/document.xml', _ei2DocXml);
+        // _ei2Zip updated in try block below
 
         // Render flat tokens
         var _ei2Now = new Date();
@@ -4396,6 +4394,7 @@ async function downloadHistory(index) {
         };
 
         try {
+          _ei2Zip.file('word/document.xml', _ei2DocXml);
           var _ei2Doc = new window.docxtemplater(_ei2Zip, {
             paragraphLoop: true, linebreaks: true,
             delimiters: {start: '{{', end: '}}'},
