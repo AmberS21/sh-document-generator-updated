@@ -4301,80 +4301,6 @@ async function downloadHistory(index) {
 
 
         })();
-        // ── Inject ALL education entries ──
-        (function() {
-          var _edu = _ei2Cv.education || [];
-          if (!_edu.length) return;
-          function _x2(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-          var _TAB_STOP2 = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
-          var _YR_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-          var _IN_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-          var _DG_RPR = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-          var _eduXml = '';
-          _edu.forEach(function(e) {
-            if (!e.institution && !e.degree) return;
-            var _ppr = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/>' + _TAB_STOP2 + '</w:pPr>';
-            _eduXml += '<w:p>' + _ppr
-              + '<w:r>' + _YR_RPR + '<w:t xml:space="preserve">' + _x2(e.years||'') + '</w:t><w:tab/></w:r>'
-              + '<w:r>' + _IN_RPR + '<w:t xml:space="preserve">' + _x2(e.institution||'') + '</w:t></w:r>'
-              + '</w:p>'
-              + '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/>' + _TAB_STOP2 + '</w:pPr>'
-              + '<w:r>' + _DG_RPR + '<w:t xml:space="preserve">	' + _x2(e.degree||'') + '</w:t></w:r>'
-              + '</w:p>';
-          });
-          // Replace {{EDU_1_START}} paragraph and {{EDU_1_DEGREE}} paragraph with full edu block
-          var _ei1 = _ei2DocXml.indexOf('{{EDU_1_START}}');
-          if (_ei1 !== -1) {
-            var _eps = _ei2DocXml.lastIndexOf('<w:p', _ei1);
-            // Find end of EDU_1_DEGREE paragraph
-            var _degi = _ei2DocXml.indexOf('{{EDU_1_DEGREE}}');
-            var _depe = _ei2DocXml.indexOf('</w:p>', _degi) + 6;
-            _ei2DocXml = _ei2DocXml.substring(0, _eps) + _eduXml + _ei2DocXml.substring(_depe);
-          }
-        })();
-
-        // ── Inject PROFESSIONAL_QUALS and TECH_SKILLS ──
-        (function() {
-          var _pq = _ei2Cv.PROFESSIONAL_QUALS || [];
-          var _ts = (_ei2Cv.TECH_SKILLS || '').trim();
-          if (!_pq.length && !_ts) return;
-          function _x3(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-          var _TAB_STOP3 = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
-          var _YR_RPR3 = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-          var _TXT_RPR3 = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-          var _qualXml = '';
-          _pq.forEach(function(q) {
-            if (!q.qualification) return;
-            var _ppr = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/>' + _TAB_STOP3 + '</w:pPr>';
-            _qualXml += '<w:p>' + _ppr
-              + '<w:r>' + _YR_RPR3 + '<w:t xml:space="preserve">' + _x3(q.year||'') + ':</w:t><w:tab/></w:r>'
-              + '<w:r>' + _TXT_RPR3 + '<w:t xml:space="preserve">' + _x3(q.qualification) + '</w:t></w:r>'
-              + '</w:p>';
-          });
-          if (_ts) {
-            var _TSH_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/>' + _TAB_STOP3 + '</w:pPr>';
-            var _TSH_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-            _qualXml += '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/></w:pPr></w:p>';
-            _qualXml += '<w:p>' + _TSH_PPR
-              + '<w:r>' + _TSH_RPR + '<w:t xml:space="preserve">Technical Skills</w:t><w:tab/></w:r>'
-              + '<w:r>' + _TXT_RPR3 + '<w:t xml:space="preserve">' + _x3(_ts) + '</w:t></w:r>'
-              + '</w:p>';
-          }
-          var _qi = _ei2DocXml.indexOf('{{QUAL_YEAR}}');
-          if (_qi !== -1) {
-            // Find paragraph start - must be <w:p> or <w:p (with space)
-            var _qps = _qi;
-            while(_qps > 0) {
-              var _qc = _ei2DocXml.lastIndexOf('<w:p', _qps-1);
-              if (_qc < 0) break;
-              var _qnext = _ei2DocXml.charAt(_qc+4);
-              if (_qnext === '>' || _qnext === ' ') { _qps = _qc; break; }
-              _qps = _qc;
-            }
-            var _qpe = _ei2DocXml.indexOf('</w:p>', _qi) + 6;
-            _ei2DocXml = _ei2DocXml.substring(0, _qps) + _qualXml + _ei2DocXml.substring(_qpe);
-          }
-        })();
         var _ei2Render = {
           CANDIDATE_NAME:    (function(n){ if(!n)return''; return n.split(' ').map(function(w){ return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); }).join(' '); })(_ei2Cv.CANDIDATE_NAME || ''),
           CURRENT_EMPLOYER:  _ei2Cv.CURRENT_EMPLOYER || '',
@@ -4383,13 +4309,23 @@ async function downloadHistory(index) {
           MONTH_YEAR:        _ei2Cv.MONTH_YEAR || _ei2Cv.PROFILE_MONTH || (_ei2Months[_ei2Now.getMonth()] + ' ' + _ei2Now.getFullYear()),
           SUMMARY:           _ei2Cv.SUMMARY || '',
           SUMMARY_BULLETS:   '',
-          EDU_1_START:       _ei2Cv.EDU_1_START || ((_ei2Cv.education||[])[0] ? ((_ei2Cv.education[0].years||'').split(/[-–]/)[0]||'').trim() : '') || '',
-          EDU_1_END:         _ei2Cv.EDU_1_END || ((_ei2Cv.education||[])[0] ? ((_ei2Cv.education[0].years||'').split(/[-–]/)[1]||'').trim() : '') || '',
-          EDU_1_INSTITUTION: _ei2Cv.EDU_1_INSTITUTION || ((_ei2Cv.education||[])[0] ? (_ei2Cv.education[0].institution||'') : '') || '',
-          EDU_1_LOCATION:    _ei2Cv.EDU_1_LOCATION || '',
-          EDU_1_DEGREE:      _ei2Cv.EDU_1_DEGREE || ((_ei2Cv.education||[])[0] ? (_ei2Cv.education[0].degree||'') : '') || '',
-          QUAL_YEAR:         _ei2Cv.QUAL_YEAR || _ei2Cv.QUAL_1_START || '',
-          QUAL_1:            [_ei2Cv.QUAL_1 || '', _ei2Cv.TECH_SKILLS ? 'Technical Skills: ' + _ei2Cv.TECH_SKILLS : ''].filter(Boolean).join('\n'),
+          EDU_1_START:       ((_ei2Cv.education||[])[0] ? (_ei2Cv.education[0].years||'') : '') || '',
+          EDU_1_END:         '',
+          EDU_1_INSTITUTION: ((_ei2Cv.education||[])[0] ? (_ei2Cv.education[0].institution||'') : '') || '',
+          EDU_1_LOCATION:    ((_ei2Cv.education||[])[0] ? (_ei2Cv.education[0].degree||'') : '') || '',
+          EDU_1_DEGREE:      (function(){
+            var _eds = (_ei2Cv.education||[]);
+            if (_eds.length <= 1) return '';
+            return _eds.slice(1).map(function(e){ return (e.years||'') + ' ' + (e.institution||'') + ' — ' + (e.degree||''); }).join(' | ');
+          })(),
+          QUAL_YEAR:         ((_ei2Cv.PROFESSIONAL_QUALS||[])[0] ? (_ei2Cv.PROFESSIONAL_QUALS[0].year||'') : '') || '',
+          QUAL_1:            (function(){
+            var _pq = _ei2Cv.PROFESSIONAL_QUALS || [];
+            var _ts = (_ei2Cv.TECH_SKILLS||'').trim();
+            var _parts = _pq.map(function(q){ return (q.year||'') + ': ' + (q.qualification||''); });
+            if (_ts) _parts.push('Technical Skills: ' + _ts);
+            return _parts.join(' | ');
+          })(),
           NATIONALITY:       _ei2Cv.NATIONALITY || '',
           LANGUAGES:         _ei2Cv.LANGUAGES || '',
           INTERESTS:         _ei2Cv.INTERESTS || ''
