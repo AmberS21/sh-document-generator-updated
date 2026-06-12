@@ -1597,10 +1597,10 @@ function buildEaIndiaBizExp(companies) {
 
   // Right-aligned tab stop at 9072 twips
   var TAB_STOP  = '<w:tabs><w:tab w:val="right" w:pos="9072"/></w:tabs>';
-  var CO_PPR    = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
+  var CO_PPR    = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
   var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-  var ROL_PPR_D = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
-  var ROL_PPR_P = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/><w:spacing w:after="0"/></w:pPr>';
+  var ROL_PPR_D = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
+  var ROL_PPR_P = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
   var ROL_RPR   = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
   var BUL_RPR   = '<w:rPr>'
                 + '<w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/>'
@@ -1608,7 +1608,7 @@ function buildEaIndiaBizExp(companies) {
                 + '<w:lang w:eastAsia="en-US"/>'
                 + '</w:rPr>';
   var BUL_PPR   = '<w:pStyle w:val="SHBullets"/>';
-  var SPACER    = '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/><w:spacing w:after="0"/></w:pPr></w:p>';
+  var SPACER    = '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr></w:p>';
 
   for (var ci = 0; ci < companies.length; ci++) {
     var co = companies[ci];
@@ -1656,7 +1656,7 @@ function buildEaIndiaBizExp(companies) {
         if (!b) continue;
         if (b.indexOf('>>') === 0) {
           var bh = b.substring(2).trim();
-          var OVW_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/></w:pPr>';
+          var OVW_PPR = '<w:pPr><w:pStyle w:val="SHText"/></w:pPr>';
           var OVW_RPR = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           xml += '<w:p>' + OVW_PPR + '<w:r>' + OVW_RPR + '<w:t xml:space="preserve">' + xe(bh) + '</w:t></w:r></w:p>';
         } else {
@@ -4332,7 +4332,7 @@ async function downloadHistory(index) {
           var _B  = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _N  = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _TAB = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
-          var _PP = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/>' + _TAB + '</w:pPr>';
+          var _PP = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB + '</w:pPr>';
           var _eduXml = '';
           var _lastInst = '';
           _edu.forEach(function(e){
@@ -4377,7 +4377,7 @@ async function downloadHistory(index) {
           var _B2  = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _N2  = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _TAB2 = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
-          var _PP2 = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/>' + _TAB2 + '</w:pPr>';
+          var _PP2 = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB2 + '</w:pPr>';
           var _qualXml = '';
           _pq.forEach(function(q){
             if (!q.qualification) return;
