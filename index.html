@@ -5368,7 +5368,7 @@ function renderLogs(logs,tbody,summary){
     sorted.forEach(function(r) {
       var key = (r.user||'') + '|' + (r.template||'');
       var ts = new Date(r.timestamp).getTime();
-      if (!seen[key] || (ts - seen[key].ts) > 60000) {
+      if (!seen[key] || (ts - seen[key].ts) > 300000) {
         seen[key] = { ts: ts, entry: r };
         result.push(seen[key]);
       } else if (r.status === 'success' || r.status === 'failed') {
@@ -5429,8 +5429,8 @@ function renderLogs(logs,tbody,summary){
   }
 
   if(!norm.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">No usage data yet</td></tr>';return;}
-  var sorted = norm.slice().reverse();
-  tbody.innerHTML = sorted.map(function(r){
+  var sorted = dedupAll.slice().reverse();
+  tbody.innerHTML = sorted.filter(function(r){ return r.status !== "started"; }).map(function(r){
     var tplLabel=(typeof TEMPLATES!=='undefined'&&TEMPLATES[r.template])?TEMPLATES[r.template].label:r.template;
     var d=new Date(r.timestamp);
     var date=isNaN(d)?r.timestamp:d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
