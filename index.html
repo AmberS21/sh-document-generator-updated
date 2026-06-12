@@ -5592,8 +5592,8 @@ function renderLogs(logs,tbody,summary){
 
   // Stats
   var now = new Date();
-  var today = new Date().toDateString();
-  var todayCount = norm.filter(function(r){ var d=new Date(r.timestamp); return !isNaN(d) && d.toDateString()===today; }).length;
+  var today = new Date().toISOString().substring(0,10);
+  var todayCount = norm.filter(function(r){ var d=r.timestamp ? r.timestamp.substring(0,10) : ''; return d === today; }).length;
   var dedupAll = norm;
   var thisMonth = norm.filter(function(r){ var d=new Date(r.timestamp); return !isNaN(d) && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); });
 
