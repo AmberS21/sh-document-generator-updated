@@ -1658,6 +1658,7 @@ function buildEaIndiaBizExp(companies) {
           var bh = b.substring(2).trim();
           var OVW_PPR = '<w:pPr><w:pStyle w:val="SHText"/></w:pPr>';
           var OVW_RPR = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          xml += SPACER;
           xml += '<w:p>' + OVW_PPR + '<w:r>' + OVW_RPR + '<w:t xml:space="preserve">' + xe(bh) + '</w:t></w:r></w:p>';
         } else {
         xml += '<w:p><w:pPr>' + BUL_PPR + BUL_RPR + '</w:pPr>'
@@ -3617,8 +3618,33 @@ async function downloadHistory(index) {
           var _cvC = item.content[_ci];
           var _nameC = (_cvC && _cvC.CANDIDATE_NAME) ? _cvC.CANDIDATE_NAME : ('Profile_' + (_ci+1));
           var _isApacC = (item.template === 'apac-profile' || false );
+          var _isEi2C = (item.template === 'ea-india-profile-v2');
           var _outC;
-          if (_isApacC) {
+          if (_isEi2C) {
+            // EA India v2 batch path - uses buildEaIndiaBizExp
+            var _ei2ZipC = new PizZip(_abC.slice(0));
+            var _ei2XmlC = _ei2ZipC.files['word/document.xml'].asText();
+            var _ei2BizC = buildEaIndiaBizExp(_cvC.companies || []);
+            var _ei2IdxC = _ei2XmlC.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
+            if (_ei2IdxC !== -1) {
+              var _ei2PSC = _ei2IdxC, _ei2SFC = _ei2IdxC;
+              while (_ei2SFC > 0) { var _ei2CC = _ei2XmlC.lastIndexOf('<w:p', _ei2SFC-1); if (_ei2CC < 0) break; if (_ei2XmlC.charAt(_ei2CC+4)==='>'||_ei2XmlC.charAt(_ei2CC+4)===' ') { _ei2PSC=_ei2CC; break; } _ei2SFC=_ei2CC; }
+              var _ei2PEC = _ei2XmlC.indexOf('</w:p>', _ei2IdxC) + 6;
+              _ei2XmlC = _ei2XmlC.substring(0, _ei2PSC) + _ei2BizC + _ei2XmlC.substring(_ei2PEC);
+            }
+            // Summary injection
+            var _ei2SC = (_cvC.SUMMARY || '').trim();
+            if (_ei2SC) {
+              var _prXmlC = _ei2SC.split(/\n/).map(function(s){ s=s.trim(); return s ? '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t xml:space="preserve">'+s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</w:t></w:r></w:p>' : ''; }).filter(Boolean).join('');
+              var _si1C = _ei2XmlC.indexOf('{{SUMMARY}}');
+              if (_si1C !== -1) { var _sp1C=_si1C; while(_sp1C>0){var _sc1C=_ei2XmlC.lastIndexOf('<w:p',_sp1C-1);if(_sc1C<0)break;if(_ei2XmlC.charAt(_sc1C+4)==='>'||_ei2XmlC.charAt(_sc1C+4)===' '){_sp1C=_sc1C;break;}_sp1C=_sc1C;} var _se1C=_ei2XmlC.indexOf('</w:p>',_si1C)+6; _ei2XmlC=_ei2XmlC.substring(0,_sp1C)+_prXmlC+_ei2XmlC.substring(_se1C); }
+            }
+            _ei2ZipC.file('word/document.xml', _ei2XmlC);
+            var _ei2DocC = new window.docxtemplater(_ei2ZipC, {paragraphLoop:true,linebreaks:true,delimiters:{start:'{{',end:'}}'},nullGetter:function(){return '';}});
+            var _now2C = new Date(); var _m2C = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            _ei2DocC.render({CANDIDATE_NAME:(function(n){return n.split(' ').map(function(w){return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase();}).join(' ');})(_cvC.CANDIDATE_NAME||''),CURRENT_EMPLOYER:_cvC.CURRENT_EMPLOYER||'',CLIENT_COMPANY:'',SEARCH_TITLE:'',MONTH_YEAR:_m2C[_now2C.getMonth()]+' '+_now2C.getFullYear(),SUMMARY:'',SUMMARY_BULLETS:'',EDU_1_START:'',EDU_1_END:'',EDU_1_INSTITUTION:'',EDU_1_LOCATION:'',EDU_1_DEGREE:'',QUAL_YEAR:'',QUAL_1:'',NATIONALITY:_cvC.NATIONALITY||'',LANGUAGES:_cvC.LANGUAGES||'',INTERESTS:_cvC.INTERESTS||''});
+            _outC = _ei2DocC.getZip().generate({type:'arraybuffer',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+          } else if (_isApacC) {
             var _azipC = await JSZip.loadAsync(_abC.slice(0));
             var _axmlC = await _azipC.files['word/document.xml'].async('string');
             _azipC.file('word/document.xml', apacFillTemplate(_axmlC, _cvC));
