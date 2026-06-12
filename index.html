@@ -4362,17 +4362,19 @@ async function downloadHistory(index) {
           }
           var _qi = _ei2DocXml.indexOf('{{QUAL_YEAR}}');
           if (_qi !== -1) {
-            var _qps = _ei2DocXml.lastIndexOf('<w:p', _qi);
+            // Find paragraph start - must be <w:p> or <w:p (with space)
+            var _qps = _qi;
+            while(_qps > 0) {
+              var _qc = _ei2DocXml.lastIndexOf('<w:p', _qps-1);
+              if (_qc < 0) break;
+              var _qnext = _ei2DocXml.charAt(_qc+4);
+              if (_qnext === '>' || _qnext === ' ') { _qps = _qc; break; }
+              _qps = _qc;
+            }
             var _qpe = _ei2DocXml.indexOf('</w:p>', _qi) + 6;
             _ei2DocXml = _ei2DocXml.substring(0, _qps) + _qualXml + _ei2DocXml.substring(_qpe);
           }
         })();
-
-        // _ei2Zip updated in try block below
-
-        // Render flat tokens
-        var _ei2Now = new Date();
-        var _ei2Months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         var _ei2Render = {
           CANDIDATE_NAME:    (function(n){ if(!n)return''; return n.split(' ').map(function(w){ return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); }).join(' '); })(_ei2Cv.CANDIDATE_NAME || ''),
           CURRENT_EMPLOYER:  _ei2Cv.CURRENT_EMPLOYER || '',
