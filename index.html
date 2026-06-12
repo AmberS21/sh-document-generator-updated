@@ -520,18 +520,7 @@ table.usage tr:last-child td{border-bottom:none;}
      ADMIN TAB
 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ -->
 <div class="page hidden" id="sec-admin">
-  <div class="card">
-    <div class="card-title"><div class="step-dot">&#128202;</div> Usage This Month</div>
-    <div class="stat-grid">
-      <div class="stat-c"><div class="stat-n" id="usageTotalCount">—</div><div class="stat-l">Docs Generated</div></div>
-      <div class="stat-c"><div class="stat-n" id="usageTodayCount">—</div><div class="stat-l">Today</div></div>
-      <div class="stat-c"><div class="stat-n">~&#163;1.85</div><div class="stat-l">Est. API Cost</div></div>
-    </div>
-    <div class="row-between">
-      <div class="note">Top: CV Profile (28) &middot; Assignment (11) &middot; Newsletter (8)</div>
-      <button onclick="exportUsageLogs()" style="background:linear-gradient(135deg,#166534,#16a34a);color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;">&#11015; Export Excel</button>
-    </div>
-  </div>
+  <!-- old usage card hidden -->
   <div class="card">
     <div class="card-title"><div class="step-dot">&#128202;</div> Usage by User</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;"></div><div style="display:flex;gap:8px;"><button onclick="loadUsageLogs()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x21BA; Refresh</button><button onclick="exportUsageLogs()" style="background:#C9A227;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">&#x2193; Export CSV</button><button onclick="clearUsageLogs()" style="background:rgba(220,38,38,.7);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x1F5D1; Clear Local</button></div></div><table class="usage"><thead><tr><th>User</th><th>Template</th><th>Input</th><th>Status</th><th>Date &amp; Time</th></tr></thead><tbody id="usageLogBody">
@@ -5370,6 +5359,8 @@ function renderLogs(logs,tbody,summary){
 
   // Stats
   var now = new Date();
+  var today = new Date().toDateString();
+  var todayCount = norm.filter(function(r){ var d=new Date(r.timestamp); return !isNaN(d) && d.toDateString()===today; }).length;
   var thisMonth = norm.filter(function(r){
     var d = new Date(r.timestamp); return !isNaN(d) && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
   });
@@ -5393,12 +5384,17 @@ function renderLogs(logs,tbody,summary){
 
     summary.innerHTML =
       '<div style="display:flex;flex-wrap:wrap;gap:10px;width:100%;margin-bottom:10px;">' +
-        '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:120px;">' +
+        '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
+          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Today</div>' +
+          '<div style="font-size:22px;font-weight:700;">'+todayCount+'</div>' +
+          '<div style="font-size:10px;opacity:.6;">generations</div>' +
+        '</div>' +
+        '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
           '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">This Month</div>' +
           '<div style="font-size:22px;font-weight:700;">'+thisMonth.length+'</div>' +
           '<div style="font-size:10px;opacity:.6;">generations</div>' +
         '</div>' +
-        '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:120px;">' +
+        '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
           '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">All Time</div>' +
           '<div style="font-size:22px;font-weight:700;">'+norm.length+'</div>' +
           '<div style="font-size:10px;opacity:.6;">generations</div>' +
