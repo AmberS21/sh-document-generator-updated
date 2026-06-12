@@ -5355,17 +5355,79 @@ function loadUsageLogs(){
 function renderLogs(logs,tbody,summary){
   var totalEl=document.getElementById('usageTotalCount');
   var todayEl=document.getElementById('usageTodayCount');
-  if(totalEl)totalEl.textContent=logs.length;
-  if(todayEl){var today=new Date().toDateString();todayEl.textContent=logs.filter(function(r){return new Date(r.timestamp||r[7]).toDateString()===today;}).length;}
-  if(!logs.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">No usage data yet</td></tr>';return;}
-  var sorted=logs.slice().reverse();
-  tbody.innerHTML=sorted.map(function(r){
-    var user=r.user||r[1]||'';var tpl=r.template||r[2]||'';var inp=r.inputMethod||r[3]||'';var st=r.status||r[4]||'';
-    var ts=r.timestamp||r[7]||'';var d=new Date(ts);var date=isNaN(d)?ts:d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    var tplLabel=(typeof TEMPLATES!=='undefined'&&TEMPLATES[tpl])?TEMPLATES[tpl].label:tpl;
-    return'<tr><td>'+user+'</td><td style="font-size:11px">'+tplLabel+'</td><td>'+inp+'</td><td class="status-'+st+'">'+st+'</td><td>'+date+'</td></tr>';
+
+  // Normalise each log entry — handle both object and array formats
+  var norm = logs.map(function(r){
+    if(Array.isArray(r)) return {user:r[1]||'',template:r[2]||'',inputMethod:r[3]||'',status:r[4]||'',timestamp:r[7]||r[5]||''};
+    return {
+      user: r.user||r.userName||'',
+      template: r.template||'',
+      inputMethod: r.inputMethod||r.input_method||r.source||'',
+      status: r.status||'',
+      timestamp: r.timestamp||r.ts||''
+    };
+  });
+
+  // Stats
+  var now = new Date();
+  var thisMonth = norm.filter(function(r){
+    var d = new Date(r.timestamp); return !isNaN(d) && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+  });
+  var successAll   = norm.filter(function(r){ return r.status==='success' || r.status==='completed'; });
+  var successMonth = thisMonth.filter(function(r){ return r.status==='success' || r.status==='completed'; });
+
+  // Cost estimate: Claude Sonnet 4.6 ~$0.015 per generation (avg ~5k input + 2k output tokens)
+  var COST_PER_GEN = 0.015;
+  var costMonth = (successMonth.length * COST_PER_GEN).toFixed(2);
+  var costAll   = (successAll.length * COST_PER_GEN).toFixed(2);
+
+  if(totalEl) totalEl.textContent = norm.length;
+  if(todayEl) todayEl.textContent = thisMonth.length;
+
+  // Render stat cards in summary area
+  if(summary){
+    var userCounts={};
+    norm.forEach(function(r){ var n=r.user||'Unknown'; userCounts[n]=(userCounts[n]||0)+1; });
+    var topUsers = Object.keys(userCounts).sort(function(a,b){return userCounts[b]-userCounts[a];}).slice(0,8)
+      .map(function(n){ return '<span style="background:rgba(255,255,255,.15);border-radius:12px;padding:3px 10px;font-size:11px;"><b>'+n+'</b> '+userCounts[n]+'</span>'; }).join('');
+
+    summary.innerHTML =
+      '<div style="display:flex;flex-wrap:wrap;gap:10px;width:100%;margin-bottom:10px;">' +
+        '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:120px;">' +
+          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">This Month</div>' +
+          '<div style="font-size:22px;font-weight:700;">'+thisMonth.length+'</div>' +
+          '<div style="font-size:10px;opacity:.6;">generations</div>' +
+        '</div>' +
+        '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:120px;">' +
+          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">All Time</div>' +
+          '<div style="font-size:22px;font-weight:700;">'+norm.length+'</div>' +
+          '<div style="font-size:10px;opacity:.6;">generations</div>' +
+        '</div>' +
+        '<div style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.3);border-radius:10px;padding:10px 16px;min-width:120px;">' +
+          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Est. Cost This Month</div>' +
+          '<div style="font-size:22px;font-weight:700;">$'+costMonth+'</div>' +
+          '<div style="font-size:10px;opacity:.6;">'+successMonth.length+' successful</div>' +
+        '</div>' +
+        '<div style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.3);border-radius:10px;padding:10px 16px;min-width:120px;">' +
+          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Est. Cost All Time</div>' +
+          '<div style="font-size:22px;font-weight:700;">$'+costAll+'</div>' +
+          '<div style="font-size:10px;opacity:.6;">'+successAll.length+' successful</div>' +
+        '</div>' +
+        '<div style="flex:1;min-width:200px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;">' + topUsers + '</div>' +
+      '</div>';
+  }
+
+  if(!norm.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">No usage data yet</td></tr>';return;}
+  var sorted = norm.slice().reverse();
+  tbody.innerHTML = sorted.map(function(r){
+    var tplLabel=(typeof TEMPLATES!=='undefined'&&TEMPLATES[r.template])?TEMPLATES[r.template].label:r.template;
+    var d=new Date(r.timestamp);
+    var date=isNaN(d)?r.timestamp:d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    var inp = r.inputMethod || '—';
+    var st  = r.status || '—';
+    var stClass = st==='success'||st==='completed' ? 'completed' : st==='failed' ? 'failed' : st==='started' ? 'attempted' : '';
+    return '<tr><td>'+r.user+'</td><td style="font-size:11px">'+tplLabel+'</td><td>'+inp+'</td><td class="status-'+stClass+'">'+st+'</td><td>'+date+'</td></tr>';
   }).join('');
-  if(summary){var counts={};logs.forEach(function(r){var n=r.user||r[1]||'Unknown';counts[n]=(counts[n]||0)+1;});summary.innerHTML=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];}).map(function(n){return'<span style="background:rgba(255,255,255,.15);border-radius:12px;padding:3px 10px;font-size:11px;"><b>'+n+'</b> '+counts[n]+'</span>';}).join('');}
 }
 function exportUsageLogs(){
   var a=document.createElement('a');
