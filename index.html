@@ -5593,28 +5593,9 @@ function renderLogs(logs,tbody,summary){
   // Stats
   var now = new Date();
   var today = new Date().toDateString();
-  // Deduplicate: merge started+success entries within 60s same user+template
-  function dedup(entries) {
-    var seen = {};
-    var result = [];
-    var sorted = entries.slice().sort(function(a,b){ return new Date(a.timestamp)-new Date(b.timestamp); });
-    sorted.forEach(function(r) {
-      var key = (r.user||'') + '|' + (r.template||'');
-      var ts = new Date(r.timestamp).getTime();
-      if (!seen[key] || (ts - seen[key].ts) > 300000) {
-        seen[key] = { ts: ts, entry: r };
-        result.push(seen[key]);
-      } else if (r.status === 'success' || r.status === 'failed') {
-        seen[key].entry = r;
-      }
-  var todayCount = dedup(norm.filter(function(r){ var d=new Date(r.timestamp); return !isNaN(d) && d.toDateString()===today; })).length;
-    });
-    return result.map(function(x){ return x.entry; });
-  }
-  var dedupAll = dedup(norm);
-  var thisMonth = dedup(norm.filter(function(r){
-    var d = new Date(r.timestamp); return !isNaN(d) && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
-  }));
+  var todayCount = norm.filter(function(r){ var d=new Date(r.timestamp); return !isNaN(d) && d.toDateString()===today; }).length;
+  var dedupAll = norm;
+  var thisMonth = norm.filter(function(r){ var d=new Date(r.timestamp); return !isNaN(d) && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); });
 
   // Cost estimate: ~$0.015 per generation
   var COST_PER_GEN = 0.015;
