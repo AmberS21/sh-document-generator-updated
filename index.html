@@ -1579,11 +1579,14 @@ function buildEaIndiaBizExp(companies) {
   function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
   // Normalise date format: "2023 Sept" -> "Sept 2023" (year before month)
+  var _MONTHS = {january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec',jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',sept:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
   function normDate(s) {
     if (!s) return '';
-    return s.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*/gi, function(m, yr, mo) {
-      return mo.charAt(0).toUpperCase() + mo.slice(1) + ' ' + yr;
-    });
+    // Convert full or abbreviated month names to 3-letter format
+    s = s.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b/gi, function(m){ return _MONTHS[m.toLowerCase()]||m; });
+    // Fix year-before-month: 2023 Jan -> Jan 2023
+    s = s.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, function(m, yr, mo){ return mo + ' ' + yr; });
+    return s;
   }
   function normDateRange(s) {
     if (!s) return '';
@@ -1593,20 +1596,16 @@ function buildEaIndiaBizExp(companies) {
   }
 
   // Right-aligned tab stop at 9072 twips
-  var TAB_STOP  = '<w:tabs><w:tab w:val="right" w:pos="9072"/></w:tabs>';
+  var CO_PPR    = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
   var CO_PPR    = '<w:pPr><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
-  var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:color w:val="2C2E82" w:themeColor="accent1"/></w:rPr>';
+  var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
   var ROL_PPR_D = '<w:pPr><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
-  var ROL_PPR_P = '<w:pPr><w:spacing w:after="0"/></w:pPr>';
-  var ROL_RPR   = '<w:rPr><w:color w:val="2C2E82" w:themeColor="accent1"/></w:rPr>';
-  var BUL_PPR   = '<w:pStyle w:val="ListParagraph"/>'
-                + '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="4"/></w:numPr>'
-                + '<w:tabs><w:tab w:val="left" w:pos="1483"/></w:tabs>'
-                + '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>'
-                + '<w:jc w:val="both"/>';
+  var ROL_PPR_D = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
+  var ROL_PPR_P = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
+  var ROL_RPR   = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
   var BUL_RPR   = '<w:rPr>'
                 + '<w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/>'
-                + '<w:color w:val="2C2E82" w:themeColor="accent1"/>'
+                + '<w:color w:val="222229"/>'
                 + '<w:lang w:eastAsia="en-US"/>'
                 + '</w:rPr>';
   var SPACER    = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
@@ -1655,9 +1654,16 @@ function buildEaIndiaBizExp(companies) {
       for (var bi = 0; bi < bullets.length; bi++) {
         var b = (bullets[bi] || '').trim();
         if (!b) continue;
+        if (b.indexOf('>>') === 0) {
+          var bh = b.substring(2).trim();
+          var HDR_PPR = '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="both"/></w:pPr>';
+          var HDR_RPR = '<w:rPr><w:b/><w:bCs/><w:color w:val="222229"/></w:rPr>';
+          xml += '<w:p>' + HDR_PPR + '<w:r>' + HDR_RPR + '<w:t xml:space="preserve">' + xe(bh) + '</w:t></w:r></w:p>';
+        } else {
         xml += '<w:p><w:pPr>' + BUL_PPR + BUL_RPR + '</w:pPr>'
             +  '<w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(b) + '</w:t></w:r>'
             +  '</w:p>';
+        }
       }
 
       // Spacer between roles (not after last)
@@ -2610,7 +2616,7 @@ ABSOLUTE RULES:
 
 FIELD INSTRUCTIONS:
 
-CANDIDATE_NAME: Full name exactly as written.
+CANDIDATE_NAME: Full name in Title Case (e.g. "David Ashley Edwards"). If the CV has it in ALL CAPS, convert to Title Case. Do NOT include post-nominal qualifications (CFA, FRM etc) in the name — put those in QUAL_1.
 CURRENT_EMPLOYER: Most recent employer name only.
 CLIENT_COMPANY: Always "".
 SEARCH_TITLE: Always "".
@@ -2622,27 +2628,35 @@ SUMMARY_BULLETS: Extract the candidate's "Core Leadership Strengths" / "Key Skil
 
 COMPANIES ARRAY:
 - company.name: Company name only (no location).
-- company.dates: ALWAYS include month where available e.g. "Jan 2016 – Present".
+- company.dates: ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Jan 2016 – Present". Never use full month names or "Sept".
 - role.role: Exact job title.
 - role.role_dates: Dates for this role only. Leave "" if company has ONE role.
-- role.bullets: ALL bullets for that role VERBATIM.
+- role.bullets: Capture ALL content under the role VERBATIM and in order. CRITICAL — if the CV has sub-headings within a role (e.g. "Key Achievements & Responsibilities", "Operational Risk Management", "Business Continuity & Operational Resilience" etc.), include them as bullet items with ">>" prefix so they are identifiable as headings. E.g. if CV has:
+  Key Achievements & Responsibilities
+    • Bullet one
+    • Bullet two
+  Business Continuity
+    • Bullet three
+Then bullets array should be: [">> Key Achievements & Responsibilities", "Bullet one", "Bullet two", ">> Business Continuity", "Bullet three"]
+If the role has an italic overview/intro line before the bullets, include it as the first item with ">>" prefix too.
+Capture every single bullet and sub-heading. Do NOT flatten or skip headings.
 - Most recent company first.
 
 EDUCATION:
-- education[]: Array of {years, institution, degree}
-- years: "YYYY – YYYY" format e.g. "1988 – 1992"
-- institution: Full institution name including location
-- degree: Full degree description
-- Most recent first. Include ALL entries.
+- education[]: Array of {years, institution, degree}. Include ALL education entries from the CV — every university, college, and course.
+- years: Include month if available e.g. "Jan 2006 – Dec 2007" or "2006 – 2007". Use 3-letter month abbreviations.
+- institution: Full institution name including location e.g. "Stellenbosch University, South Africa"
+- degree: Full degree name exactly as written e.g. "BSc (Hons) Financial Mathematics"
+- Most recent first.
 
-QUAL_1: Full professional qualifications/certifications VERBATIM including all items. Do NOT truncate.
-TECH_SKILLS: Extract ALL technical skills, tools, languages, frameworks etc as a single string exactly as written in the CV.
+PROFESSIONAL_QUALS: Extract ONLY professional qualifications and certifications (CFA, FRM, CAIA, ACCA, CPA etc). Format as array of {year, qualification} e.g. [{year:"2026",qualification:"CAIA charterholder, CAIA Association"},{year:"2025",qualification:"Certified FRM, Global Association of Risk Professionals"}]. Most recent first.
+TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single string exactly as written in the CV. Leave "" if none.
 NATIONALITY: Exact nationality. Leave "" if not found.
 LANGUAGES: Languages with levels. Leave "" if not found.
 INTERESTS: Interests as stated. Leave "" if not found.
 
 Return this JSON structure:
-{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_1":"","TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}
+{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}
 
 CANDIDATE SOURCE:
 
@@ -4237,8 +4251,8 @@ async function downloadHistory(index) {
 
           // Build prose XML with spacer between each paragraph
           var _SPACER = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
-          var _proseXml = _proseParas.map(function(b){
-            return '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t xml:space="preserve">'+_x(b)+'</w:t></w:r></w:p>' + _SPACER;
+          var _proseXml = _proseParas.map(function(b, _pi){
+            return '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t xml:space="preserve">'+_x(b)+'</w:t></w:r></w:p>' + (_pi < _proseParas.length - 1 ? _SPACER : '');
           }).join('');
           var _si1 = _ei2DocXml.indexOf('{{SUMMARY}}');
           if (_si1 !== -1) {
@@ -4285,6 +4299,73 @@ async function downloadHistory(index) {
             _ei2DocXml=_ei2DocXml.substring(0,_sp2)+_bulXml+_ei2DocXml.substring(_se2);
           }
 
+
+        // ── Inject ALL education entries ──
+        (function() {
+          var _edu = _ei2Cv.education || [];
+          if (!_edu.length) return;
+          function _x2(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+          var _TAB_STOP2 = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
+          var _YR_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          var _IN_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          var _DG_RPR = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          var _eduXml = '';
+          _edu.forEach(function(e) {
+            if (!e.institution && !e.degree) return;
+            var _ppr = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/>' + _TAB_STOP2 + '</w:pPr>';
+            _eduXml += '<w:p>' + _ppr
+              + '<w:r>' + _YR_RPR + '<w:t xml:space="preserve">' + _x2(e.years||'') + '</w:t><w:tab/></w:r>'
+              + '<w:r>' + _IN_RPR + '<w:t xml:space="preserve">' + _x2(e.institution||'') + '</w:t></w:r>'
+              + '</w:p>'
+              + '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/>' + _TAB_STOP2 + '</w:pPr>'
+              + '<w:r>' + _DG_RPR + '<w:t xml:space="preserve">	' + _x2(e.degree||'') + '</w:t></w:r>'
+              + '</w:p>';
+          });
+          // Replace {{EDU_1_START}} paragraph and {{EDU_1_DEGREE}} paragraph with full edu block
+          var _ei1 = _ei2DocXml.indexOf('{{EDU_1_START}}');
+          if (_ei1 !== -1) {
+            var _eps = _ei2DocXml.lastIndexOf('<w:p', _ei1);
+            // Find end of EDU_1_DEGREE paragraph
+            var _degi = _ei2DocXml.indexOf('{{EDU_1_DEGREE}}');
+            var _depe = _ei2DocXml.indexOf('</w:p>', _degi) + 6;
+            _ei2DocXml = _ei2DocXml.substring(0, _eps) + _eduXml + _ei2DocXml.substring(_depe);
+          }
+        })();
+
+        // ── Inject PROFESSIONAL_QUALS and TECH_SKILLS ──
+        (function() {
+          var _pq = _ei2Cv.PROFESSIONAL_QUALS || [];
+          var _ts = (_ei2Cv.TECH_SKILLS || '').trim();
+          if (!_pq.length && !_ts) return;
+          function _x3(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+          var _TAB_STOP3 = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
+          var _YR_RPR3 = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          var _TXT_RPR3 = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          var _qualXml = '';
+          _pq.forEach(function(q) {
+            if (!q.qualification) return;
+            var _ppr = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/>' + _TAB_STOP3 + '</w:pPr>';
+            _qualXml += '<w:p>' + _ppr
+              + '<w:r>' + _YR_RPR3 + '<w:t xml:space="preserve">' + _x3(q.year||'') + ':</w:t><w:tab/></w:r>'
+              + '<w:r>' + _TXT_RPR3 + '<w:t xml:space="preserve">' + _x3(q.qualification) + '</w:t></w:r>'
+              + '</w:p>';
+          });
+          if (_ts) {
+            var _TSH_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/>' + _TAB_STOP3 + '</w:pPr>';
+            var _TSH_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+            _qualXml += '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/></w:pPr></w:p>';
+            _qualXml += '<w:p>' + _TSH_PPR
+              + '<w:r>' + _TSH_RPR + '<w:t xml:space="preserve">Technical Skills</w:t><w:tab/></w:r>'
+              + '<w:r>' + _TXT_RPR3 + '<w:t xml:space="preserve">' + _x3(_ts) + '</w:t></w:r>'
+              + '</w:p>';
+          }
+          var _qi = _ei2DocXml.indexOf('{{QUAL_YEAR}}');
+          if (_qi !== -1) {
+            var _qps = _ei2DocXml.lastIndexOf('<w:p', _qi);
+            var _qpe = _ei2DocXml.indexOf('</w:p>', _qi) + 6;
+            _ei2DocXml = _ei2DocXml.substring(0, _qps) + _qualXml + _ei2DocXml.substring(_qpe);
+          }
+        })();
           _ei2Zip.file('word/document.xml', _ei2DocXml);
           _ei2Cv.SUMMARY = ''; // already injected
         })();
@@ -4295,7 +4376,7 @@ async function downloadHistory(index) {
         var _ei2Now = new Date();
         var _ei2Months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         var _ei2Render = {
-          CANDIDATE_NAME:    _ei2Cv.CANDIDATE_NAME || '',
+          CANDIDATE_NAME:    (function(n){ if(!n)return''; return n.split(' ').map(function(w){ return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(); }).join(' '); })(_ei2Cv.CANDIDATE_NAME || ''),
           CURRENT_EMPLOYER:  _ei2Cv.CURRENT_EMPLOYER || '',
           CLIENT_COMPANY:    _ei2Cv.CLIENT_COMPANY || '[Client Company]',
           SEARCH_TITLE:      _ei2Cv.SEARCH_TITLE || '[Job Title]',
