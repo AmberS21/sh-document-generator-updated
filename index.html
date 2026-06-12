@@ -1599,7 +1599,7 @@ function buildEaIndiaBizExp(companies) {
   var TAB_STOP  = '<w:tabs><w:tab w:val="right" w:pos="9072"/></w:tabs>';
   var CO_PPR    = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
   var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-  var ROL_PPR_D = '<w:pPr><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
+  var ROL_PPR_D = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
   var ROL_PPR_P = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
   var ROL_RPR   = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
   var BUL_RPR   = '<w:rPr>'
@@ -1656,9 +1656,9 @@ function buildEaIndiaBizExp(companies) {
         if (!b) continue;
         if (b.indexOf('>>') === 0) {
           var bh = b.substring(2).trim();
-          var OVW_PPR = '<w:pPr><w:pStyle w:val="SHBullets"/></w:pPr>';
-          var OVW_RPR = '<w:rPr><w:i/><w:iCs/><w:color w:val="222229"/></w:rPr>';
-          xml += '<w:p>' + OVW_PPR + '<w:r>' + OVW_RPR + '<w:t xml:space="preserve">' + xe(bh) + '</w:t></w:r></w:p>' + SPACER;
+          var OVW_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/></w:pPr>';
+          var OVW_RPR = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          xml += '<w:p>' + OVW_PPR + '<w:r>' + OVW_RPR + '<w:t xml:space="preserve">' + xe(bh) + '</w:t></w:r></w:p>';
         } else {
         xml += '<w:p><w:pPr>' + BUL_PPR + BUL_RPR + '</w:pPr>'
             +  '<w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(b) + '</w:t></w:r>'
@@ -2643,11 +2643,12 @@ Capture every single bullet and sub-heading. Do NOT flatten or skip headings.
 - Most recent company first.
 
 EDUCATION:
-- education[]: Array of {years, institution, degree}. Create ONE entry per degree/qualification — even if from the same institution.
-- years: The year(s) for that specific degree e.g. "2007" or "2006 – 2007". Use 3-letter month abbreviations if months given.
-- institution: Full institution name e.g. "Stellenbosch University". If multiple degrees from same institution, repeat the institution name for each entry.
+- education[]: Array of {years, institution, degree}. ONLY include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc. Do NOT include professional certifications, licences or chartered qualifications (CFA, FRM, CAIA, ACCA, CPA, PRINCE2 etc) — those go in PROFESSIONAL_QUALS only.
+- Create ONE entry per degree, even if from same institution.
+- years: e.g. "2007" or "2006 – 2007". Use 3-letter month abbreviations if months given.
+- institution: Full institution name e.g. "Stellenbosch University".
 - degree: Full degree name exactly as written e.g. "BSc (Hons) Financial Mathematics"
-- Most recent first. Include ALL degrees.
+- Most recent first.
 
 PROFESSIONAL_QUALS: Extract ONLY professional qualifications and certifications (CFA, FRM, CAIA, ACCA, CPA etc). Format as array of {year, qualification} e.g. [{year:"2026",qualification:"CAIA charterholder, CAIA Association"},{year:"2025",qualification:"Certified FRM, Global Association of Risk Professionals"}]. Most recent first.
 TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single string exactly as written in the CV. Leave "" if none.
@@ -4245,6 +4246,7 @@ async function downloadHistory(index) {
           var _rawBullets = (_ei2Cv.SUMMARY_BULLETS || '').trim();
           var _bulletsStr = _rawBullets;
           var _bulletLabel = _rawBullets ? 'Core Leadership Strengths' : '';
+          var _LABEL_SPACER = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
 
           // Prose paragraphs - split on newlines only (each \n = separate paragraph)
           var _proseParas = _proseStr.split(/\n/).map(function(s){return s.trim();}).filter(Boolean);
@@ -4284,7 +4286,7 @@ async function downloadHistory(index) {
           var _bulItems = _bulletsStr ? _bulletsStr.split('|').map(function(s){return s.trim();}).filter(Boolean) : [];
           var _bulXml = '';
           if (_bulletLabel) {
-            _bulXml += '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t>'+_x(_bulletLabel)+'</w:t></w:r></w:p>';
+            _bulXml += _LABEL_SPACER + '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t>'+_x(_bulletLabel)+'</w:t></w:r></w:p>';
           }
           _bulXml += _bulItems.map(function(b){
             return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr><w:r><w:t xml:space="preserve">'+_x(b)+'</w:t></w:r></w:p>';
@@ -4329,7 +4331,8 @@ async function downloadHistory(index) {
           function _xe(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
           var _B  = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _N  = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-          var _PP = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/></w:pPr>';
+          var _TAB = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
+          var _PP = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/>' + _TAB + '</w:pPr>';
           var _eduXml = '';
           var _lastInst = '';
           _edu.forEach(function(e){
@@ -4373,7 +4376,8 @@ async function downloadHistory(index) {
           function _xq(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
           var _B2  = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _N2  = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-          var _PP2 = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/></w:pPr>';
+          var _TAB2 = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
+          var _PP2 = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="-426"/>' + _TAB2 + '</w:pPr>';
           var _qualXml = '';
           _pq.forEach(function(q){
             if (!q.qualification) return;
@@ -4385,11 +4389,21 @@ async function downloadHistory(index) {
           });
           if (_ts) {
             _qualXml += '<w:p>' + _PP2 + '</w:p>';
-            _qualXml += '<w:p>' + _PP2
-              + '<w:r>' + _B2 + '<w:t xml:space="preserve">Technical Skills:</w:t></w:r>'
-              + '<w:r><w:tab/></w:r>'
-              + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(_ts) + '</w:t></w:r>'
-              + '</w:p>';
+            var _tsLines = _ts.split('|').map(function(s){ return s.trim(); }).filter(Boolean);
+            _tsLines.forEach(function(tl, ti) {
+              if (ti === 0) {
+                _qualXml += '<w:p>' + _PP2
+                  + '<w:r>' + _B2 + '<w:t xml:space="preserve">Technical Skills:</w:t></w:r>'
+                  + '<w:r><w:tab/></w:r>'
+                  + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(tl) + '</w:t></w:r>'
+                  + '</w:p>';
+              } else {
+                _qualXml += '<w:p>' + _PP2
+                  + '<w:r><w:tab/></w:r>'
+                  + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(tl) + '</w:t></w:r>'
+                  + '</w:p>';
+              }
+            });
           }
           var _a46 = _ei2DocXml.indexOf('paraId="4BB10D82"');
           if (_a46 !== -1) {
