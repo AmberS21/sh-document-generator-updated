@@ -232,6 +232,8 @@ app.post('/api/proxy/log', async (req, res) => {
 
 // GET /api/proxy/logs — return all logs as JSON
 app.get('/api/proxy/logs', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
   try {
     if (!_tableClient) return res.json(_fallbackLogs);
     const logs = [];
