@@ -1573,83 +1573,138 @@ function buildApacEyBizExp(companies) {
 
 
 function buildEaIndiaBizExp(companies) {
-  // Builds Business Experience XML for EA India template
+  // EA India (non-Reg) template business experience builder
   if (!companies || companies.length === 0) return '';
   var xml = '';
   function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  // Normalise date format: "2023 Sept" -> "Sept 2023" (year before month)
   var _MONTHS = {january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec',jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',sept:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
   function normDate(s) {
     if (!s) return '';
-    // Convert full or abbreviated month names to 3-letter format
     s = s.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b/gi, function(m){ return _MONTHS[m.toLowerCase()]||m; });
-    // Fix year-before-month: 2023 Jan -> Jan 2023
     s = s.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, function(m, yr, mo){ return mo + ' ' + yr; });
     return s;
   }
   function normDateRange(s) {
     if (!s) return '';
-    var parts = s.split(/\s*[–—-]+\s*/);
+    var parts = s.split(/\s*[\u2013\u2014-]+\s*/);
     if (parts.length === 2) return normDate(parts[0].trim()) + ' \u2013 ' + normDate(parts[1].trim());
     return normDate(s);
   }
-
-  // Right-aligned tab stop at 9072 twips
   var TAB_STOP  = '<w:tabs><w:tab w:val="right" w:pos="9900"/></w:tabs>';
-  var CO_PPR    = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
-  var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-  var ROL_PPR_D = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
-  var ROL_PPR_P = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
-  var ROL_RPR   = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-  var BUL_RPR   = '<w:rPr>'
-                + '<w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/>'
-                + '<w:color w:val="222229"/>'
-                + '<w:lang w:eastAsia="en-US"/>'
-                + '</w:rPr>';
-  var BUL_PPR   = '<w:pStyle w:val="SHBullets"/>';
-  var SPACER    = '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr></w:p>';
-
+  var CO_PPR    = '<w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/>' + TAB_STOP + '</w:pPr>';
+  var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="002060"/></w:rPr>';
+  var ROL_PPR_D = '<w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/>' + TAB_STOP + '</w:pPr>';
+  var ROL_PPR_P = '<w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/></w:pPr>';
+  var ROL_RPR   = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="002060"/></w:rPr>';
+  var BUL_RPR   = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/><w:color w:val="2C2E82"/><w:lang w:eastAsia="en-US"/></w:rPr>';
+  var BUL_PPR   = '<w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="4"/></w:numPr><w:spacing w:after="0"/><w:jc w:val="both"/>';
+  var SPACER    = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
   for (var ci = 0; ci < companies.length; ci++) {
     var co = companies[ci];
     if (!co || !co.name) continue;
     var roles = co.roles || [];
     var multiRole = roles.length > 1;
-
-    // Spacer before company (except first)
     if (ci > 0) { xml += SPACER; xml += SPACER; }
-
-    // Company line: BOLD name + location, TAB right-aligned, BOLD dates
     var coDates = normDateRange(co.dates || '');
     xml += '<w:p>' + CO_PPR
         +  '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(co.name) + (co.location ? ', ' + xe(co.location) : '') + '</w:t></w:r>'
         +  (coDates ? '<w:r>' + CO_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>' : '')
         +  '</w:p>';
-
-    // Empty line after company heading
-    xml += SPACER;
-
+    if (co.description) {
+      var DESC_PPR = '<w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/></w:pPr>';
+      var DESC_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="002060"/></w:rPr>';
+      xml += '<w:p>' + DESC_PPR + '<w:r>' + DESC_RPR + '<w:t xml:space="preserve">' + xe(co.description) + '</w:t></w:r></w:p>';
+      xml += SPACER;
+    }
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
       if (!role || !role.role) continue;
       var roleDates = multiRole ? normDateRange(role.role_dates || '') : '';
-
-      // Role title line: left title, TAB right-aligned, dates (only multi-role)
       if (roleDates) {
         xml += '<w:p>' + ROL_PPR_D
             +  '<w:r>' + ROL_RPR + '<w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
             +  '<w:r>' + ROL_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(roleDates) + '</w:t></w:r>'
             +  '</w:p>';
       } else {
-        xml += '<w:p>' + ROL_PPR_P
-            +  '<w:r>' + ROL_RPR + '<w:t>' + xe(role.role) + '</w:t></w:r>'
-            +  '</w:p>';
+        xml += '<w:p>' + ROL_PPR_P + '<w:r>' + ROL_RPR + '<w:t>' + xe(role.role) + '</w:t></w:r></w:p>';
       }
-
-      // ONE blank line between role title and bullets
       xml += SPACER;
+      var bullets = role.bullets || [];
+      for (var bi = 0; bi < bullets.length; bi++) {
+        var b = (bullets[bi] || '').trim();
+        if (!b) continue;
+        if (b.indexOf('>>') === 0) {
+          var bh = b.substring(2).trim();
+          var OVW_PPR = '<w:pPr><w:spacing w:after="0"/></w:pPr>';
+          var OVW_RPR = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          xml += '<w:p>' + OVW_PPR + '<w:r>' + OVW_RPR + '<w:t xml:space="preserve">' + xe(bh) + '</w:t></w:r></w:p>';
+        } else {
+          xml += '<w:p><w:pPr>' + BUL_PPR + '</w:pPr><w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(b) + '</w:t></w:r></w:p>';
+        }
+      }
+      if (ri < roles.length - 1) { xml += SPACER; }
+    }
+  }
+  return xml;
+}
 
-      // Bullets
+function buildEaIndiaRegBizExp(companies) {
+  // EA India (Reg/v2) template business experience builder
+  if (!companies || companies.length === 0) return '';
+  var xml = '';
+  function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var _MONTHS = {january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec',jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',sept:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
+  function normDate(s) {
+    if (!s) return '';
+    s = s.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b/gi, function(m){ return _MONTHS[m.toLowerCase()]||m; });
+    s = s.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, function(m, yr, mo){ return mo + ' ' + yr; });
+    return s;
+  }
+  function normDateRange(s) {
+    if (!s) return '';
+    var parts = s.split(/\s*[\u2013\u2014-]+\s*/);
+    if (parts.length === 2) return normDate(parts[0].trim()) + ' \u2013 ' + normDate(parts[1].trim());
+    return normDate(s);
+  }
+  var TAB_STOP  = '<w:tabs><w:tab w:val="right" w:pos="9900"/></w:tabs>';
+  var CO_PPR    = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
+  var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
+  var ROL_PPR_D = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
+  var ROL_PPR_P = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
+  var ROL_RPR   = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
+  var BUL_RPR   = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/><w:lang w:eastAsia="en-US"/></w:rPr>';
+  var BUL_PPR   = '<w:pStyle w:val="SHBullets"/>';
+  var SPACER    = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
+  for (var ci = 0; ci < companies.length; ci++) {
+    var co = companies[ci];
+    if (!co || !co.name) continue;
+    var roles = co.roles || [];
+    var multiRole = roles.length > 1;
+    if (ci > 0) { xml += SPACER; }
+    var coDates = normDateRange(co.dates || '');
+    xml += '<w:p>' + CO_PPR
+        +  '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(co.name) + (co.location ? ', ' + xe(co.location) : '') + '</w:t></w:r>'
+        +  (coDates ? '<w:r>' + CO_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>' : '')
+        +  '</w:p>';
+    if (co.description) {
+      var DESC_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
+      var DESC_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
+      xml += '<w:p>' + DESC_PPR + '<w:r>' + DESC_RPR + '<w:t xml:space="preserve">' + xe(co.description) + '</w:t></w:r></w:p>';
+    }
+    xml += SPACER;
+    for (var ri = 0; ri < roles.length; ri++) {
+      var role = roles[ri];
+      if (!role || !role.role) continue;
+      var roleDates = multiRole ? normDateRange(role.role_dates || '') : '';
+      if (roleDates) {
+        xml += '<w:p>' + ROL_PPR_D
+            +  '<w:r>' + ROL_RPR + '<w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
+            +  '<w:r>' + ROL_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(roleDates) + '</w:t></w:r>'
+            +  '</w:p>';
+      } else {
+        xml += '<w:p>' + ROL_PPR_P + '<w:r>' + ROL_RPR + '<w:t>' + xe(role.role) + '</w:t></w:r></w:p>';
+      }
+      xml += SPACER;
       var bullets = role.bullets || [];
       for (var bi = 0; bi < bullets.length; bi++) {
         var b = (bullets[bi] || '').trim();
@@ -1657,17 +1712,88 @@ function buildEaIndiaBizExp(companies) {
         if (b.indexOf('>>') === 0) {
           var bh = b.substring(2).trim();
           var OVW_PPR = '<w:pPr><w:pStyle w:val="SHText"/></w:pPr>';
-          var OVW_RPR = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-          xml += SPACER;
+          var OVW_RPR = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
           xml += '<w:p>' + OVW_PPR + '<w:r>' + OVW_RPR + '<w:t xml:space="preserve">' + xe(bh) + '</w:t></w:r></w:p>';
         } else {
-        xml += '<w:p><w:pPr>' + BUL_PPR + BUL_RPR + '</w:pPr>'
-            +  '<w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(b) + '</w:t></w:r>'
-            +  '</w:p>';
+          xml += '<w:p><w:pPr>' + BUL_PPR + '</w:pPr><w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(b) + '</w:t></w:r></w:p>';
         }
       }
+      if (ri < roles.length - 1) { xml += SPACER; }
+    }
+  }
+  return xml;
+}
 
-      // Spacer between roles (not after last)
+function buildChangeConsBizExp(companies) {
+  // Change Consulting template business experience builder
+  if (!companies || companies.length === 0) return '';
+  var xml = '';
+  function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var _MONTHS = {january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec',jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',sept:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
+  function normDate(s) {
+    if (!s) return '';
+    s = s.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b/gi, function(m){ return _MONTHS[m.toLowerCase()]||m; });
+    s = s.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, function(m, yr, mo){ return mo + ' ' + yr; });
+    return s;
+  }
+  function normDateRange(s) {
+    if (!s) return '';
+    var parts = s.split(/\s*[\u2013\u2014-]+\s*/);
+    if (parts.length === 2) return normDate(parts[0].trim()) + ' \u2013 ' + normDate(parts[1].trim());
+    return normDate(s);
+  }
+  var TAB_STOP  = '<w:tabs><w:tab w:val="right" w:pos="9900"/></w:tabs>';
+  var CO_PPR    = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
+  var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
+  var ROL_PPR_D = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
+  var ROL_PPR_P = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
+  var ROL_RPR   = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
+  var BUL_RPR   = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/><w:lang w:eastAsia="en-US"/></w:rPr>';
+  var BUL_PPR   = '<w:pStyle w:val="SHBullets"/>';
+  var SPACER    = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
+  for (var ci = 0; ci < companies.length; ci++) {
+    var co = companies[ci];
+    if (!co || !co.name) continue;
+    var roles = co.roles || [];
+    var multiRole = roles.length > 1;
+    if (ci > 0) { xml += SPACER; xml += SPACER; }
+    var coDates = normDateRange(co.dates || '');
+    xml += '<w:p>' + CO_PPR
+        +  '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(co.name) + (co.location ? ', ' + xe(co.location) : '') + '</w:t></w:r>'
+        +  (coDates ? '<w:r>' + CO_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>' : '')
+        +  '</w:p>';
+    if (co.description) {
+      var DESC_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
+      var DESC_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
+      xml += '<w:p>' + DESC_PPR + '<w:r>' + DESC_RPR + '<w:t xml:space="preserve">' + xe(co.description) + '</w:t></w:r></w:p>';
+      xml += SPACER;
+    }
+    for (var ri = 0; ri < roles.length; ri++) {
+      var role = roles[ri];
+      if (!role || !role.role) continue;
+      var roleDates = multiRole ? normDateRange(role.role_dates || '') : '';
+      if (roleDates) {
+        xml += '<w:p>' + ROL_PPR_D
+            +  '<w:r>' + ROL_RPR + '<w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
+            +  '<w:r>' + ROL_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(roleDates) + '</w:t></w:r>'
+            +  '</w:p>';
+      } else {
+        xml += '<w:p>' + ROL_PPR_P + '<w:r>' + ROL_RPR + '<w:t>' + xe(role.role) + '</w:t></w:r></w:p>';
+      }
+      xml += SPACER;
+      var bullets = role.bullets || [];
+      for (var bi = 0; bi < bullets.length; bi++) {
+        var b = (bullets[bi] || '').trim();
+        if (!b) continue;
+        if (b.indexOf('>>') === 0) {
+          var bh = b.substring(2).trim();
+          var OVW_PPR = '<w:pPr><w:pStyle w:val="SHText"/></w:pPr>';
+          var OVW_RPR = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
+          xml += '<w:p>' + OVW_PPR + '<w:r>' + OVW_RPR + '<w:t xml:space="preserve">' + xe(bh) + '</w:t></w:r></w:p>';
+        } else {
+          xml += '<w:p><w:pPr>' + BUL_PPR + '</w:pPr><w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(b) + '</w:t></w:r></w:p>';
+        }
+      }
       if (ri < roles.length - 1) { xml += SPACER; }
     }
   }
@@ -2641,14 +2767,16 @@ COMPANIES ARRAY:
 Then bullets array should be: [">> Key Achievements & Responsibilities", "Bullet one", "Bullet two", ">> Business Continuity", "Bullet three"]
 If the role has an italic overview/intro line before the bullets, include it as the first item with ">>" prefix too.
 Capture every single bullet and sub-heading. Do NOT flatten or skip headings.
+- IMPORTANT: If the CV has sections like "Summary of Key Responsibilities" or "Select Deal Experience" or similar summary sections that appear AFTER ALL work histories (i.e. not under a specific role), attach them to the MOST RECENT role as additional bullets using ">>" prefix for the section heading.
 - Most recent company first.
 
 EDUCATION:
-- education[]: Array of {years, institution, degree}. ONLY include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc. Do NOT include professional certifications, licences or chartered qualifications (CFA, FRM, CAIA, ACCA, CPA, PRINCE2 etc) — those go in PROFESSIONAL_QUALS only.
+- education[]: Array of {years, institution, degree, extra}. ONLY include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc. Do NOT include professional certifications, licences or chartered qualifications (CFA, FRM, CAIA, ACCA, CPA, PRINCE2 etc) — those go in PROFESSIONAL_QUALS only.
 - Create ONE entry per degree, even if from same institution.
 - years: e.g. "2007" or "2006 – 2007". Use 3-letter month abbreviations if months given.
 - institution: Full institution name e.g. "Stellenbosch University".
 - degree: Full degree name exactly as written e.g. "BSc (Hons) Financial Mathematics"
+- extra: Any additional description, ERASMUS year, honours, specialisation, or extra line given for this degree. Leave "" if none.
 - Most recent first.
 
 PROFESSIONAL_QUALS: Extract ONLY professional qualifications and certifications (CFA, FRM, CAIA, ACCA, CPA etc). Format as array of {year, qualification} e.g. [{year:"2026",qualification:"CAIA charterholder, CAIA Association"},{year:"2025",qualification:"Certified FRM, Global Association of Risk Professionals"}]. Most recent first.
@@ -2658,7 +2786,7 @@ LANGUAGES: Languages with levels. Leave "" if not found.
 INTERESTS: Interests as stated. Leave "" if not found.
 
 Return this JSON structure:
-{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}
+{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}
 
 CANDIDATE SOURCE:
 
@@ -2671,7 +2799,7 @@ var isApacV2 = (tpl === 'apac-profile-v2');
 if (isApacV2) { isApac = true; isApacUpdated = true; }
 var apacEyJsonStr = '{"CANDIDATE_NAME":"","CURRENT_TITLE":"","CURRENT_EMPLOYER":"","PROFILE_DATE":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_INSTITUTION":"","EDU_1_START":"","EDU_1_END":"","EDU_1_DEGREE":"","EDU_2_INSTITUTION":"","EDU_2_START":"","EDU_2_END":"","EDU_2_DEGREE":"","EDU_1_BULLETS":"","EDU_2_BULLETS":"","QUAL_1_TEXT":"","QUAL_1_START":"","QUAL_1_END":"","QUAL_1_DETAIL":"","QUAL_2_TEXT":"","QUAL_2_START":"","QUAL_2_END":"","QUAL_2_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","CANDIDATE_SUMMARY":""}';
 var changeConsJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_1_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","INTERESTS_DETAIL":""}';
-var eaIndiaJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY_INTRO":"","KEY_SKILLS":"","EXEC_OVERVIEW_BULLET_1":"","EXEC_OVERVIEW_BULLET_2":"","EXEC_OVERVIEW_BULLET_3":"","EXEC_OVERVIEW_BULLET_4":"","EXEC_OVERVIEW_BULLET_5":"","EXEC_OVERVIEW_BULLET_6":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_YEAR":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_1_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_2_YEAR":"","QUAL_2_TEXT":"","QUAL_3_YEAR":"","QUAL_3_TEXT":"","QUAL_4_YEAR":"","QUAL_4_TEXT":"","QUAL_5_YEAR":"","QUAL_5_TEXT":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","volunteering":[{"dates":"","role":"","description":""}]}';
+var eaIndiaJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY_INTRO":"","KEY_SKILLS":"","EXEC_OVERVIEW_BULLET_1":"","EXEC_OVERVIEW_BULLET_2":"","EXEC_OVERVIEW_BULLET_3":"","EXEC_OVERVIEW_BULLET_4":"","EXEC_OVERVIEW_BULLET_5":"","EXEC_OVERVIEW_BULLET_6":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_YEAR":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_1_EXTRA":"","EDU_2_YEAR":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_2_YEAR":"","QUAL_2_TEXT":"","QUAL_3_YEAR":"","QUAL_3_TEXT":"","QUAL_4_YEAR":"","QUAL_4_TEXT":"","QUAL_5_YEAR":"","QUAL_5_TEXT":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","volunteering":[{"dates":"","role":"","description":""}]}';
 var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"projects":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_1":"e.g. CPIM | Six Sigma Black Belt — copy FULL string verbatim","QUAL_2":"","QUAL_3":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","PROJECT_1_TITLE":"","PROJECT_1_CLIENT":"","PROJECT_1_DATE":"","PROJECT_1_DESCRIPTION":"","PROJECT_2_TITLE":"","PROJECT_2_CLIENT":"","PROJECT_2_DATE":"","PROJECT_2_DESCRIPTION":"","PROJECT_3_TITLE":"","PROJECT_3_CLIENT":"","PROJECT_3_DATE":"","PROJECT_3_DESCRIPTION":"","PROJECT_4_TITLE":"","PROJECT_4_CLIENT":"","PROJECT_4_DATE":"","PROJECT_4_DESCRIPTION":"","PROJECT_5_TITLE":"","PROJECT_5_CLIENT":"","PROJECT_5_DATE":"","PROJECT_5_DESCRIPTION":"","PROJECT_6_TITLE":"","PROJECT_6_CLIENT":"","PROJECT_6_DATE":"","PROJECT_6_DESCRIPTION":"","PROJECT_7_TITLE":"","PROJECT_7_CLIENT":"","PROJECT_7_DATE":"","PROJECT_7_DESCRIPTION":"","PROJECT_8_TITLE":"","PROJECT_8_CLIENT":"","PROJECT_8_DATE":"","PROJECT_8_DESCRIPTION":"","PROJECT_9_TITLE":"","PROJECT_9_CLIENT":"","PROJECT_9_DATE":"","PROJECT_9_DESCRIPTION":"","PROJECT_10_TITLE":"","PROJECT_10_CLIENT":"","PROJECT_10_DATE":"","PROJECT_10_DESCRIPTION":""}';
 var csJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var globalJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CURRENT_TITLE":"","SEARCH_TITLE":"","CLIENT_COMPANY":"","MONTH_YEAR":"","SUMMARY":"","COMPANY_1_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_1_BULLET_1":"","COMPANY_1_BULLET_2":"","COMPANY_1_BULLET_3":"","COMPANY_1_BULLET_4":"","COMPANY_1_BULLET_5":"","COMPANY_1_BULLET_6":"","COMPANY_1_BULLET_7":"","COMPANY_1_BULLET_8":"","COMPANY_1_BULLET_9":"","COMPANY_1_BULLET_10":"","COMPANY_2_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_2_BULLET_1":"","COMPANY_2_BULLET_2":"","COMPANY_2_BULLET_3":"","COMPANY_2_BULLET_4":"","COMPANY_2_BULLET_5":"","COMPANY_2_BULLET_6":"","COMPANY_2_BULLET_7":"","COMPANY_2_BULLET_8":"","COMPANY_2_BULLET_9":"","COMPANY_2_BULLET_10":"","COMPANY_3_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_3_BULLET_1":"","COMPANY_3_BULLET_2":"","COMPANY_3_BULLET_3":"","COMPANY_3_BULLET_4":"","COMPANY_3_BULLET_5":"","COMPANY_3_BULLET_6":"","COMPANY_3_BULLET_7":"","COMPANY_3_BULLET_8":"","COMPANY_3_BULLET_9":"","COMPANY_3_BULLET_10":"","COMPANY_4_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_4_BULLET_1":"","COMPANY_4_BULLET_2":"","COMPANY_4_BULLET_3":"","COMPANY_4_BULLET_4":"","COMPANY_4_BULLET_5":"","COMPANY_4_BULLET_6":"","COMPANY_4_BULLET_7":"","COMPANY_4_BULLET_8":"","COMPANY_4_BULLET_9":"","COMPANY_4_BULLET_10":"","COMPANY_5_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_5_BULLET_1":"","COMPANY_5_BULLET_2":"","COMPANY_5_BULLET_3":"","COMPANY_5_BULLET_4":"","COMPANY_5_BULLET_5":"","COMPANY_5_BULLET_6":"","COMPANY_5_BULLET_7":"","COMPANY_5_BULLET_8":"","COMPANY_5_BULLET_9":"","COMPANY_5_BULLET_10":"","COMPANY_6_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_6_BULLET_1":"","COMPANY_6_BULLET_2":"","COMPANY_6_BULLET_3":"","COMPANY_6_BULLET_4":"","COMPANY_6_BULLET_5":"","COMPANY_6_BULLET_6":"","COMPANY_6_BULLET_7":"","COMPANY_6_BULLET_8":"","COMPANY_6_BULLET_9":"","COMPANY_6_BULLET_10":"","COMPANY_7_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_7_BULLET_1":"","COMPANY_7_BULLET_2":"","COMPANY_7_BULLET_3":"","COMPANY_7_BULLET_4":"","COMPANY_7_BULLET_5":"","COMPANY_7_BULLET_6":"","COMPANY_7_BULLET_7":"","COMPANY_7_BULLET_8":"","COMPANY_7_BULLET_9":"","COMPANY_7_BULLET_10":"","COMPANY_8_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_8_BULLET_1":"","COMPANY_8_BULLET_2":"","COMPANY_8_BULLET_3":"","COMPANY_8_BULLET_4":"","COMPANY_8_BULLET_5":"","COMPANY_8_BULLET_6":"","COMPANY_8_BULLET_7":"","COMPANY_8_BULLET_8":"","COMPANY_8_BULLET_9":"","COMPANY_8_BULLET_10":"","COMPANY_9_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_9_BULLET_1":"","COMPANY_9_BULLET_2":"","COMPANY_9_BULLET_3":"","COMPANY_9_BULLET_4":"","COMPANY_9_BULLET_5":"","COMPANY_9_BULLET_6":"","COMPANY_9_BULLET_7":"","COMPANY_9_BULLET_8":"","COMPANY_9_BULLET_9":"","COMPANY_9_BULLET_10":"","COMPANY_10_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_10_BULLET_1":"","COMPANY_10_BULLET_2":"","COMPANY_10_BULLET_3":"","COMPANY_10_BULLET_4":"","COMPANY_10_BULLET_5":"","COMPANY_10_BULLET_6":"","COMPANY_10_BULLET_7":"","COMPANY_10_BULLET_8":"","COMPANY_10_BULLET_9":"","COMPANY_10_BULLET_10":"","COMPANY_11_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_11_BULLET_1":"","COMPANY_11_BULLET_2":"","COMPANY_11_BULLET_3":"","COMPANY_11_BULLET_4":"","COMPANY_11_BULLET_5":"","COMPANY_11_BULLET_6":"","COMPANY_11_BULLET_7":"","COMPANY_11_BULLET_8":"","COMPANY_11_BULLET_9":"","COMPANY_11_BULLET_10":"","COMPANY_12_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_12_BULLET_1":"","COMPANY_12_BULLET_2":"","COMPANY_12_BULLET_3":"","COMPANY_12_BULLET_4":"","COMPANY_12_BULLET_5":"","COMPANY_12_BULLET_6":"","COMPANY_12_BULLET_7":"","COMPANY_12_BULLET_8":"","COMPANY_12_BULLET_9":"","COMPANY_12_BULLET_10":"","COMPANY_13_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_13_BULLET_1":"","COMPANY_13_BULLET_2":"","COMPANY_13_BULLET_3":"","COMPANY_13_BULLET_4":"","COMPANY_13_BULLET_5":"","COMPANY_13_BULLET_6":"","COMPANY_13_BULLET_7":"","COMPANY_13_BULLET_8":"","COMPANY_13_BULLET_9":"","COMPANY_13_BULLET_10":"","COMPANY_14_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_14_BULLET_1":"","COMPANY_14_BULLET_2":"","COMPANY_14_BULLET_3":"","COMPANY_14_BULLET_4":"","COMPANY_14_BULLET_5":"","COMPANY_14_BULLET_6":"","COMPANY_14_BULLET_7":"","COMPANY_14_BULLET_8":"","COMPANY_14_BULLET_9":"","COMPANY_14_BULLET_10":"","COMPANY_15_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_15_BULLET_1":"","COMPANY_15_BULLET_2":"","COMPANY_15_BULLET_3":"","COMPANY_15_BULLET_4":"","COMPANY_15_BULLET_5":"","COMPANY_15_BULLET_6":"","COMPANY_15_BULLET_7":"","COMPANY_15_BULLET_8":"","COMPANY_15_BULLET_9":"","COMPANY_15_BULLET_10":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","AFFILIATION_2":"","AFFILIATION_2_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
@@ -2704,17 +2832,19 @@ COMPANIES ARRAY — CRITICAL RULES:
 - company.name: Full legal company name — use IDENTICAL string for all roles at same company.
 - company.location: City, Country (leave empty if not stated).
 - company.dates: Overall tenure at company (e.g. "Mar 2019 – Present"). ALWAYS include month — never year-only. Most recent company first.
+- company.description: If the CV has an italic or introductory paragraph describing the company (e.g. "InfraRed is a mid-market infrastructure investment manager..."), capture it VERBATIM here. Leave "" if none.
 - role.role: Exact job title as written in CV.
 - role.role_dates: Dates for THIS specific role only (e.g. "Jul 2021 – Jul 2023"). Leave "" if the company has only ONE role (dates already shown in company header).
 - role.bullets: ALL bullet points written directly under THAT specific role, VERBATIM. NEVER mix bullets from different roles. Every single bullet must be captured — no limit, no skipping.
 - Most recent company first. Most recent role first within each company.
 
 EDUCATION:
-- EDU_1_YEAR: Year (e.g. "2018") — just the year, no colon.
-- EDU_1_INSTITUTION: Full institution name (e.g. "Said Business School, Oxford").
-- EDU_1_DEGREE: Degree or course name (e.g. "Oxford Fintech Programme").
-- EDU_1_EXTRA: Any additional detail line (e.g. honours, specialisation). Leave "" if none.
-- Only extract the PRIMARY degree/education. Leave all EDU fields as "" if no education section found.
+- EDU_1_YEAR: Year of most recent degree (e.g. "2018").
+- EDU_1_INSTITUTION: Full institution name of most recent degree.
+- EDU_1_DEGREE: Degree name of most recent degree.
+- EDU_1_EXTRA: Any additional detail line VERBATIM (e.g. "ERASMUS year at La Sorbonne, Paris IV"). Leave "" if none.
+- EDU_2_YEAR, EDU_2_INSTITUTION, EDU_2_DEGREE, EDU_2_EXTRA: Second education entry if present (e.g. undergraduate degree). Same rules. Leave all as "" if only one education entry.
+- Most recent first.
 
 PROFESSIONAL QUALIFICATIONS — up to 5 entries:
 - QUAL_N_YEAR: Year of qualification (e.g. "2015"). Extract year only.
@@ -3632,7 +3762,7 @@ async function downloadHistory(index) {
             // EA India v2 batch path - uses buildEaIndiaBizExp
             var _ei2ZipC = new PizZip(_abC.slice(0));
             var _ei2XmlC = _ei2ZipC.files['word/document.xml'].asText();
-            var _ei2BizC = buildEaIndiaBizExp(_cvC.companies || []);
+            var _ei2BizC = buildEaIndiaRegBizExp(_cvC.companies || []);
             var _ei2IdxC = _ei2XmlC.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
             if (_ei2IdxC !== -1) {
               var _ei2PSC = _ei2IdxC, _ei2SFC = _ei2IdxC;
@@ -4300,7 +4430,7 @@ async function downloadHistory(index) {
         var _ccCv = item.content;
 
         // Step 1: build business experience XML (same style as EA India)
-        var _ccBizXml = buildEaIndiaBizExp(_ccCv.companies || []);
+        var _ccBizXml = buildChangeConsBizExp(_ccCv.companies || []);
 
         // Step 2: inject BUSINESS_EXPERIENCE_BLOCK
         var _ccDocXml = _ccZip.files['word/document.xml'].asText();
@@ -4366,7 +4496,7 @@ async function downloadHistory(index) {
         var _ei2Cv  = item.content;
 
         // Build business experience using buildEaIndiaBizExp (same style)
-        var _ei2BizXml = buildEaIndiaBizExp(_ei2Cv.companies || []);
+        var _ei2BizXml = buildEaIndiaRegBizExp(_ei2Cv.companies || []);
 
         // Inject BUSINESS_EXPERIENCE_BLOCK
         var _ei2DocXml = _ei2Zip.files['word/document.xml'].asText();
@@ -4487,8 +4617,9 @@ async function downloadHistory(index) {
           _edu.forEach(function(e){
             if (!e.institution && !e.degree) return;
             var _sameInst = (e.institution||'').trim() === _lastInst;
+            var _SP = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
             if (!_sameInst) {
-              // New institution - show year + bold institution on first line
+              if (_eduXml) _eduXml += _SP;
               _eduXml += '<w:p>' + _PP
                 + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.years||'') + ':</w:t></w:r>'
                 + '<w:r><w:tab/></w:r>'
@@ -4497,14 +4628,15 @@ async function downloadHistory(index) {
                 + '<w:p>' + _PP
                 + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(e.degree||'') + '</w:t></w:r>'
                 + '</w:p>';
+              if (e.extra) _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(e.extra) + '</w:t></w:r></w:p>';
               _lastInst = (e.institution||'').trim();
             } else {
-              // Same institution - show year + degree only (no institution repeated)
               _eduXml += '<w:p>' + _PP
                 + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.years||'') + ':</w:t></w:r>'
                 + '<w:r><w:tab/></w:r>'
                 + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(e.degree||'') + '</w:t></w:r>'
                 + '</w:p>';
+              if (e.extra) _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(e.extra) + '</w:t></w:r></w:p>';
             }
           });
           // Replace P39 start to P40 end using paraId anchors
@@ -4588,12 +4720,15 @@ async function downloadHistory(index) {
         var _eiDocXml = _eiZip.files['word/document.xml'].asText();
         var _eiBeIdx = _eiDocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
         if (_eiBeIdx !== -1) {
-          var _eiPStart = _eiBeIdx, _eiSearchFrom = _eiBeIdx;
-          while (_eiSearchFrom > 0) {
-            var _eiCand = _eiDocXml.lastIndexOf('<w:p', _eiSearchFrom - 1);
-            if (_eiCand < 0) break;
-            if (_eiDocXml.charAt(_eiCand + 4) === '>' || _eiDocXml.charAt(_eiCand + 4) === ' ') { _eiPStart = _eiCand; break; }
-            _eiSearchFrom = _eiCand;
+          // Find the paragraph start - must be <w:p> or <w:p (with space/newline), not <w:pPr etc
+          var _eiPStart = _eiBeIdx;
+          var _eiSearch = _eiBeIdx;
+          while (_eiSearch > 0) {
+            var _eiC = _eiDocXml.lastIndexOf('<w:p', _eiSearch - 1);
+            if (_eiC < 0) break;
+            var _eiN = _eiDocXml.charAt(_eiC + 4);
+            if (_eiN === '>' || _eiN === ' ') { _eiPStart = _eiC; break; }
+            _eiSearch = _eiC;
           }
           var _eiPEnd = _eiDocXml.indexOf('</w:p>', _eiBeIdx) + 6;
           _eiDocXml = _eiDocXml.substring(0, _eiPStart) + _eiBizXml + _eiDocXml.substring(_eiPEnd);
