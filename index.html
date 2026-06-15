@@ -5567,7 +5567,7 @@ function loadUsageLogs(){
   var summary=document.getElementById('usageSummary');
   if(!tbody)return;
   tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>';
-  fetch('/api/proxy/logs?t='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
+  fetch('/api/proxy/logs?nocache='+Date.now()+'&r='+Math.random(),{cache:'no-store',headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}}).then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
   .then(function(logs){renderLogs(logs,tbody,summary);})
   .catch(function(){
     try{var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');renderLogs(logs,tbody,summary);}
