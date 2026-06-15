@@ -1613,7 +1613,6 @@ function buildEaIndiaBizExp(companies) {
   for (var ci = 0; ci < companies.length; ci++) {
     var co = companies[ci];
     if (!co || !co.name) continue;
-      }
     var roles = co.roles || [];
     var multiRole = roles.length > 1;
 
@@ -1629,6 +1628,14 @@ function buildEaIndiaBizExp(companies) {
 
     // Empty line after company heading
     xml += SPACER;
+      // Company description (italic line)
+      if (co.description) {
+        var DESC_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
+        var DESC_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="2C2E82"/></w:rPr>';
+        xml += '<w:p>' + DESC_PPR + '<w:r>' + DESC_RPR + '<w:t xml:space="preserve">' + xe(co.description) + '</w:t></w:r></w:p>';
+        xml += SPACER;
+
+      }
 
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
@@ -1648,14 +1655,6 @@ function buildEaIndiaBizExp(companies) {
       }
 
       // ONE blank line between role title and bullets
-      xml += SPACER;
-      // Company description (italic line)
-      if (co.description) {
-        var DESC_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
-        var DESC_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="2C2E82"/></w:rPr>';
-        xml += '<w:p>' + DESC_PPR + '<w:r>' + DESC_RPR + '<w:t xml:space="preserve">' + xe(co.description) + '</w:t></w:r></w:p>';
-        xml += SPACER;
-
       // Bullets
       var bullets = role.bullets || [];
       for (var bi = 0; bi < bullets.length; bi++) {
