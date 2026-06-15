@@ -1,4 +1,4 @@
-/**/
+/**
  * DocGen Backend API
  * Securely proxies requests to Anthropic and Ezekia APIs
  * API keys are stored as environment variables — never exposed to frontend
