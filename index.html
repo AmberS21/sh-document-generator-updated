@@ -1607,7 +1607,7 @@ function buildEaIndiaBizExp(companies) {
                 + '<w:color w:val="2C2E82"/>'
                 + '<w:lang w:eastAsia="en-US"/>'
                 + '</w:rPr>';
-  var BUL_PPR   = '<w:pPr><w:pStyle w:val="SHBullets"/></w:pPr>';
+  var BUL_PPR   = '<w:pStyle w:val="SHBullets"/>';
   var SPACER    = '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr></w:p>';
 
   for (var ci = 0; ci < companies.length; ci++) {
@@ -1664,7 +1664,6 @@ function buildEaIndiaBizExp(companies) {
           var bh = b.substring(2).trim();
           var OVW_PPR = '<w:pPr><w:pStyle w:val="SHText"/></w:pPr>';
           var OVW_RPR = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="2C2E82"/></w:rPr>';
-          xml += SPACER;
           xml += '<w:p>' + OVW_PPR + '<w:r>' + OVW_RPR + '<w:t xml:space="preserve">' + xe(bh) + '</w:t></w:r></w:p>';
         } else {
         xml += '<w:p><w:pPr>' + BUL_PPR + BUL_RPR + '</w:pPr>'
