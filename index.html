@@ -4595,13 +4595,7 @@ async function downloadHistory(index) {
         var _eiDocXml = _eiZip.files['word/document.xml'].asText();
         var _eiBeIdx = _eiDocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
         if (_eiBeIdx !== -1) {
-          var _eiPStart = _eiBeIdx, _eiSearchFrom = _eiBeIdx;
-          while (_eiSearchFrom > 0) {
-            var _eiCand = _eiDocXml.lastIndexOf('<w:p', _eiSearchFrom - 1);
-            if (_eiCand < 0) break;
-            if (_eiDocXml.charAt(_eiCand + 4) === '>' || _eiDocXml.charAt(_eiCand + 4) === ' ') { _eiPStart = _eiCand; break; }
-            _eiSearchFrom = _eiCand;
-          }
+          var _eiPStart = _eiDocXml.lastIndexOf('<w:p', _eiBeIdx);
           var _eiPEnd = _eiDocXml.indexOf('</w:p>', _eiBeIdx) + 6;
           _eiDocXml = _eiDocXml.substring(0, _eiPStart) + _eiBizXml + _eiDocXml.substring(_eiPEnd);
         }
