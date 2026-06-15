@@ -2807,59 +2807,84 @@ var _eaIndiaMonthYear = (function(){var m=['January','February','March','April',
 var eaIndiaPrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate source below and extract ALL information into a structured JSON object for the Global Candidate Profile — EA India template.
 
 ABSOLUTE RULES:
-- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
+- Return ONLY raw JSON. No markdown, no code blocks, no backticks, no commentary.
 - CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
-- Copy all text VERBATIM — never summarise, rephrase, or add content not in the source.
-- Extract EVERY work history entry WITHOUT EXCEPTION.
+- Copy ALL text VERBATIM — never summarise, rephrase, shorten or add anything not in the source.
+- Extract EVERY work history entry WITHOUT EXCEPTION — no matter how old or brief.
 
 FIELD-BY-FIELD INSTRUCTIONS:
 
-CANDIDATE_NAME: Full name exactly as written.
-CURRENT_EMPLOYER: Most recent employer name only.
-CLIENT_COMPANY: Always empty string "".
-SEARCH_TITLE: Always empty string "".
-PROFILE_MONTH: Today's month and year: "` + _eaIndiaMonthYear + `". Always use this value.
+CANDIDATE_NAME: Full name exactly as written in the CV.
+CURRENT_EMPLOYER: Most recent employer name only (no job title, no dates).
+CLIENT_COMPANY: Always "".
+SEARCH_TITLE: Always "".
+PROFILE_MONTH: "` + _eaIndiaMonthYear + `". Always use this exact value.
 
-SUMMARY_INTRO: Copy the candidate's opening personal profile / executive summary paragraph VERBATIM — word for word, no changes. This is the short paragraph at the top of their CV. If it does not exist, leave empty.
+SUMMARY_INTRO: Copy the candidate's opening personal profile / executive summary VERBATIM — every word, no changes. This is the paragraph(s) at the top of the CV describing who they are. If multiple paragraphs, join with \n. Do NOT include bullet points or skills lists — prose only. Leave "" if no summary exists.
 
-KEY_SKILLS: Extract the candidate's key skills or competencies list. Join as a single comma-separated string (e.g. "Leadership, Financial Advice, Investment Management, Creating & Driving Transformation Strategy"). If listed as bullets, join them with ", ".
+KEY_SKILLS: Extract ALL the candidate's skills, competencies and areas of expertise. Join every item as a single comma-separated string (e.g. "Leadership, M&A, Payments, FCA Regulatory Engagement"). Include items from ALL skills sections regardless of their heading (Experience, Legal Risk & Regulatory Expertise, Key Skills, Core Competencies, etc). Leave "" if no skills section exists.
 
-EXEC_OVERVIEW_BULLET_1 through EXEC_OVERVIEW_BULLET_6: Extract the Executive Overview / Professional Profile bullet points VERBATIM. Each bullet = one field. If there are fewer than 6 bullets, leave unused fields as "". If there is no Executive Overview section, leave all 6 as "".
+EXEC_OVERVIEW_BULLET_1 through EXEC_OVERVIEW_BULLET_6:
+Extract up to 6 bullet points from the Executive Overview / Core Strengths / Professional Profile bullet list — the bullets that appear directly under the opening summary paragraphs — VERBATIM. One bullet per field. Leave unused fields as "". Leave all as "" if no such bullet section exists.
+IMPORTANT: Do NOT put skills list items here. These must be prose capability statements (e.g. "Leading through change, scaling, transformation..."). If the CV has no separate bullet list under the summary, leave all 6 as "".
 
-COMPANIES ARRAY — CRITICAL RULES:
-- Group ALL roles held at the same company under ONE company entry.
-- Each role is a separate object in the roles array.
-- company.name: Full legal company name — use IDENTICAL string for all roles at same company.
-- company.location: City, Country (leave empty if not stated).
-- company.dates: Overall tenure at company (e.g. "Mar 2019 – Present"). ALWAYS include month — never year-only. Most recent company first.
-- company.description: If the CV has an italic or introductory paragraph describing the company (e.g. "InfraRed is a mid-market infrastructure investment manager..."), capture it VERBATIM here. Leave "" if none.
-- role.role: Exact job title as written in CV.
-- role.role_dates: Dates for THIS specific role only (e.g. "Jul 2021 – Jul 2023"). Leave "" if the company has only ONE role (dates already shown in company header).
-- role.bullets: ALL bullet points written directly under THAT specific role, VERBATIM. NEVER mix bullets from different roles. Every single bullet must be captured — no limit, no skipping.
-- Most recent company first. Most recent role first within each company.
+COMPANIES ARRAY — READ EVERY RULE:
 
-EDUCATION:
-- EDU_1_YEAR: Year of most recent degree (e.g. "2018").
-- EDU_1_INSTITUTION: Full institution name of most recent degree.
-- EDU_1_DEGREE: Degree name of most recent degree.
-- EDU_1_EXTRA: Any additional detail line VERBATIM (e.g. "ERASMUS year at La Sorbonne, Paris IV"). Leave "" if none.
-- EDU_2_YEAR, EDU_2_INSTITUTION, EDU_2_DEGREE, EDU_2_EXTRA: Second education entry if present (e.g. undergraduate degree). Same rules. Leave all as "" if only one education entry.
-- Most recent first.
+Rule 1 — Group by company: ALL roles at the same company go under ONE company entry with multiple objects in the roles[] array.
+
+Rule 2 — company.name: Full company name exactly as written. Use IDENTICAL string for every role at the same company.
+
+Rule 3 — company.location: City and/or Country if stated. Leave "" if not given.
+
+Rule 4 — company.dates: The candidate's OVERALL tenure at that company. ALWAYS include month using 3-letter abbreviation (Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec). Format: "Mar 2019 – Present" or "Jan 2015 – Dec 2018". NEVER year-only. NEVER full month names. If CV shows dates as MM/YY (e.g. 09/23) convert to "Sep 2023".
+
+Rule 5 — company.description: If the CV has a short sentence or paragraph describing what the company does — typically in italics or parentheses directly under the company name — copy it VERBATIM here. This describes the company, NOT the candidate's responsibilities. Example: "An AU$2bn ASX-listed payment services & mortgage services settlement platform." Leave "" if none.
+
+Rule 6 — role.role: Exact job title as written in the CV. Nothing added or removed.
+
+Rule 7 — role.role_dates: REQUIRED when the company has 2 or more roles. Same 3-letter month format. Leave "" ONLY if this company has exactly ONE role.
+
+Rule 8 — role.bullets — CRITICAL:
+THIS CV STRUCTURE HAS NO PER-ROLE BULLETS IN THE WORK HISTORY SECTION.
+If the work history section lists companies and roles WITHOUT bullet points written directly under each role, then EVERY role's bullets array must be EMPTY: [].
+Do NOT invent bullets. Do NOT move content from other sections into bullets.
+Only populate bullets[] if the CV explicitly writes bullet points or numbered achievements DIRECTLY under that specific role title in the work history section.
+
+Rule 9 — Thematic achievement sections (e.g. "Executive Experience", "Leadership & Management", "Strategic", "Operational", "International"):
+These sections appear AFTER all job entries and summarise achievements by theme — NOT by company. They must NOT be placed in any company's bullets[]. Leave all companies' bullets[] as [] and do not extract this content — the template has no field for it.
+
+Rule 10 — Most recent company first. Most recent role first within each company.
+
+EDUCATION — ONLY academic university qualifications:
+Include ONLY: university degrees (MBA, MSc, MA, BSc, BA, LLB, LLM, PhD), Diplomas and Graduate Diplomas awarded by a university or law school.
+DO NOT include: executive programmes, professional certifications, short courses, institute qualifications — even if from a prestigious university like Oxford or Columbia. Those go in QUAL fields.
+
+Examples IN education: MBA (London Business School), Diploma in Legal Practice & Graduate Diploma in Law (University of Law London), BSc (Hons) Computer Science (Cardiff University).
+Examples NOT in education (go in QUAL): Oxford University (Said) – Blockchain & Crypto Strategy Programme, Columbia Business School – Institute of Leadership, Securities & Investment Institute – Islamic Finance.
+
+Pick the 2 MOST RECENT academic qualifications only.
+- EDU_1_YEAR: Graduation year or year range (e.g. "2008" or "2006 – 2008").
+- EDU_1_INSTITUTION: Full institution name.
+- EDU_1_DEGREE: Full degree name exactly as written.
+- EDU_1_EXTRA: Any extra detail line VERBATIM. Leave "" if none.
+- EDU_2_*: Second most recent academic entry. Leave all "" if only one academic qualification.
 
 PROFESSIONAL QUALIFICATIONS — up to 5 entries:
-- QUAL_N_YEAR: Year of qualification (e.g. "2015"). Extract year only.
-- QUAL_N_TEXT: Full qualification name (e.g. "Chartered Fellow of CISI").
-- List from most recent to oldest. Leave unused QUAL fields as "".
-- If qualifications are listed without years, put "" for the year.
+Include ALL professional certifications, chartered qualifications, licences AND executive/short programmes not included in Education.
+- QUAL_N_YEAR: Year completed. Use end year if a range (e.g. "2023" for "Jan 2023 – Mar 2023"). Leave "" if not stated.
+- QUAL_N_TEXT: Full name and awarding body VERBATIM.
+- Most recent first. Leave unused QUAL fields as "".
 
 NATIONALITY: Exact nationality as stated. Leave "" if not found.
-LANGUAGES: Languages with proficiency levels as stated. Leave "" if not found.
+LANGUAGES: Languages and proficiency levels exactly as stated. Leave "" if not found.
 INTERESTS: Interests/hobbies as stated. Leave "" if not found.
 
-VOLUNTEERING ARRAY — extract if present, leave as empty array [] if not:
-- Each entry: {"dates": "Jun 2015 – Dec 2024", "role": "Chair of Investment Committee of St Peter's Hospice", "description": "Brief description verbatim"}
-- Extract up to 3 entries. Most recent first.
-- If no volunteering/charitable work section exists, return "volunteering": [].
+VOLUNTEERING ARRAY:
+Extract volunteering, charitable roles, ambassadorships if a dedicated section exists.
+- dates: Date range ONLY if explicitly stated in CV. Leave "" if no dates given — do NOT guess or infer.
+- role: Organisation name or role title VERBATIM.
+- description: Any descriptive text VERBATIM. Leave "" if none beyond the title.
+Up to 3 entries, most recent first. Return [] if no volunteering section exists.
 
 JSON STRUCTURE — return exactly this schema filled with real data:
 ` + eaIndiaJsonStr + `
