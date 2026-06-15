@@ -1613,6 +1613,13 @@ function buildEaIndiaBizExp(companies) {
   for (var ci = 0; ci < companies.length; ci++) {
     var co = companies[ci];
     if (!co || !co.name) continue;
+      // Company description (italic line)
+      if (co.description) {
+        var DESC_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
+        var DESC_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+        xml += '<w:p>' + DESC_PPR + '<w:r>' + DESC_RPR + '<w:t xml:space="preserve">' + xe(co.description) + '</w:t></w:r></w:p>';
+        xml += SPACER;
+      }
     var roles = co.roles || [];
     var multiRole = roles.length > 1;
 
@@ -2658,7 +2665,7 @@ LANGUAGES: Languages with levels. Leave "" if not found.
 INTERESTS: Interests as stated. Leave "" if not found.
 
 Return this JSON structure:
-{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}
+{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}
 
 CANDIDATE SOURCE:
 
@@ -2704,6 +2711,7 @@ COMPANIES ARRAY — CRITICAL RULES:
 - company.name: Full legal company name — use IDENTICAL string for all roles at same company.
 - company.location: City, Country (leave empty if not stated).
 - company.dates: Overall tenure at company (e.g. "Mar 2019 – Present"). ALWAYS include month — never year-only. Most recent company first.
+- company.description: If the CV has an italic or introductory paragraph describing the company (e.g. "InfraRed is a mid-market infrastructure investment manager..."), capture it VERBATIM here. Leave "" if none.
 - role.role: Exact job title as written in CV.
 - role.role_dates: Dates for THIS specific role only (e.g. "Jul 2021 – Jul 2023"). Leave "" if the company has only ONE role (dates already shown in company header).
 - role.bullets: ALL bullet points written directly under THAT specific role, VERBATIM. NEVER mix bullets from different roles. Every single bullet must be captured — no limit, no skipping.
@@ -2713,7 +2721,7 @@ EDUCATION:
 - EDU_1_YEAR: Year (e.g. "2018") — just the year, no colon.
 - EDU_1_INSTITUTION: Full institution name (e.g. "Said Business School, Oxford").
 - EDU_1_DEGREE: Degree or course name (e.g. "Oxford Fintech Programme").
-- EDU_1_EXTRA: Any additional detail line (e.g. honours, specialisation). Leave "" if none.
+- EDU_1_EXTRA: Any additional detail line VERBATIM (e.g. "ERASMUS year at La Sorbonne, Paris IV", honours, specialisation). If multiple extra lines exist, join with " | ". Leave "" if none.
 - Only extract the PRIMARY degree/education. Leave all EDU fields as "" if no education section found.
 
 PROFESSIONAL QUALIFICATIONS — up to 5 entries:
@@ -5309,21 +5317,6 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 
 
-function renderLogs(logs,tbody,summary){
-  var totalEl=document.getElementById('usageTotalCount');
-  var todayEl=document.getElementById('usageTodayCount');
-  if(totalEl)totalEl.textContent=logs.length;
-  if(todayEl){var today=new Date().toDateString();todayEl.textContent=logs.filter(function(r){return new Date(r.timestamp||r[7]).toDateString()===today;}).length;}
-  if(!logs.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">No usage data yet</td></tr>';return;}
-  var sorted=logs.slice().reverse();
-  tbody.innerHTML=sorted.map(function(r){
-    var user=r.user||r[1]||'',tpl=r.template||r[2]||'',inp=r.inputMethod||r[3]||'',st=r.status||r[4]||'';
-    var ts=r.timestamp||r[7]||'',d=new Date(ts),date=isNaN(d)?ts:d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    var lbl=(typeof TEMPLATES!=='undefined'&&TEMPLATES[tpl])?TEMPLATES[tpl].label:tpl;
-    return '<tr><td>'+user+'</td><td style="font-size:11px">'+lbl+'</td><td>'+inp+'</td><td class="status-'+st+'">'+st+'</td><td>'+date+'</td></tr>';
-  }).join('');
-  if(summary){var c={};logs.forEach(function(r){var n=r.user||r[1]||'Unknown';c[n]=(c[n]||0)+1;});summary.innerHTML=Object.keys(c).sort(function(a,b){return c[b]-c[a];}).map(function(n){return'<span style="background:rgba(255,255,255,.15);border-radius:12px;padding:3px 10px;font-size:11px;"><b>'+n+'</b> '+c[n]+'</span>';}).join('');}
-}
 function exportUsageLogs(){
   // Try server CSV, fall back to localStorage
   fetch('/api/proxy/logs/csv').then(function(r){
@@ -5582,7 +5575,7 @@ function loadUsageLogs(){
   var summary=document.getElementById('usageSummary');
   if(!tbody)return;
   tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>';
-  fetch('/api/proxy/logs').then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
+  fetch('/api/proxy/logs?nocache='+Date.now()+'&r='+Math.random(),{cache:'no-store',headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}}).then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
   .then(function(logs){renderLogs(logs,tbody,summary);})
   .catch(function(){
     try{var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');renderLogs(logs,tbody,summary);}
@@ -5607,29 +5600,10 @@ function renderLogs(logs,tbody,summary){
 
   // Stats
   var now = new Date();
-  var today = new Date().toDateString();
-  var todayCount = dedup(norm.filter(function(r){ var d=new Date(r.timestamp); return !isNaN(d) && d.toDateString()===today; })).length;
-  // Deduplicate: merge started+success entries within 60s same user+template
-  function dedup(entries) {
-    var seen = {};
-    var result = [];
-    var sorted = entries.slice().sort(function(a,b){ return new Date(a.timestamp)-new Date(b.timestamp); });
-    sorted.forEach(function(r) {
-      var key = (r.user||'') + '|' + (r.template||'');
-      var ts = new Date(r.timestamp).getTime();
-      if (!seen[key] || (ts - seen[key].ts) > 300000) {
-        seen[key] = { ts: ts, entry: r };
-        result.push(seen[key]);
-      } else if (r.status === 'success' || r.status === 'failed') {
-        seen[key].entry = r;
-      }
-    });
-    return result.map(function(x){ return x.entry; });
-  }
-  var dedupAll = dedup(norm);
-  var thisMonth = dedup(norm.filter(function(r){
-    var d = new Date(r.timestamp); return !isNaN(d) && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
-  }));
+  var today = new Date().toISOString().substring(0,10);
+  var todayCount = norm.filter(function(r){ var d=r.timestamp ? r.timestamp.substring(0,10) : ''; return d === today; }).length;
+  var dedupAll = norm;
+  var thisMonth = norm.filter(function(r){ var d=new Date(r.timestamp); return !isNaN(d) && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); });
 
   // Cost estimate: ~$0.015 per generation
   var COST_PER_GEN = 0.015;
@@ -5637,7 +5611,7 @@ function renderLogs(logs,tbody,summary){
   var costAll   = (dedupAll.length * COST_PER_GEN).toFixed(2);
 
   if(totalEl) totalEl.textContent = norm.length;
-  if(todayEl) todayEl.textContent = thisMonth.length;
+  if(todayEl) todayEl.textContent = todayCount;
 
   // Render stat cards in summary area
   if(summary){
