@@ -2788,10 +2788,12 @@ SUMMARY: Extract the candidate's opening prose paragraphs VERBATIM. Separate eac
 SUMMARY_BULLETS: Extract the candidate's "Core Leadership Strengths" / "Key Skills" / "Core Competencies" section. Return as a pipe-separated string of items exactly as written e.g. "Investment Platform Strategy & Execution | Private Equity & Public Markets Technology | Deal Lifecycle & Portfolio Analytics Systems". If no such section exists, leave "".
 
 COMPANIES ARRAY:
-- company.name: Company name only (no location).
-- company.dates: ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Jan 2016 – Present". Never use full month names or "Sept".
-- role.role: Exact job title.
-- role.role_dates: Dates for this role only. Leave "" if company has ONE role.
+CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same company (even in different locations or different time periods), ALL those roles must go under ONE company entry. Judge by company name only — ignore location differences. For example, if the CV lists "Barclays Bank | London" and "Barclays Bank | London / India" and "Barclays Bank | London" as separate entries — these are ALL the same company "Barclays Bank" and must be grouped into one entry with multiple roles.
+- company.name: Company name only — no location, no punctuation added.
+- company.dates: The OVERALL tenure across ALL roles at this company — earliest start date to latest end date. ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Dec 2005 – Oct 2025". Never use full month names or "Sept".
+- company.location: City/Country of the company headquarters or primary location. Leave "" if not stated.
+- role.role: Exact job title. If that specific role was in a different location, append it after a comma e.g. "Programme Manager — Group Risk, London / India".
+- role.role_dates: Dates for this role only. REQUIRED when company has 2 or more roles. Leave "" only if company has exactly ONE role.
 - role.bullets: Capture ALL content under the role VERBATIM and in order. CRITICAL — if the CV has sub-headings within a role (e.g. "Key Achievements & Responsibilities", "Operational Risk Management", "Business Continuity & Operational Resilience" etc.), include them as bullet items with ">>" prefix so they are identifiable as headings. E.g. if CV has:
   Key Achievements & Responsibilities
     • Bullet one
@@ -3933,7 +3935,7 @@ async function downloadHistory(index) {
               function _xe2(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
               var _B = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
               var _N = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-              var _PP = '<w:pPr><w:pStyle w:val="SHText"/></w:pPr>';
+              var _PP = '<w:pPr><w:pStyle w:val="SHText"/><w:jc w:val="both"/></w:pPr>';
               var _eduXml = ''; var _lastInst = '';
               _edu.forEach(function(e){
                 if (!e.institution && !e.degree) return;
