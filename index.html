@@ -523,7 +523,7 @@ table.usage tr:last-child td{border-bottom:none;}
   <!-- old usage card hidden -->
   <div class="card">
     <div class="card-title"><div class="step-dot">&#128202;</div> Usage by User</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;"></div><div style="display:flex;gap:8px;"><button onclick="loadUsageLogs()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x21BA; Refresh</button><button onclick="exportUsageLogs()" style="background:#C9A227;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">&#x2193; Export CSV</button><button onclick="clearUsageLogs()" style="background:rgba(220,38,38,.7);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x1F5D1; Clear Local</button></div></div><table class="usage"><thead><tr><th>User</th><th>Template</th><th>Input</th><th>Status</th><th>Date &amp; Time</th></tr></thead><tbody id="usageLogBody">
+    <div id="logStorageStatus" style="margin-bottom:8px;padding:6px 12px;background:rgba(0,0,0,.2);border-radius:6px;"></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;"></div><div style="display:flex;gap:8px;"><button onclick="loadUsageLogs()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x21BA; Refresh</button><button onclick="exportUsageLogs()" style="background:#C9A227;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">&#x2193; Export CSV</button><button onclick="clearUsageLogs()" style="background:rgba(220,38,38,.7);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x1F5D1; Clear Local</button></div></div><table class="usage"><thead><tr><th>User</th><th>Template</th><th>Input</th><th>Status</th><th>Date &amp; Time</th></tr></thead><tbody id="usageLogBody">
         <tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>
       </tbody>
     </table>
@@ -5854,10 +5854,16 @@ async function initUserName() {
     document.getElementById('userName').textContent = n;
   }
 }
-function saveUserName(){var inp=document.getElementById('namePromptInput');var name=inp.value.trim();if(!name){inp.style.border='1.5px solid #e74c3c';return;}localStorage.setItem('sh_userName',name);document.getElementById('userName').textContent=name;document.getElementById('namePromptOverlay').style.display='none';notify('Welcome, '+name+'!');}
+function saveUserName(){var inp=document.getElementById('namePromptInput');var name=inp.value.trim();if(!name||name.length<2){inp.style.border='1.5px solid #e74c3c';inp.placeholder='Please enter your name to continue';return;}localStorage.setItem('sh_userName',name);document.getElementById('userName').textContent=name;document.getElementById('namePromptOverlay').style.display='none';notify('Welcome, '+name+'!');}
 function logUsage(template,inputMethod,status){
   try {
-    var name = localStorage.getItem('sh_userName')||'Unknown';
+    var name = localStorage.getItem('sh_userName')||'';
+    if (!name || name === 'Unknown') {
+      // Force name capture before logging
+      document.getElementById('namePromptOverlay').style.display = 'flex';
+      document.getElementById('namePromptInput').focus();
+      name = 'Unknown';
+    }
     var logs = JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');
     var entry = {id:Date.now(),user:name,template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()};
     logs.push(entry);
@@ -5871,6 +5877,17 @@ function loadUsageLogs(){
   var summary=document.getElementById('usageSummary');
   if(!tbody)return;
   tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>';
+  // Check storage backend status
+  fetch('/api/proxy/logs/status').then(function(r){return r.json();}).then(function(s){
+    var statusEl=document.getElementById('logStorageStatus');
+    if(statusEl){
+      if(s.backend==='azure-table'){
+        statusEl.innerHTML='<span style="color:#22c55e;font-size:12px;">&#x2714; Azure Table Storage — logs persist permanently</span>';
+      } else {
+        statusEl.innerHTML='<span style="color:#ef4444;font-size:12px;">&#x26A0; In-memory fallback only — logs lost on restart. Ask Michika to set AZURE_STORAGE_CONNECTION_STRING on the server.</span>';
+      }
+    }
+  }).catch(function(){});
   fetch('/api/proxy/logs?nocache='+Date.now()+'&r='+Math.random(),{cache:'no-store',headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}}).then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
   .then(function(logs){renderLogs(logs,tbody,summary);})
   .catch(function(){
