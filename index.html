@@ -2912,11 +2912,16 @@ DO NOT include: executive programmes, professional certifications, short courses
 Examples IN education: MBA (London Business School), Diploma in Legal Practice & Graduate Diploma in Law (University of Law London), BSc (Hons) Computer Science (Cardiff University).
 Examples NOT in education (go in QUAL): Oxford University (Said) – Blockchain & Crypto Strategy Programme, Columbia Business School – Institute of Leadership, Securities & Investment Institute – Islamic Finance.
 
-Extract ALL academic qualifications. Fill EDU_1 (most recent), EDU_2 (second), EDU_3 (third) in order.
-- EDU_N_YEAR: ALWAYS include month if given in CV. Use format "Mon YYYY – Mon YYYY" or "Mon YYYY" (e.g. "Sep 2006 – Jul 2008", "Sep 1991 – Jul 1994"). If CV gives MM/YYYY convert to Mon YYYY (e.g. 09/06 → Sep 2006). If CV gives only a year (e.g. "2008") use just the year. Never invent months not in the CV.
-- EDU_N_INSTITUTION: Full institution name exactly as written.
-- EDU_N_DEGREE: Full degree name exactly as written.
-- EDU_N_EXTRA: Any extra detail line VERBATIM. Leave "" if none.
+Extract ALL academic qualifications. Each degree = its own EDU entry. EDU_1 = most recent, EDU_2 = second, EDU_3 = third.
+CRITICAL: Each EDU entry is ONE qualification from ONE institution. Never combine two qualifications into one entry.
+For this CV the correct mapping is:
+- EDU_1: MBA — London Business School — Sep 2006 – Jul 2008
+- EDU_2: Diploma in Legal Practice & Graduate Diploma in Law — University of Law, London — Sep 1994 – Jul 1996
+- EDU_3: BSc (Hons) Computer Science (mathematical bias) — Cardiff University — Sep 1991 – Jul 1994
+- EDU_N_YEAR: Include months if given. Format "Mon YYYY – Mon YYYY" (e.g. "Sep 2006 – Jul 2008"). Convert MM/YYYY to Mon YYYY.
+- EDU_N_INSTITUTION: Institution name only.
+- EDU_N_DEGREE: Degree name only — do NOT include institution name here.
+- EDU_N_EXTRA: Only use for additional detail about THAT SAME degree (e.g. honours, specialisation). Leave "" if none. NEVER put a different qualification here.
 Leave EDU_3_* as "" if fewer than 3 academic qualifications.
 
 PROFESSIONAL QUALIFICATIONS — up to 5 entries:
