@@ -2767,6 +2767,7 @@ var isEaIndia = (tpl === 'ea-india-profile');
 var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
@@ -2819,7 +2820,7 @@ LANGUAGES: Languages with levels. Leave "" if not found.
 INTERESTS: Interests as stated. Leave "" if not found.
 
 Return this JSON structure:
-{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}
+` + eaIndiaV2JsonStr + `
 
 CANDIDATE SOURCE:
 
@@ -3065,16 +3066,7 @@ CANDIDATE SOURCE:
 
 ` + inputText;
 
-var prompt = isApacEy
-  ? apacEyPrompt
-  : isEaIndiaV2
-  ? eaIndiaV2Prompt
-  : isChangeCons
-  ? changeConsPrompt
-  : isEaIndia
-  ? eaIndiaPrompt
-  : isCareerSummary
-  ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
+var csPrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
 - Return ONLY raw JSON. No markdown, no code blocks, no commentary.
@@ -3137,7 +3129,18 @@ FIELD INSTRUCTIONS FOR PERSONAL DETAILS:
 
 CANDIDATE SOURCE:
 
-` + inputText
+` + inputText;
+
+var prompt = isApacEy
+  ? apacEyPrompt
+  : isEaIndiaV2
+  ? eaIndiaV2Prompt
+  : isChangeCons
+  ? changeConsPrompt
+  : isEaIndia
+  ? eaIndiaPrompt
+  : isCareerSummary
+  ? csPrompt
 : isApac
   ? isApacUpdated
     ? `You are a document-filling assistant for Sheffield Haworth. Your task is to read the candidate CV below and extract ALL information into a structured JSON object for the APAC Candidate Profile (Updated) template.
