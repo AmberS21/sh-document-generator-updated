@@ -3943,7 +3943,7 @@ async function downloadHistory(index) {
                 var _same = (e.institution||'').trim() === _lastInst;
                 if (!_same) {
                   _eduXml += '<w:p>'+_PP+'<w:r>'+_B+'<w:t xml:space="preserve">'+ _xe2(e.years||'')+':</w:t></w:r><w:r><w:tab/></w:r><w:r>'+_B+'<w:t xml:space="preserve">'+_xe2(e.institution||'')+'</w:t></w:r></w:p>';
-                  _eduXml += '<w:p>'+_PP+'<w:r>'+_N+'<w:t xml:space="preserve">'+_xe2(e.degree||'')+'</w:t></w:r></w:p>';
+                  _eduXml += '<w:p>'+_PP+'<w:r><w:tab/></w:r><w:r>'+_N+'<w:t xml:space="preserve">'+_xe2(e.degree||'')+'</w:t></w:r></w:p>';
                   _lastInst = (e.institution||'').trim();
                 } else {
                   _eduXml += '<w:p>'+_PP+'<w:r>'+_B+'<w:t xml:space="preserve">'+_xe2(e.years||'')+':</w:t></w:r><w:r><w:tab/></w:r><w:r>'+_N+'<w:t xml:space="preserve">'+_xe2(e.degree||'')+'</w:t></w:r></w:p>';
