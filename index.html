@@ -2567,7 +2567,7 @@ async function generate() {
                 }
                 var pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
                 var txt='';
-                for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var vp=page.getViewport({scale:1});var pgW=vp.width;var tc=await page.getTextContent();var _rows={};for(var ii=0;ii<tc.items.length;ii++){var it=tc.items[ii];var ix=it.transform[4];var iy=Math.round(it.transform[5]/3)*3;if(ix>pgW*0.72)continue;if(!_rows[iy])_rows[iy]=[];_rows[iy].push({x:ix,str:it.str});}var pgTxt='';Object.keys(_rows).map(Number).sort(function(a,b){return b-a;}).forEach(function(yk){var row=_rows[yk].sort(function(a,b){return a.x-b.x;});var line=row.map(function(r){return r.str;}).join(' ').trim();if(line)pgTxt+=line+'\n';});txt+=pgTxt+'\n';}
+                for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();txt+=tc.items.map(function(s){return s.str;}).join(' ')+'\n';}
                 var extracted = txt.trim();
                 if (!extracted || extracted.length < 50) {
                   throw new Error('This PDF appears to be image-based (scanned). PDF.js cannot extract text from image PDFs.\n\nPlease either:\n• Copy and paste the CV text directly using the Paste Text tab\n• Convert the PDF to a text-based PDF first\n• Use a Word (.docx) version of the CV');
@@ -2845,14 +2845,6 @@ ABSOLUTE RULES:
 - Copy ALL text VERBATIM — never summarise, rephrase, shorten or add anything not in the source.
 - Extract EVERY work history entry WITHOUT EXCEPTION — no matter how old or brief.
 
-PDF LAYOUT NOTE — READ FIRST:
-The source text may come from a multi-column PDF. This means company names, roles, descriptions and dates may appear scrambled or out of order on the same line. To find the company description:
-- Look for a sentence that describes what the COMPANY does (not what the candidate did) anywhere near the company name — on the same line, the line before, or within 3 lines after.
-- These descriptions typically start with: "A/An...", "The...", "One of...", "A global...", "A UK..." followed by what the company is.
-- Examples of what a company description looks like: "An AU$2bn ASX-listed payment services & mortgage services settlement platform", "The UK's largest FTSE-listed commercial media organisation", "A global fund manager with US$150bn AUM", "A US investment bank offering M&A advisory"
-- ALWAYS extract this text into company.description — it is almost always present for financial services CVs.
-- Do NOT confuse skills lists, bullet points, or candidate achievements with company descriptions.
-
 FIELD-BY-FIELD INSTRUCTIONS:
 
 CANDIDATE_NAME: Full name exactly as written in the CV.
@@ -2897,23 +2889,11 @@ Rule 3 — company.location: City and/or Country if stated. Leave "" if not give
 
 Rule 4 — company.dates: The candidate's OVERALL tenure at that company. ALWAYS include month using 3-letter abbreviation (Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec). Format: "Mar 2019 – Present" or "Jan 2015 – Dec 2018". NEVER year-only. NEVER full month names. If CV shows dates as MM/YY (e.g. 09/23) convert to "Sep 2023".
 
-Rule 5 — company.description: EVERY company entry in this CV has a company description. Find and copy it VERBATIM.
-The description is a sentence about what the COMPANY is — not what the candidate did. It always describes the organisation: its size, sector, or type.
-Pattern: starts with "A/An...", "The...", or "One of..." and describes the company type/size.
-This CV's format: descriptions appear in the RIGHT column of a table next to the company name. Due to PDF extraction they may appear on the same line as the company name, immediately before it, or immediately after it — scan all nearby text.
-Specific descriptions to find for this CV:
-- PEXA UK → "An AU$2bn ASX-listed payment services & mortgage services settlement platform"
-- Reach plc → "The UK's largest FTSE-listed commercial media organisation"
-- Octopus Investments → "A disruptive corporate private and plc group offering banking fund/wealth management, VC & energy services"
-- Jetstone Asset Management → "A multi-strategy boutique hedge fund with US$8bn AUM (maternity cover – 12 months)"
-- First Sentier / CBA → "A global fund manager with US$150bn AUM, then part of Australia's largest retail ASX listed bank"
-- Jefferies → "A US investment bank offering M&A advisory, multi asset class sales and trading products/markets and asset management"
-- Landsbanki → "One of Europe's largest challenger banks offering full retail banking fund/asset management and Private Equity fund services"
-- EuroMTS → "One of Europe's leading electronic fixed-income trading platforms with average market daily volumes exceeding €130 billion"
-- Mitsubishi → "The capital markets, derivatives, and finance arm of the Mitsubishi Corporation, one of Japan's largest conglomerates"
-- Fieldfisher → "Fieldfisher is a Top 20 European full-service law firm"
-Leave "" ONLY if the source text genuinely contains no company description at all.
-
+Rule 5 — company.description: In the source text, immediately after each company name and role title you will see a short sentence describing what the company is. Copy it VERBATIM into this field.
+It describes the company itself — its size, sector, type. It is NOT what the candidate did.
+It typically starts with "A/An...", "The...", or "One of..." — e.g. "An AU$2bn ASX-listed payment services & mortgage services settlement platform", "The UK's largest FTSE-listed commercial media organisation", "A global fund manager with US$150bn AUM".
+The source text for this CV reads: company name + role, then immediately the description on the same line or next line. Always extract it.
+Leave "" only if there is genuinely no such sentence near the company entry.
 Rule 6 — role.role: Exact job title as written in the CV. Nothing added or removed.
 
 Rule 7 — role.role_dates: REQUIRED when the company has 2 or more roles. Same 3-letter month format. Leave "" ONLY if this company has exactly ONE role.
