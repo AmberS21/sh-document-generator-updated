@@ -2567,7 +2567,7 @@ async function generate() {
                 }
                 var pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
                 var txt='';
-                for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();txt+=tc.items.map(function(s){return s.str;}).join('\n')+'\n';}
+                for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();var pgTxt='';var lastY=null;for(var ii=0;ii<tc.items.length;ii++){var it=tc.items[ii];if(lastY!==null&&Math.abs(it.transform[5]-lastY)>5){pgTxt+='\n';}else if(pgTxt.length>0&&!pgTxt.endsWith(' ')&&!pgTxt.endsWith('\n')){pgTxt+=' ';}pgTxt+=it.str;lastY=it.transform[5];}txt+=pgTxt+'\n\n';}
                 var extracted = txt.trim();
                 if (!extracted || extracted.length < 50) {
                   throw new Error('This PDF appears to be image-based (scanned). PDF.js cannot extract text from image PDFs.\n\nPlease either:\n• Copy and paste the CV text directly using the Paste Text tab\n• Convert the PDF to a text-based PDF first\n• Use a Word (.docx) version of the CV');
