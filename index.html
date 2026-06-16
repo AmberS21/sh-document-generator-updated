@@ -523,7 +523,7 @@ table.usage tr:last-child td{border-bottom:none;}
   <!-- old usage card hidden -->
   <div class="card">
     <div class="card-title"><div class="step-dot">&#128202;</div> Usage by User</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;"></div><div style="display:flex;gap:8px;"><button onclick="loadUsageLogs()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x21BA; Refresh</button><button onclick="exportUsageLogs()" style="background:#C9A227;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">&#x2193; Export CSV</button><button onclick="clearUsageLogs()" style="background:rgba(220,38,38,.7);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x1F5D1; Clear Local</button></div></div><table class="usage"><thead><tr><th>User</th><th>Template</th><th>Input</th><th>Status</th><th>Date &amp; Time</th></tr></thead><tbody id="usageLogBody">
+    <div id="logStorageStatus" style="margin-bottom:8px;padding:6px 12px;background:rgba(0,0,0,.2);border-radius:6px;"></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;"></div><div style="display:flex;gap:8px;"><button onclick="loadUsageLogs()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x21BA; Refresh</button><button onclick="exportUsageLogs()" style="background:#C9A227;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">&#x2193; Export CSV</button><button onclick="clearUsageLogs()" style="background:rgba(220,38,38,.7);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x1F5D1; Clear Local</button></div></div><table class="usage"><thead><tr><th>User</th><th>Template</th><th>Input</th><th>Status</th><th>Date &amp; Time</th></tr></thead><tbody id="usageLogBody">
         <tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>
       </tbody>
     </table>
@@ -2767,6 +2767,7 @@ var isEaIndia = (tpl === 'ea-india-profile');
 var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","ADDITIONAL_INFO":"","INTERESTS":""}';
 var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
@@ -2787,10 +2788,12 @@ SUMMARY: Extract the candidate's opening prose paragraphs VERBATIM. Separate eac
 SUMMARY_BULLETS: Extract the candidate's "Core Leadership Strengths" / "Key Skills" / "Core Competencies" section. Return as a pipe-separated string of items exactly as written e.g. "Investment Platform Strategy & Execution | Private Equity & Public Markets Technology | Deal Lifecycle & Portfolio Analytics Systems". If no such section exists, leave "".
 
 COMPANIES ARRAY:
-- company.name: Company name only (no location).
-- company.dates: ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Jan 2016 – Present". Never use full month names or "Sept".
-- role.role: Exact job title.
-- role.role_dates: Dates for this role only. Leave "" if company has ONE role.
+CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same company (even in different locations or different time periods), ALL those roles must go under ONE company entry. Judge by company name only — ignore location differences. For example, if the CV lists "Barclays Bank | London" and "Barclays Bank | London / India" and "Barclays Bank | London" as separate entries — these are ALL the same company "Barclays Bank" and must be grouped into one entry with multiple roles.
+- company.name: Company name only — no location, no punctuation added.
+- company.dates: The OVERALL tenure across ALL roles at this company — earliest start date to latest end date. ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Dec 2005 – Oct 2025". Never use full month names or "Sept".
+- company.location: City/Country of the company headquarters or primary location. Leave "" if not stated.
+- role.role: Exact job title. If that specific role was in a different location, append it after a comma e.g. "Programme Manager — Group Risk, London / India".
+- role.role_dates: Dates for this role only. REQUIRED when company has 2 or more roles. Leave "" only if company has exactly ONE role.
 - role.bullets: Capture ALL content under the role VERBATIM and in order. CRITICAL — if the CV has sub-headings within a role (e.g. "Key Achievements & Responsibilities", "Operational Risk Management", "Business Continuity & Operational Resilience" etc.), include them as bullet items with ">>" prefix so they are identifiable as headings. E.g. if CV has:
   Key Achievements & Responsibilities
     • Bullet one
@@ -2816,10 +2819,11 @@ PROFESSIONAL_QUALS: Extract ONLY professional qualifications and certifications 
 TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single string exactly as written in the CV. Leave "" if none.
 NATIONALITY: Exact nationality. Leave "" if not found.
 LANGUAGES: Languages with levels. Leave "" if not found.
-INTERESTS: Interests as stated. Leave "" if not found.
+ADDITIONAL_INFO: Extract the candidate's leadership character, values, cultural approach, and working style — typically found in a section labelled "Leadership Character" or similar. This is prose about HOW the candidate leads and works (e.g. "Known for collaborative, resilient leadership that builds trust. Committed to developing others..."). Leave "" if not found.
+INTERESTS: Extract ONLY outside-work hobbies, sports, personal interests — found after phrases like "Outside work:" or "Hobbies:" (e.g. "family, sports and ad-hoc challenges - New York Marathon..."). Do NOT put leadership character text here. Leave "" if not found.
 
 Return this JSON structure:
-{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}
+` + eaIndiaV2JsonStr + `
 
 CANDIDATE SOURCE:
 
@@ -3065,16 +3069,7 @@ CANDIDATE SOURCE:
 
 ` + inputText;
 
-var prompt = isApacEy
-  ? apacEyPrompt
-  : isEaIndiaV2
-  ? eaIndiaV2Prompt
-  : isChangeCons
-  ? changeConsPrompt
-  : isEaIndia
-  ? eaIndiaPrompt
-  : isCareerSummary
-  ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
+var csPrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
 - Return ONLY raw JSON. No markdown, no code blocks, no commentary.
@@ -3085,7 +3080,18 @@ ABSOLUTE RULES:
 - Copy ALL bullet points VERBATIM — word for word, no changes.
 
 COMPANIES ARRAY RULES:
-- Group ALL roles held at the same company under ONE company entry.
+GROUPING RULE — READ CAREFULLY:
+Only group consecutive roles at the same company into one entry. If a candidate worked at Company A, then Company B, then Company A again — these are THREE separate entries (two for Company A, one for Company B), NOT two entries. The key is whether the roles are CONSECUTIVE with no other company in between.
+
+Example of CORRECT grouping:
+- Role 1: Barclays, 2020–Present
+- Role 2: Barclays, 2017–2020
+- Role 3: Barclays, 2014–2017
+- Role 4: Deutsche Bank, 2010–2014
+- Role 5: Barclays, 2005–2010
+→ Creates 3 company entries: Barclays (2017–Present, 3 roles), Deutsche Bank (2010–2014), Barclays (2005–2010)
+NOT 2 entries. The 2005–2010 Barclays stint is SEPARATE because Deutsche Bank breaks the continuity.
+
 - Each role is a separate object in the roles array with its own bullets.
 - role_dates: always fill for EVERY role — e.g. "Mar 2019 – Nov 2025". Only leave "" if the company has exactly ONE role (dates already shown in company header).
 - company.dates: ALWAYS use "Mon YYYY – Mon YYYY" format including month e.g. "Jan 2019 – Present" or "Mar 2018 – Dec 2019". NEVER year-only.
@@ -3116,8 +3122,9 @@ JSON STRUCTURE — return exactly this, filled with real data:
       ]
     }
   ],
-  "EDU_1_START": "", "EDU_1_END": "", "EDU_1_INSTITUTION": "", "EDU_1_LOCATION": "", "EDU_1_DEGREE": "",
-  "EDU_2_START": "", "EDU_2_END": "", "EDU_2_INSTITUTION": "", "EDU_2_LOCATION": "", "EDU_2_DEGREE": "",
+  "EDU_1_START": "", "EDU_1_END": "", "EDU_1_INSTITUTION": "", "EDU_1_LOCATION": "", "EDU_1_DEGREE": "", "EDU_1_EXTRA": "",
+  "EDU_2_START": "", "EDU_2_END": "", "EDU_2_INSTITUTION": "", "EDU_2_LOCATION": "", "EDU_2_DEGREE": "", "EDU_2_EXTRA": "",
+  "EDU_3_START": "", "EDU_3_END": "", "EDU_3_INSTITUTION": "", "EDU_3_LOCATION": "", "EDU_3_DEGREE": "", "EDU_3_EXTRA": "",
   "QUAL_1": "",
   "TECH_SKILLS": "",
   "AFFILIATION_1": "",
@@ -3133,11 +3140,23 @@ FIELD INSTRUCTIONS FOR PERSONAL DETAILS:
 - QUAL_1: Extract ALL professional qualifications, licences, certifications and accreditations as a single string, VERBATIM from the CV. Include in-progress qualifications with their expected dates. Copy the FULL text exactly as written (e.g. "Series 7 complete & 63 in progress (expected 06/2026)"). Do NOT truncate or split.
 - TECH_SKILLS: Extract all technical/software skills as a comma-separated string.
 - AFFILIATION_1: Extract all professional memberships, affiliations and industry groups.
+- EDU fields: Extract ALL academic qualifications. EDU_1 = most recent, EDU_2 = second, EDU_3 = third. Each degree is ONE entry from ONE institution. EDU_N_EXTRA = honours, specialisation, or extra detail for that degree only. Leave EDU_3 fields empty if fewer than 3 academic qualifications.
 - NATIONALITY, LANGUAGES, INTERESTS: Extract exactly as stated; leave empty if not found.
 
 CANDIDATE SOURCE:
 
-` + inputText
+` + inputText;
+
+var prompt = isApacEy
+  ? apacEyPrompt
+  : isEaIndiaV2
+  ? eaIndiaV2Prompt
+  : isChangeCons
+  ? changeConsPrompt
+  : isEaIndia
+  ? eaIndiaPrompt
+  : isCareerSummary
+  ? csPrompt
 : isApac
   ? isApacUpdated
     ? `You are a document-filling assistant for Sheffield Haworth. Your task is to read the candidate CV below and extract ALL information into a structured JSON object for the APAC Candidate Profile (Updated) template.
@@ -3930,14 +3949,14 @@ async function downloadHistory(index) {
               function _xe2(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
               var _B = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
               var _N = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
-              var _PP = '<w:pPr><w:pStyle w:val="SHText"/></w:pPr>';
+              var _PP = '<w:pPr><w:pStyle w:val="SHText"/><w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs><w:jc w:val="both"/></w:pPr>';
               var _eduXml = ''; var _lastInst = '';
               _edu.forEach(function(e){
                 if (!e.institution && !e.degree) return;
                 var _same = (e.institution||'').trim() === _lastInst;
                 if (!_same) {
                   _eduXml += '<w:p>'+_PP+'<w:r>'+_B+'<w:t xml:space="preserve">'+ _xe2(e.years||'')+':</w:t></w:r><w:r><w:tab/></w:r><w:r>'+_B+'<w:t xml:space="preserve">'+_xe2(e.institution||'')+'</w:t></w:r></w:p>';
-                  _eduXml += '<w:p>'+_PP+'<w:r>'+_N+'<w:t xml:space="preserve">'+_xe2(e.degree||'')+'</w:t></w:r></w:p>';
+                  _eduXml += '<w:p>'+_PP+'<w:r><w:tab/></w:r><w:r>'+_N+'<w:t xml:space="preserve">'+_xe2(e.degree||'')+'</w:t></w:r></w:p>';
                   _lastInst = (e.institution||'').trim();
                 } else {
                   _eduXml += '<w:p>'+_PP+'<w:r>'+_B+'<w:t xml:space="preserve">'+_xe2(e.years||'')+':</w:t></w:r><w:r><w:tab/></w:r><w:r>'+_N+'<w:t xml:space="preserve">'+_xe2(e.degree||'')+'</w:t></w:r></w:p>';
@@ -4106,18 +4125,31 @@ async function downloadHistory(index) {
           _csZip.file('word/header4.xml', _csHdr4);
         }
 
-        // Step 3b — Remove EDU_2 rows entirely if no second education entry
+        // Step 3b — Remove EDU_2 rows if no second education entry
         (function() {
           var _cv2 = item.content;
           if (!_cv2.EDU_2_INSTITUTION && !_cv2.EDU_2_START && !_cv2.EDU_2_DEGREE) {
             var _d2 = _csZip.files['word/document.xml'].asText();
-            // Remove all 5 EDU_2 paragraphs by paraId (fixed in template)
             var _edu2Ids = ['3C61EEB2', '140F0114', '1EA90AA6', '560A467D', '633F0E7D'];
             for (var _ei = 0; _ei < _edu2Ids.length; _ei++) {
               var _re2 = new RegExp('<w:p\\s[^>]*w14:paraId="' + _edu2Ids[_ei] + '"[^>]*>[\\s\\S]*?<\/w:p>\\s*');
               _d2 = _d2.replace(_re2, '');
             }
             _csZip.file('word/document.xml', _d2);
+          }
+        })();
+
+        // Step 3c — Remove EDU_3 rows if no third education entry
+        (function() {
+          var _cv3 = item.content;
+          if (!_cv3.EDU_3_INSTITUTION && !_cv3.EDU_3_START && !_cv3.EDU_3_DEGREE) {
+            var _d3 = _csZip.files['word/document.xml'].asText();
+            var _edu3Ids = ['3E300001', '3E300002', '3E300003', '3E300004'];
+            for (var _ei3 = 0; _ei3 < _edu3Ids.length; _ei3++) {
+              var _re3 = new RegExp('<w:p\\s[^>]*w14:paraId="' + _edu3Ids[_ei3] + '"[^>]*>[\\s\\S]*?<\/w:p>\\s*');
+              _d3 = _d3.replace(_re3, '');
+            }
+            _csZip.file('word/document.xml', _d3);
           }
         })();
 
@@ -4686,6 +4718,7 @@ async function downloadHistory(index) {
           QUAL_1:            '',
           NATIONALITY:       _ei2Cv.NATIONALITY || '',
           LANGUAGES:         _ei2Cv.LANGUAGES || '',
+          ADDITIONAL_INFO:   _ei2Cv.ADDITIONAL_INFO || '',
           INTERESTS:         _ei2Cv.INTERESTS || ''
         };
 
@@ -4747,8 +4780,10 @@ async function downloadHistory(index) {
           var _TAB2 = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
           var _PP2 = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB2 + '</w:pPr>';
           var _qualXml = '';
-          _pq.forEach(function(q){
+          var _QSPACER = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
+          _pq.forEach(function(q, qi){
             if (!q.qualification) return;
+            if (qi > 0) { _qualXml += _QSPACER; }
             _qualXml += '<w:p>' + _PP2
               + '<w:r>' + _B2 + '<w:t xml:space="preserve">' + _xq(q.year||'') + ':</w:t></w:r>'
               + '<w:r><w:tab/></w:r>'
@@ -5819,10 +5854,16 @@ async function initUserName() {
     document.getElementById('userName').textContent = n;
   }
 }
-function saveUserName(){var inp=document.getElementById('namePromptInput');var name=inp.value.trim();if(!name){inp.style.border='1.5px solid #e74c3c';return;}localStorage.setItem('sh_userName',name);document.getElementById('userName').textContent=name;document.getElementById('namePromptOverlay').style.display='none';notify('Welcome, '+name+'!');}
+function saveUserName(){var inp=document.getElementById('namePromptInput');var name=inp.value.trim();if(!name||name.length<2){inp.style.border='1.5px solid #e74c3c';inp.placeholder='Please enter your name to continue';return;}localStorage.setItem('sh_userName',name);document.getElementById('userName').textContent=name;document.getElementById('namePromptOverlay').style.display='none';notify('Welcome, '+name+'!');}
 function logUsage(template,inputMethod,status){
   try {
-    var name = localStorage.getItem('sh_userName')||'Unknown';
+    var name = localStorage.getItem('sh_userName')||'';
+    if (!name || name === 'Unknown') {
+      // Force name capture before logging
+      document.getElementById('namePromptOverlay').style.display = 'flex';
+      document.getElementById('namePromptInput').focus();
+      name = 'Unknown';
+    }
     var logs = JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');
     var entry = {id:Date.now(),user:name,template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()};
     logs.push(entry);
@@ -5836,6 +5877,17 @@ function loadUsageLogs(){
   var summary=document.getElementById('usageSummary');
   if(!tbody)return;
   tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>';
+  // Check storage backend status
+  fetch('/api/proxy/logs/status').then(function(r){return r.json();}).then(function(s){
+    var statusEl=document.getElementById('logStorageStatus');
+    if(statusEl){
+      if(s.backend==='azure-table'){
+        statusEl.innerHTML='<span style="color:#22c55e;font-size:12px;">&#x2714; Azure Table Storage — logs persist permanently</span>';
+      } else {
+        statusEl.innerHTML='<span style="color:#ef4444;font-size:12px;">&#x26A0; In-memory fallback only — logs lost on restart. Ask Michika to set AZURE_STORAGE_CONNECTION_STRING on the server.</span>';
+      }
+    }
+  }).catch(function(){});
   fetch('/api/proxy/logs?nocache='+Date.now()+'&r='+Math.random(),{cache:'no-store',headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}}).then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
   .then(function(logs){renderLogs(logs,tbody,summary);})
   .catch(function(){
