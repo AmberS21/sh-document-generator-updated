@@ -1517,7 +1517,7 @@ function buildApacEyBizExp(companies) {
     if (!co || !co.name) continue;
     var roles = co.roles || [];
     var multiRole = roles.length > 1;
-    if (ci > 0) { xml += SPACER; xml += SPACER; }
+    if (ci > 0) { xml += SPACER; }
 
     // Company line: BOLD name, tab, BOLD dates — tab and date in separate run
     var coDates = normDateRange(co.dates || '');
@@ -1525,8 +1525,6 @@ function buildApacEyBizExp(companies) {
         +  '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(co.name) + '</w:t></w:r>'
         +  (coDates ? '<w:r>' + CO_RPR + '<w:tab/></w:r><w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>' : '')
         +  '</w:p>';
-
-    xml += SPACER;
 
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
@@ -1580,6 +1578,15 @@ function buildEaIndiaBizExp(companies) {
   var _MONTHS = {january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec',jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',sept:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
   function normDate(s) {
     if (!s) return '';
+    // Convert MM/YYYY or MM/YY → Mon YYYY (e.g. 09/23 → Sep 2023, 01/2001 → Jan 2001)
+    var _MO_NAMES = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    s = s.replace(/(\d{1,2})\/(\d{2,4})/g, function(m, mo, yr) {
+      var moNum = parseInt(mo, 10);
+      if (moNum < 1 || moNum > 12) return m;
+      var yrNum = parseInt(yr, 10);
+      var fullYr = yr.length === 2 ? (yrNum >= 50 ? 1900 + yrNum : 2000 + yrNum) : yrNum;
+      return _MO_NAMES[moNum] + ' ' + fullYr;
+    });
     s = s.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b/gi, function(m){ return _MONTHS[m.toLowerCase()]||m; });
     s = s.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, function(m, yr, mo){ return mo + ' ' + yr; });
     return s;
@@ -1604,8 +1611,7 @@ function buildEaIndiaBizExp(companies) {
     if (!co || !co.name) continue;
     var roles = co.roles || [];
     var multiRole = roles.length > 1;
-    if (ci > 0) { xml += SPACER; xml += SPACER; }
-    var coDates = normDateRange(co.dates || '');
+    if (ci > 0) { xml += SPACER; }    var coDates = normDateRange(co.dates || '');
     xml += '<w:p>' + CO_PPR
         +  '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(co.name) + (co.location ? ', ' + xe(co.location) : '') + '</w:t></w:r>'
         +  (coDates ? '<w:r>' + CO_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>' : '')
@@ -1628,8 +1634,9 @@ function buildEaIndiaBizExp(companies) {
       } else {
         xml += '<w:p>' + ROL_PPR_P + '<w:r>' + ROL_RPR + '<w:t>' + xe(role.role) + '</w:t></w:r></w:p>';
       }
-      xml += SPACER;
       var bullets = role.bullets || [];
+      var hasBullets = bullets.some(function(b){ return (b||'').trim().length > 0; });
+      if (hasBullets) { xml += SPACER; }
       for (var bi = 0; bi < bullets.length; bi++) {
         var b = (bullets[bi] || '').trim();
         if (!b) continue;
@@ -1647,6 +1654,32 @@ function buildEaIndiaBizExp(companies) {
   }
   return xml;
 }
+
+function buildEaIndiaExecExp(execExp) {
+  // EA India (non-Reg) Executive Experience section builder
+  if (!execExp || execExp.length === 0) return '';
+  var xml = '';
+  function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var BUL_RPR = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/><w:color w:val="2C2E82"/><w:lang w:eastAsia="en-US"/></w:rPr>';
+  var BUL_PPR = '<w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="4"/></w:numPr><w:spacing w:after="0"/><w:jc w:val="both"/>';
+  var HDG_PPR = '<w:pPr><w:spacing w:after="0"/><w:rPr><w:color w:val="002060"/></w:rPr></w:pPr>';
+  var HDG_RPR = '<w:rPr><w:color w:val="002060"/></w:rPr>';
+  var SPACER  = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
+  for (var si = 0; si < execExp.length; si++) {
+    var section = execExp[si];
+    if (!section || !section.section) continue;
+    if (si > 0) { xml += SPACER; }
+    xml += '<w:p>' + HDG_PPR + '<w:r>' + HDG_RPR + '<w:t xml:space="preserve">' + xe(section.section) + '</w:t></w:r></w:p>';
+    var bullets = section.bullets || [];
+    for (var bi = 0; bi < bullets.length; bi++) {
+      var b = (bullets[bi] || '').trim();
+      if (!b) continue;
+      xml += '<w:p><w:pPr>' + BUL_PPR + '</w:pPr><w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(b) + '</w:t></w:r></w:p>';
+    }
+  }
+  return xml;
+}
+
 
 function buildEaIndiaRegBizExp(companies) {
   // EA India (Reg/v2) template business experience builder
@@ -2534,7 +2567,7 @@ async function generate() {
                 }
                 var pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
                 var txt='';
-                for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();txt+=tc.items.map(function(s){return s.str;}).join('\n')+'\n';}
+                for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();txt+=tc.items.map(function(s){return s.str;}).join(' ')+'\n';}
                 var extracted = txt.trim();
                 if (!extracted || extracted.length < 50) {
                   throw new Error('This PDF appears to be image-based (scanned). PDF.js cannot extract text from image PDFs.\n\nPlease either:\n• Copy and paste the CV text directly using the Paste Text tab\n• Convert the PDF to a text-based PDF first\n• Use a Word (.docx) version of the CV');
@@ -2797,9 +2830,9 @@ var isApacDealList = (tpl === 'apac-profile-deal-list');
 if (isApacDealList) { isApac = true; isApacUpdated = true; }
 var isApacV2 = (tpl === 'apac-profile-v2');
 if (isApacV2) { isApac = true; isApacUpdated = true; }
-var apacEyJsonStr = '{"CANDIDATE_NAME":"","CURRENT_TITLE":"","CURRENT_EMPLOYER":"","PROFILE_DATE":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_INSTITUTION":"","EDU_1_START":"","EDU_1_END":"","EDU_1_DEGREE":"","EDU_2_INSTITUTION":"","EDU_2_START":"","EDU_2_END":"","EDU_2_DEGREE":"","EDU_1_BULLETS":"","EDU_2_BULLETS":"","QUAL_1_TEXT":"","QUAL_1_START":"","QUAL_1_END":"","QUAL_1_DETAIL":"","QUAL_2_TEXT":"","QUAL_2_START":"","QUAL_2_END":"","QUAL_2_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","CANDIDATE_SUMMARY":""}';
+var apacEyJsonStr = '{"CANDIDATE_NAME":"","CURRENT_TITLE":"","CURRENT_EMPLOYER":"","PROFILE_DATE":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"executive_experience":[{"section":"","bullets":[""]}],"EDU_1_INSTITUTION":"","EDU_1_START":"","EDU_1_END":"","EDU_1_DEGREE":"","EDU_2_INSTITUTION":"","EDU_2_START":"","EDU_2_END":"","EDU_2_DEGREE":"","EDU_1_BULLETS":"","EDU_2_BULLETS":"","QUAL_1_TEXT":"","QUAL_1_START":"","QUAL_1_END":"","QUAL_1_DETAIL":"","QUAL_2_TEXT":"","QUAL_2_START":"","QUAL_2_END":"","QUAL_2_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","CANDIDATE_SUMMARY":""}';
 var changeConsJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_1_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","INTERESTS_DETAIL":""}';
-var eaIndiaJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY_INTRO":"","KEY_SKILLS":"","EXEC_OVERVIEW_BULLET_1":"","EXEC_OVERVIEW_BULLET_2":"","EXEC_OVERVIEW_BULLET_3":"","EXEC_OVERVIEW_BULLET_4":"","EXEC_OVERVIEW_BULLET_5":"","EXEC_OVERVIEW_BULLET_6":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_YEAR":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_1_EXTRA":"","EDU_2_YEAR":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_2_YEAR":"","QUAL_2_TEXT":"","QUAL_3_YEAR":"","QUAL_3_TEXT":"","QUAL_4_YEAR":"","QUAL_4_TEXT":"","QUAL_5_YEAR":"","QUAL_5_TEXT":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","volunteering":[{"dates":"","role":"","description":""}]}';
+var eaIndiaJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY_INTRO":"","EXP_SKILL_1":"","EXP_SKILL_2":"","EXP_SKILL_3":"","EXP_SKILL_4":"","EXP_SKILL_5":"","EXP_SKILL_6":"","LRR_SKILL_1":"","LRR_SKILL_2":"","LRR_SKILL_3":"","LRR_SKILL_4":"","LRR_SKILL_5":"","LRR_SKILL_6":"","LRR_SKILL_7":"","LRR_SKILL_8":"","LRR_SKILL_9":"","LRR_SKILL_10":"","LRR_SKILL_11":"","KEY_SKILL_1":"","KEY_SKILL_2":"","KEY_SKILL_3":"","KEY_SKILL_4":"","KEY_SKILL_5":"","KEY_SKILL_6":"","KEY_SKILL_7":"","KEY_SKILL_8":"","KEY_SKILL_9":"","KEY_SKILL_10":"","EXEC_OVERVIEW_BULLET_1":"","EXEC_OVERVIEW_BULLET_2":"","EXEC_OVERVIEW_BULLET_3":"","EXEC_OVERVIEW_BULLET_4":"","EXEC_OVERVIEW_BULLET_5":"","EXEC_OVERVIEW_BULLET_6":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_YEAR":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_1_EXTRA":"","EDU_2_YEAR":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","EDU_3_YEAR":"","EDU_3_INSTITUTION":"","EDU_3_DEGREE":"","EDU_3_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_2_YEAR":"","QUAL_2_TEXT":"","QUAL_3_YEAR":"","QUAL_3_TEXT":"","QUAL_4_YEAR":"","QUAL_4_TEXT":"","QUAL_5_YEAR":"","QUAL_5_TEXT":"","AFFIL_1_YEAR":"","AFFIL_1_TEXT":"","AFFIL_2_YEAR":"","AFFIL_2_TEXT":"","AFFIL_3_YEAR":"","AFFIL_3_TEXT":"","AFFIL_4_YEAR":"","AFFIL_4_TEXT":"","AFFIL_5_YEAR":"","AFFIL_5_TEXT":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","volunteering":[{"dates":"","role":"","description":""}]}';
 var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"projects":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_1":"e.g. CPIM | Six Sigma Black Belt — copy FULL string verbatim","QUAL_2":"","QUAL_3":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","PROJECT_1_TITLE":"","PROJECT_1_CLIENT":"","PROJECT_1_DATE":"","PROJECT_1_DESCRIPTION":"","PROJECT_2_TITLE":"","PROJECT_2_CLIENT":"","PROJECT_2_DATE":"","PROJECT_2_DESCRIPTION":"","PROJECT_3_TITLE":"","PROJECT_3_CLIENT":"","PROJECT_3_DATE":"","PROJECT_3_DESCRIPTION":"","PROJECT_4_TITLE":"","PROJECT_4_CLIENT":"","PROJECT_4_DATE":"","PROJECT_4_DESCRIPTION":"","PROJECT_5_TITLE":"","PROJECT_5_CLIENT":"","PROJECT_5_DATE":"","PROJECT_5_DESCRIPTION":"","PROJECT_6_TITLE":"","PROJECT_6_CLIENT":"","PROJECT_6_DATE":"","PROJECT_6_DESCRIPTION":"","PROJECT_7_TITLE":"","PROJECT_7_CLIENT":"","PROJECT_7_DATE":"","PROJECT_7_DESCRIPTION":"","PROJECT_8_TITLE":"","PROJECT_8_CLIENT":"","PROJECT_8_DATE":"","PROJECT_8_DESCRIPTION":"","PROJECT_9_TITLE":"","PROJECT_9_CLIENT":"","PROJECT_9_DATE":"","PROJECT_9_DESCRIPTION":"","PROJECT_10_TITLE":"","PROJECT_10_CLIENT":"","PROJECT_10_DATE":"","PROJECT_10_DESCRIPTION":""}';
 var csJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var globalJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CURRENT_TITLE":"","SEARCH_TITLE":"","CLIENT_COMPANY":"","MONTH_YEAR":"","SUMMARY":"","COMPANY_1_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_1_BULLET_1":"","COMPANY_1_BULLET_2":"","COMPANY_1_BULLET_3":"","COMPANY_1_BULLET_4":"","COMPANY_1_BULLET_5":"","COMPANY_1_BULLET_6":"","COMPANY_1_BULLET_7":"","COMPANY_1_BULLET_8":"","COMPANY_1_BULLET_9":"","COMPANY_1_BULLET_10":"","COMPANY_2_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_2_BULLET_1":"","COMPANY_2_BULLET_2":"","COMPANY_2_BULLET_3":"","COMPANY_2_BULLET_4":"","COMPANY_2_BULLET_5":"","COMPANY_2_BULLET_6":"","COMPANY_2_BULLET_7":"","COMPANY_2_BULLET_8":"","COMPANY_2_BULLET_9":"","COMPANY_2_BULLET_10":"","COMPANY_3_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_3_BULLET_1":"","COMPANY_3_BULLET_2":"","COMPANY_3_BULLET_3":"","COMPANY_3_BULLET_4":"","COMPANY_3_BULLET_5":"","COMPANY_3_BULLET_6":"","COMPANY_3_BULLET_7":"","COMPANY_3_BULLET_8":"","COMPANY_3_BULLET_9":"","COMPANY_3_BULLET_10":"","COMPANY_4_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_4_BULLET_1":"","COMPANY_4_BULLET_2":"","COMPANY_4_BULLET_3":"","COMPANY_4_BULLET_4":"","COMPANY_4_BULLET_5":"","COMPANY_4_BULLET_6":"","COMPANY_4_BULLET_7":"","COMPANY_4_BULLET_8":"","COMPANY_4_BULLET_9":"","COMPANY_4_BULLET_10":"","COMPANY_5_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_5_BULLET_1":"","COMPANY_5_BULLET_2":"","COMPANY_5_BULLET_3":"","COMPANY_5_BULLET_4":"","COMPANY_5_BULLET_5":"","COMPANY_5_BULLET_6":"","COMPANY_5_BULLET_7":"","COMPANY_5_BULLET_8":"","COMPANY_5_BULLET_9":"","COMPANY_5_BULLET_10":"","COMPANY_6_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_6_BULLET_1":"","COMPANY_6_BULLET_2":"","COMPANY_6_BULLET_3":"","COMPANY_6_BULLET_4":"","COMPANY_6_BULLET_5":"","COMPANY_6_BULLET_6":"","COMPANY_6_BULLET_7":"","COMPANY_6_BULLET_8":"","COMPANY_6_BULLET_9":"","COMPANY_6_BULLET_10":"","COMPANY_7_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_7_BULLET_1":"","COMPANY_7_BULLET_2":"","COMPANY_7_BULLET_3":"","COMPANY_7_BULLET_4":"","COMPANY_7_BULLET_5":"","COMPANY_7_BULLET_6":"","COMPANY_7_BULLET_7":"","COMPANY_7_BULLET_8":"","COMPANY_7_BULLET_9":"","COMPANY_7_BULLET_10":"","COMPANY_8_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_8_BULLET_1":"","COMPANY_8_BULLET_2":"","COMPANY_8_BULLET_3":"","COMPANY_8_BULLET_4":"","COMPANY_8_BULLET_5":"","COMPANY_8_BULLET_6":"","COMPANY_8_BULLET_7":"","COMPANY_8_BULLET_8":"","COMPANY_8_BULLET_9":"","COMPANY_8_BULLET_10":"","COMPANY_9_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_9_BULLET_1":"","COMPANY_9_BULLET_2":"","COMPANY_9_BULLET_3":"","COMPANY_9_BULLET_4":"","COMPANY_9_BULLET_5":"","COMPANY_9_BULLET_6":"","COMPANY_9_BULLET_7":"","COMPANY_9_BULLET_8":"","COMPANY_9_BULLET_9":"","COMPANY_9_BULLET_10":"","COMPANY_10_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_10_BULLET_1":"","COMPANY_10_BULLET_2":"","COMPANY_10_BULLET_3":"","COMPANY_10_BULLET_4":"","COMPANY_10_BULLET_5":"","COMPANY_10_BULLET_6":"","COMPANY_10_BULLET_7":"","COMPANY_10_BULLET_8":"","COMPANY_10_BULLET_9":"","COMPANY_10_BULLET_10":"","COMPANY_11_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_11_BULLET_1":"","COMPANY_11_BULLET_2":"","COMPANY_11_BULLET_3":"","COMPANY_11_BULLET_4":"","COMPANY_11_BULLET_5":"","COMPANY_11_BULLET_6":"","COMPANY_11_BULLET_7":"","COMPANY_11_BULLET_8":"","COMPANY_11_BULLET_9":"","COMPANY_11_BULLET_10":"","COMPANY_12_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_12_BULLET_1":"","COMPANY_12_BULLET_2":"","COMPANY_12_BULLET_3":"","COMPANY_12_BULLET_4":"","COMPANY_12_BULLET_5":"","COMPANY_12_BULLET_6":"","COMPANY_12_BULLET_7":"","COMPANY_12_BULLET_8":"","COMPANY_12_BULLET_9":"","COMPANY_12_BULLET_10":"","COMPANY_13_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_13_BULLET_1":"","COMPANY_13_BULLET_2":"","COMPANY_13_BULLET_3":"","COMPANY_13_BULLET_4":"","COMPANY_13_BULLET_5":"","COMPANY_13_BULLET_6":"","COMPANY_13_BULLET_7":"","COMPANY_13_BULLET_8":"","COMPANY_13_BULLET_9":"","COMPANY_13_BULLET_10":"","COMPANY_14_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_14_BULLET_1":"","COMPANY_14_BULLET_2":"","COMPANY_14_BULLET_3":"","COMPANY_14_BULLET_4":"","COMPANY_14_BULLET_5":"","COMPANY_14_BULLET_6":"","COMPANY_14_BULLET_7":"","COMPANY_14_BULLET_8":"","COMPANY_14_BULLET_9":"","COMPANY_14_BULLET_10":"","COMPANY_15_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_15_BULLET_1":"","COMPANY_15_BULLET_2":"","COMPANY_15_BULLET_3":"","COMPANY_15_BULLET_4":"","COMPANY_15_BULLET_5":"","COMPANY_15_BULLET_6":"","COMPANY_15_BULLET_7":"","COMPANY_15_BULLET_8":"","COMPANY_15_BULLET_9":"","COMPANY_15_BULLET_10":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","AFFILIATION_2":"","AFFILIATION_2_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
@@ -2807,59 +2840,113 @@ var _eaIndiaMonthYear = (function(){var m=['January','February','March','April',
 var eaIndiaPrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate source below and extract ALL information into a structured JSON object for the Global Candidate Profile — EA India template.
 
 ABSOLUTE RULES:
-- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
+- Return ONLY raw JSON. No markdown, no code blocks, no backticks, no commentary.
 - CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
-- Copy all text VERBATIM — never summarise, rephrase, or add content not in the source.
-- Extract EVERY work history entry WITHOUT EXCEPTION.
+- Copy ALL text VERBATIM — never summarise, rephrase, shorten or add anything not in the source.
+- Extract EVERY work history entry WITHOUT EXCEPTION — no matter how old or brief.
 
 FIELD-BY-FIELD INSTRUCTIONS:
 
-CANDIDATE_NAME: Full name exactly as written.
-CURRENT_EMPLOYER: Most recent employer name only.
-CLIENT_COMPANY: Always empty string "".
-SEARCH_TITLE: Always empty string "".
-PROFILE_MONTH: Today's month and year: "` + _eaIndiaMonthYear + `". Always use this value.
+CANDIDATE_NAME: Full name exactly as written in the CV.
+CURRENT_EMPLOYER: Most recent employer name only (no job title, no dates).
+CLIENT_COMPANY: Always "".
+SEARCH_TITLE: Always "".
+PROFILE_MONTH: "` + _eaIndiaMonthYear + `". Always use this exact value.
 
-SUMMARY_INTRO: Copy the candidate's opening personal profile / executive summary paragraph VERBATIM — word for word, no changes. This is the short paragraph at the top of their CV. If it does not exist, leave empty.
+SUMMARY_INTRO: Copy the candidate's opening personal profile / executive summary VERBATIM — every word, no changes. This is the paragraph(s) at the top of the CV describing who they are. If multiple paragraphs, join with \n. Do NOT include bullet points or skills lists — prose only. Leave "" if no summary exists.
 
-KEY_SKILLS: Extract the candidate's key skills or competencies list. Join as a single comma-separated string (e.g. "Leadership, Financial Advice, Investment Management, Creating & Driving Transformation Strategy"). If listed as bullets, join them with ", ".
+SKILLS SECTIONS — the CV may have up to 3 separate named skills groups. Extract each group into its own set of fields:
 
-EXEC_OVERVIEW_BULLET_1 through EXEC_OVERVIEW_BULLET_6: Extract the Executive Overview / Professional Profile bullet points VERBATIM. Each bullet = one field. If there are fewer than 6 bullets, leave unused fields as "". If there is no Executive Overview section, leave all 6 as "".
+EXP_SKILL_1 through EXP_SKILL_6: Extract items from the "Experience" skills group VERBATIM, one per field. Leave unused fields as "". Leave all as "" if no "Experience" group exists.
 
-COMPANIES ARRAY — CRITICAL RULES:
-- Group ALL roles held at the same company under ONE company entry.
-- Each role is a separate object in the roles array.
-- company.name: Full legal company name — use IDENTICAL string for all roles at same company.
-- company.location: City, Country (leave empty if not stated).
-- company.dates: Overall tenure at company (e.g. "Mar 2019 – Present"). ALWAYS include month — never year-only. Most recent company first.
-- company.description: If the CV has an italic or introductory paragraph describing the company (e.g. "InfraRed is a mid-market infrastructure investment manager..."), capture it VERBATIM here. Leave "" if none.
-- role.role: Exact job title as written in CV.
-- role.role_dates: Dates for THIS specific role only (e.g. "Jul 2021 – Jul 2023"). Leave "" if the company has only ONE role (dates already shown in company header).
-- role.bullets: ALL bullet points written directly under THAT specific role, VERBATIM. NEVER mix bullets from different roles. Every single bullet must be captured — no limit, no skipping.
-- Most recent company first. Most recent role first within each company.
+LRR_SKILL_1 through LRR_SKILL_11: Extract items from the "Legal, Risk & Regulatory Expertise" group (or similarly named legal/regulatory skills group) VERBATIM, one per field. Leave unused fields as "". Leave all as "" if no such group exists.
 
-EDUCATION:
-- EDU_1_YEAR: Year of most recent degree (e.g. "2018").
-- EDU_1_INSTITUTION: Full institution name of most recent degree.
-- EDU_1_DEGREE: Degree name of most recent degree.
-- EDU_1_EXTRA: Any additional detail line VERBATIM (e.g. "ERASMUS year at La Sorbonne, Paris IV"). Leave "" if none.
-- EDU_2_YEAR, EDU_2_INSTITUTION, EDU_2_DEGREE, EDU_2_EXTRA: Second education entry if present (e.g. undergraduate degree). Same rules. Leave all as "" if only one education entry.
-- Most recent first.
+KEY_SKILL_1 through KEY_SKILL_10: Extract items from the "Key Skills" (or "Skills", "Core Competencies") group VERBATIM, one per field. Leave unused fields as "". Leave all as "" if no such group exists.
+
+If the CV has only one skills section, put all items into KEY_SKILL_1 onwards and leave EXP_SKILL_* and LRR_SKILL_* empty.
+
+EXEC_OVERVIEW_BULLET_1 through EXEC_OVERVIEW_BULLET_6:
+Extract up to 6 bullet points from the Executive Overview / Core Strengths bullet list — the capability statement bullets that appear directly under the opening summary paragraphs — VERBATIM. One bullet per field. Leave unused fields as "". Leave all as "" if no such bullet section exists.
+IMPORTANT: These must be short prose capability statements from the summary section only (e.g. "Leading through change, scaling, transformation..."). Do NOT put skills list items here. Do NOT put content from the "Executive Experience" thematic section here — that goes in executive_experience array below.
+
+EXECUTIVE EXPERIENCE ARRAY:
+Some CVs — especially senior executive CVs — list all their career achievements in thematic sections AFTER all work history entries. These sections are typically headed "Executive Experience" and contain sub-sections like "Leadership & Management", "Strategic", "International", "Operational", "Company Secretarial/Governance/Regulatory", etc.
+
+Extract each sub-section into the executive_experience array:
+- section: The sub-section heading VERBATIM (e.g. "Leadership & Management", "Strategic", "International", "Operational", "Company Secretarial/Governance/Regulatory").
+- bullets: ALL bullet points under that sub-section VERBATIM as an array. Copy every single bullet — do not skip, summarise or rephrase.
+
+If the CV has no such thematic executive experience section, return [].
+Do NOT put these bullets into any company's bullets[] array.
+
+COMPANIES ARRAY — READ EVERY RULE:
+
+Rule 1 — Group by company: ALL roles at the same company go under ONE company entry with multiple objects in the roles[] array.
+
+Rule 2 — company.name: Full company name exactly as written. Use IDENTICAL string for every role at the same company.
+
+Rule 3 — company.location: City and/or Country if stated. Leave "" if not given.
+
+Rule 4 — company.dates: The candidate's OVERALL tenure at that company. ALWAYS include month using 3-letter abbreviation (Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec). Format: "Mar 2019 – Present" or "Jan 2015 – Dec 2018". NEVER year-only. NEVER full month names. If CV shows dates as MM/YY (e.g. 09/23) convert to "Sep 2023".
+
+Rule 5 — company.description: If the CV has an italic or introductory sentence describing what the company does (e.g. "An AU$2bn ASX-listed payment services & mortgage services settlement platform", "The UK's largest FTSE-listed commercial media organisation"), capture it VERBATIM here. It appears in the source text right next to or immediately after the company name. Leave "" if none.
+Rule 6 — role.role: Exact job title as written in the CV. Nothing added or removed.
+
+Rule 7 — role.role_dates: REQUIRED when the company has 2 or more roles. Same 3-letter month format. Leave "" ONLY if this company has exactly ONE role.
+
+Rule 8 — role.bullets — CRITICAL:
+THIS CV STRUCTURE HAS NO PER-ROLE BULLETS IN THE WORK HISTORY SECTION.
+If the work history section lists companies and roles WITHOUT bullet points written directly under each role, then EVERY role's bullets array must be EMPTY: [].
+Do NOT invent bullets. Do NOT move content from other sections into bullets.
+Only populate bullets[] if the CV explicitly writes bullet points or numbered achievements DIRECTLY under that specific role title in the work history section.
+
+Rule 9 — Thematic achievement sections (e.g. "Executive Experience", "Leadership & Management", "Strategic", "Operational", "International"):
+These sections appear AFTER all job entries and summarise achievements by theme — NOT by company. They must NOT be placed in any company's bullets[]. Leave all companies' bullets[] as [] and do not extract this content — the template has no field for it.
+
+Rule 10 — Most recent company first. Most recent role first within each company.
+
+EDUCATION — ONLY academic university qualifications:
+Include ONLY: university degrees (MBA, MSc, MA, BSc, BA, LLB, LLM, PhD), Diplomas and Graduate Diplomas awarded by a university or law school.
+DO NOT include: executive programmes, professional certifications, short courses, institute qualifications — even if from a prestigious university like Oxford or Columbia. Those go in QUAL fields.
+
+Examples IN education: MBA (London Business School), Diploma in Legal Practice & Graduate Diploma in Law (University of Law London), BSc (Hons) Computer Science (Cardiff University).
+Examples NOT in education (go in QUAL): Oxford University (Said) – Blockchain & Crypto Strategy Programme, Columbia Business School – Institute of Leadership, Securities & Investment Institute – Islamic Finance.
+
+Extract ALL academic qualifications. Each degree = its own EDU entry. EDU_1 = most recent, EDU_2 = second, EDU_3 = third.
+CRITICAL: Each EDU entry is ONE qualification from ONE institution. Never combine two qualifications into one entry.
+For this CV the correct mapping is:
+- EDU_1: MBA — London Business School — Sep 2006 – Jul 2008
+- EDU_2: Diploma in Legal Practice & Graduate Diploma in Law — University of Law, London — Sep 1994 – Jul 1996
+- EDU_3: BSc (Hons) Computer Science (mathematical bias) — Cardiff University — Sep 1991 – Jul 1994
+- EDU_N_YEAR: Include months if given. Format "Mon YYYY – Mon YYYY" (e.g. "Sep 2006 – Jul 2008"). Convert MM/YYYY to Mon YYYY.
+- EDU_N_INSTITUTION: Institution name only.
+- EDU_N_DEGREE: Degree name only — do NOT include institution name here.
+- EDU_N_EXTRA: Only use for additional detail about THAT SAME degree (e.g. honours, specialisation). Leave "" if none. NEVER put a different qualification here.
+Leave EDU_3_* as "" if fewer than 3 academic qualifications.
 
 PROFESSIONAL QUALIFICATIONS — up to 5 entries:
-- QUAL_N_YEAR: Year of qualification (e.g. "2015"). Extract year only.
-- QUAL_N_TEXT: Full qualification name (e.g. "Chartered Fellow of CISI").
-- List from most recent to oldest. Leave unused QUAL fields as "".
-- If qualifications are listed without years, put "" for the year.
+Include ALL professional certifications, chartered qualifications, licences AND executive/short programmes not included in Education.
+- QUAL_N_YEAR: Date completed. Include months if given in CV (e.g. "Jan 2023 – Mar 2023", "Oct 2015", "Sep 2008"). If CV gives only a year use just the year. Leave "" if not stated.
+- QUAL_N_TEXT: Full name and awarding body VERBATIM.
+- Most recent first. Leave unused QUAL fields as "".
 
 NATIONALITY: Exact nationality as stated. Leave "" if not found.
-LANGUAGES: Languages with proficiency levels as stated. Leave "" if not found.
+LANGUAGES: Languages and proficiency levels exactly as stated. Leave "" if not found.
 INTERESTS: Interests/hobbies as stated. Leave "" if not found.
 
-VOLUNTEERING ARRAY — extract if present, leave as empty array [] if not:
-- Each entry: {"dates": "Jun 2015 – Dec 2024", "role": "Chair of Investment Committee of St Peter's Hospice", "description": "Brief description verbatim"}
-- Extract up to 3 entries. Most recent first.
-- If no volunteering/charitable work section exists, return "volunteering": [].
+VOLUNTEERING ARRAY:
+Extract volunteering, charitable roles, ambassadorships if a dedicated section exists.
+- dates: Date range ONLY if explicitly stated in CV. Leave "" if no dates given — do NOT guess or infer.
+- role: Organisation name or role title VERBATIM.
+- description: Any descriptive text VERBATIM. Leave "" if none beyond the title.
+Up to 3 entries, most recent first. Return [] if no volunteering section exists.
+
+PROFESSIONAL AFFILIATIONS — up to 5 entries:
+Extract ALL professional memberships, awards, honours, fellowships and affiliations (e.g. "Fellow of the Royal Society of the Arts (2016)", "Member of the Law Society of England & Wales (2000)", "Admitted to the Freedom of the City of London Solicitors' Company (2022)").
+This section is often labelled "Affiliations, Memberships & Awards" or "Professional Affiliations" in the CV.
+- AFFIL_N_YEAR: Year if stated (e.g. "2022", "2016"). Leave "" if not stated.
+- AFFIL_N_TEXT: Full text VERBATIM.
+Most recent first. Leave unused fields as "".
 
 JSON STRUCTURE — return exactly this schema filled with real data:
 ` + eaIndiaJsonStr + `
@@ -4715,6 +4802,7 @@ async function downloadHistory(index) {
 
         // Step 1: build business experience XML
         var _eiBizXml = buildEaIndiaBizExp(_eiCv.companies || []);
+        var _eiExecXml = buildEaIndiaExecExp(_eiCv.executive_experience || []);
 
         // Step 2: inject BUSINESS_EXPERIENCE_BLOCK
         var _eiDocXml = _eiZip.files['word/document.xml'].asText();
@@ -4732,6 +4820,21 @@ async function downloadHistory(index) {
           }
           var _eiPEnd = _eiDocXml.indexOf('</w:p>', _eiBeIdx) + 6;
           _eiDocXml = _eiDocXml.substring(0, _eiPStart) + _eiBizXml + _eiDocXml.substring(_eiPEnd);
+        }
+        // Replace EXECUTIVE_EXPERIENCE_BLOCK token
+        var _eiEeIdx = _eiDocXml.indexOf('{{EXECUTIVE_EXPERIENCE_BLOCK}}');
+        if (_eiEeIdx !== -1) {
+          var _eiEePStart = _eiEeIdx;
+          var _eiEeSearch = _eiEeIdx;
+          while (_eiEeSearch > 0) {
+            var _eiEeC = _eiDocXml.lastIndexOf('<w:p', _eiEeSearch - 1);
+            if (_eiEeC < 0) break;
+            var _eiEeN = _eiDocXml.charAt(_eiEeC + 4);
+            if (_eiEeN === '>' || _eiEeN === ' ') { _eiEePStart = _eiEeC; break; }
+            _eiEeSearch = _eiEeC;
+          }
+          var _eiEePEnd = _eiDocXml.indexOf('</w:p>', _eiEeIdx) + 6;
+          _eiDocXml = _eiDocXml.substring(0, _eiEePStart) + _eiExecXml + _eiDocXml.substring(_eiEePEnd);
         }
         _eiZip.file('word/document.xml', _eiDocXml);
 
@@ -4765,7 +4868,20 @@ async function downloadHistory(index) {
           SEARCH_TITLE:          _eiCv.SEARCH_TITLE || '',
           PROFILE_MONTH:         _eiCv.PROFILE_MONTH || (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})(),
           SUMMARY_INTRO:         _eiCv.SUMMARY_INTRO || '',
-          KEY_SKILLS:            _eiCv.KEY_SKILLS || '',
+          EXP_SKILL_1:  _eiCv.EXP_SKILL_1 || '',  EXP_SKILL_2:  _eiCv.EXP_SKILL_2 || '',
+          EXP_SKILL_3:  _eiCv.EXP_SKILL_3 || '',  EXP_SKILL_4:  _eiCv.EXP_SKILL_4 || '',
+          EXP_SKILL_5:  _eiCv.EXP_SKILL_5 || '',  EXP_SKILL_6:  _eiCv.EXP_SKILL_6 || '',
+          LRR_SKILL_1:  _eiCv.LRR_SKILL_1 || '',  LRR_SKILL_2:  _eiCv.LRR_SKILL_2 || '',
+          LRR_SKILL_3:  _eiCv.LRR_SKILL_3 || '',  LRR_SKILL_4:  _eiCv.LRR_SKILL_4 || '',
+          LRR_SKILL_5:  _eiCv.LRR_SKILL_5 || '',  LRR_SKILL_6:  _eiCv.LRR_SKILL_6 || '',
+          LRR_SKILL_7:  _eiCv.LRR_SKILL_7 || '',  LRR_SKILL_8:  _eiCv.LRR_SKILL_8 || '',
+          LRR_SKILL_9:  _eiCv.LRR_SKILL_9 || '',  LRR_SKILL_10: _eiCv.LRR_SKILL_10 || '',
+          LRR_SKILL_11: _eiCv.LRR_SKILL_11 || '',
+          KEY_SKILL_1:  _eiCv.KEY_SKILL_1 || '',  KEY_SKILL_2:  _eiCv.KEY_SKILL_2 || '',
+          KEY_SKILL_3:  _eiCv.KEY_SKILL_3 || '',  KEY_SKILL_4:  _eiCv.KEY_SKILL_4 || '',
+          KEY_SKILL_5:  _eiCv.KEY_SKILL_5 || '',  KEY_SKILL_6:  _eiCv.KEY_SKILL_6 || '',
+          KEY_SKILL_7:  _eiCv.KEY_SKILL_7 || '',  KEY_SKILL_8:  _eiCv.KEY_SKILL_8 || '',
+          KEY_SKILL_9:  _eiCv.KEY_SKILL_9 || '',  KEY_SKILL_10: _eiCv.KEY_SKILL_10 || '',
           EXEC_OVERVIEW_BULLET_1: _eiCv.EXEC_OVERVIEW_BULLET_1 || '',
           EXEC_OVERVIEW_BULLET_2: _eiCv.EXEC_OVERVIEW_BULLET_2 || '',
           EXEC_OVERVIEW_BULLET_3: _eiCv.EXEC_OVERVIEW_BULLET_3 || '',
@@ -4776,6 +4892,24 @@ async function downloadHistory(index) {
           EDU_1_INSTITUTION: _eiCv.EDU_1_INSTITUTION || '',
           EDU_1_DEGREE:      _eiCv.EDU_1_DEGREE || '',
           EDU_1_EXTRA:       _eiCv.EDU_1_EXTRA || '',
+          EDU_2_YEAR:        _eiCv.EDU_2_YEAR || '',
+          EDU_2_INSTITUTION: _eiCv.EDU_2_INSTITUTION || '',
+          EDU_2_DEGREE:      _eiCv.EDU_2_DEGREE || '',
+          EDU_2_EXTRA:       _eiCv.EDU_2_EXTRA || '',
+          EDU_3_YEAR:        _eiCv.EDU_3_YEAR || '',
+          EDU_3_INSTITUTION: _eiCv.EDU_3_INSTITUTION || '',
+          EDU_3_DEGREE:      _eiCv.EDU_3_DEGREE || '',
+          EDU_3_EXTRA:       _eiCv.EDU_3_EXTRA || '',
+          AFFIL_1_YEAR:      _eiCv.AFFIL_1_YEAR || '',
+          AFFIL_1_TEXT:      _eiCv.AFFIL_1_TEXT || '',
+          AFFIL_2_YEAR:      _eiCv.AFFIL_2_YEAR || '',
+          AFFIL_2_TEXT:      _eiCv.AFFIL_2_TEXT || '',
+          AFFIL_3_YEAR:      _eiCv.AFFIL_3_YEAR || '',
+          AFFIL_3_TEXT:      _eiCv.AFFIL_3_TEXT || '',
+          AFFIL_4_YEAR:      _eiCv.AFFIL_4_YEAR || '',
+          AFFIL_4_TEXT:      _eiCv.AFFIL_4_TEXT || '',
+          AFFIL_5_YEAR:      _eiCv.AFFIL_5_YEAR || '',
+          AFFIL_5_TEXT:      _eiCv.AFFIL_5_TEXT || '',
           NATIONALITY:       _eiCv.NATIONALITY || '',
           LANGUAGES:         _eiCv.LANGUAGES || '',
           INTERESTS:         _eiCv.INTERESTS || ''
