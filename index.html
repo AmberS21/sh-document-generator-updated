@@ -1620,6 +1620,7 @@ function buildEaIndiaBizExp(companies) {
       var DESC_PPR = '<w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/></w:pPr>';
       var DESC_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="002060"/></w:rPr>';
       xml += '<w:p>' + DESC_PPR + '<w:r>' + DESC_RPR + '<w:t xml:space="preserve">' + xe(co.description) + '</w:t></w:r></w:p>';
+      xml += SPACER;
     }
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
