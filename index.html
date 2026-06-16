@@ -2767,7 +2767,7 @@ var isEaIndia = (tpl === 'ea-india-profile');
 var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
+var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","ADDITIONAL_INFO":"","INTERESTS":""}';
 var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
@@ -2819,7 +2819,8 @@ PROFESSIONAL_QUALS: Extract ONLY professional qualifications and certifications 
 TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single string exactly as written in the CV. Leave "" if none.
 NATIONALITY: Exact nationality. Leave "" if not found.
 LANGUAGES: Languages with levels. Leave "" if not found.
-INTERESTS: Interests as stated. Leave "" if not found.
+ADDITIONAL_INFO: Extract the candidate's leadership character, values, cultural approach, and working style — typically found in a section labelled "Leadership Character" or similar. This is prose about HOW the candidate leads and works (e.g. "Known for collaborative, resilient leadership that builds trust. Committed to developing others..."). Leave "" if not found.
+INTERESTS: Extract ONLY outside-work hobbies, sports, personal interests — found after phrases like "Outside work:" or "Hobbies:" (e.g. "family, sports and ad-hoc challenges - New York Marathon..."). Do NOT put leadership character text here. Leave "" if not found.
 
 Return this JSON structure:
 ` + eaIndiaV2JsonStr + `
@@ -4691,6 +4692,7 @@ async function downloadHistory(index) {
           QUAL_1:            '',
           NATIONALITY:       _ei2Cv.NATIONALITY || '',
           LANGUAGES:         _ei2Cv.LANGUAGES || '',
+          ADDITIONAL_INFO:   _ei2Cv.ADDITIONAL_INFO || '',
           INTERESTS:         _ei2Cv.INTERESTS || ''
         };
 
@@ -4752,8 +4754,10 @@ async function downloadHistory(index) {
           var _TAB2 = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
           var _PP2 = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB2 + '</w:pPr>';
           var _qualXml = '';
-          _pq.forEach(function(q){
+          var _QSPACER = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
+          _pq.forEach(function(q, qi){
             if (!q.qualification) return;
+            if (qi > 0) { _qualXml += _QSPACER; }
             _qualXml += '<w:p>' + _PP2
               + '<w:r>' + _B2 + '<w:t xml:space="preserve">' + _xq(q.year||'') + ':</w:t></w:r>'
               + '<w:r><w:tab/></w:r>'
