@@ -2567,7 +2567,7 @@ async function generate() {
                 }
                 var pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
                 var txt='';
-                for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();var pgTxt='';var lastY=null;for(var ii=0;ii<tc.items.length;ii++){var it=tc.items[ii];if(lastY!==null&&Math.abs(it.transform[5]-lastY)>5){pgTxt+='\n';}else if(pgTxt.length>0&&!pgTxt.endsWith(' ')&&!pgTxt.endsWith('\n')){pgTxt+=' ';}pgTxt+=it.str;lastY=it.transform[5];}txt+=pgTxt+'\n\n';}
+                for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var vp=page.getViewport({scale:1});var pgW=vp.width;var tc=await page.getTextContent();var _rows={};for(var ii=0;ii<tc.items.length;ii++){var it=tc.items[ii];var ix=it.transform[4];var iy=Math.round(it.transform[5]/3)*3;if(ix>pgW*0.72)continue;if(!_rows[iy])_rows[iy]=[];_rows[iy].push({x:ix,str:it.str});}var pgTxt='';Object.keys(_rows).map(Number).sort(function(a,b){return b-a;}).forEach(function(yk){var row=_rows[yk].sort(function(a,b){return a.x-b.x;});var line=row.map(function(r){return r.str;}).join(' ').trim();if(line)pgTxt+=line+'\n';});txt+=pgTxt+'\n';}
                 var extracted = txt.trim();
                 if (!extracted || extracted.length < 50) {
                   throw new Error('This PDF appears to be image-based (scanned). PDF.js cannot extract text from image PDFs.\n\nPlease either:\n• Copy and paste the CV text directly using the Paste Text tab\n• Convert the PDF to a text-based PDF first\n• Use a Word (.docx) version of the CV');
