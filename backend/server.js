@@ -230,6 +230,16 @@ app.post('/api/proxy/log', async (req, res) => {
   }
 });
 
+// GET /api/proxy/logs/status — show storage backend status
+app.get('/api/proxy/logs/status', (req, res) => {
+  res.json({
+    backend: _tableClient ? 'azure-table' : 'in-memory-fallback',
+    azureConfigured: !!CONN_STR,
+    fallbackCount: _fallbackLogs.length,
+    warning: !_tableClient ? 'Azure Table Storage not connected — logs will be lost on restart. Ask Michika to set AZURE_STORAGE_CONNECTION_STRING.' : null
+  });
+});
+
 // GET /api/proxy/logs — return all logs as JSON
 app.get('/api/proxy/logs', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
