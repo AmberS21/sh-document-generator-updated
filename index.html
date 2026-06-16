@@ -1517,7 +1517,7 @@ function buildApacEyBizExp(companies) {
     if (!co || !co.name) continue;
     var roles = co.roles || [];
     var multiRole = roles.length > 1;
-    if (ci > 0) { xml += SPACER; xml += SPACER; }
+    if (ci > 0) { xml += SPACER; }
 
     // Company line: BOLD name, tab, BOLD dates — tab and date in separate run
     var coDates = normDateRange(co.dates || '');
@@ -1525,8 +1525,6 @@ function buildApacEyBizExp(companies) {
         +  '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(co.name) + '</w:t></w:r>'
         +  (coDates ? '<w:r>' + CO_RPR + '<w:tab/></w:r><w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>' : '')
         +  '</w:p>';
-
-    xml += SPACER;
 
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
@@ -1580,6 +1578,15 @@ function buildEaIndiaBizExp(companies) {
   var _MONTHS = {january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec',jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',sept:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
   function normDate(s) {
     if (!s) return '';
+    // Convert MM/YYYY or MM/YY → Mon YYYY (e.g. 09/23 → Sep 2023, 01/2001 → Jan 2001)
+    var _MO_NAMES = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    s = s.replace(/(\d{1,2})\/(\d{2,4})/g, function(m, mo, yr) {
+      var moNum = parseInt(mo, 10);
+      if (moNum < 1 || moNum > 12) return m;
+      var yrNum = parseInt(yr, 10);
+      var fullYr = yr.length === 2 ? (yrNum >= 50 ? 1900 + yrNum : 2000 + yrNum) : yrNum;
+      return _MO_NAMES[moNum] + ' ' + fullYr;
+    });
     s = s.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b/gi, function(m){ return _MONTHS[m.toLowerCase()]||m; });
     s = s.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, function(m, yr, mo){ return mo + ' ' + yr; });
     return s;
@@ -1604,8 +1611,7 @@ function buildEaIndiaBizExp(companies) {
     if (!co || !co.name) continue;
     var roles = co.roles || [];
     var multiRole = roles.length > 1;
-    if (ci > 0) { xml += SPACER; xml += SPACER; }
-    var coDates = normDateRange(co.dates || '');
+    if (ci > 0) { xml += SPACER; }    var coDates = normDateRange(co.dates || '');
     xml += '<w:p>' + CO_PPR
         +  '<w:r>' + CO_RPR + '<w:t xml:space="preserve">' + xe(co.name) + (co.location ? ', ' + xe(co.location) : '') + '</w:t></w:r>'
         +  (coDates ? '<w:r>' + CO_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>' : '')
@@ -2862,12 +2868,15 @@ DO NOT include: executive programmes, professional certifications, short courses
 Examples IN education: MBA (London Business School), Diploma in Legal Practice & Graduate Diploma in Law (University of Law London), BSc (Hons) Computer Science (Cardiff University).
 Examples NOT in education (go in QUAL): Oxford University (Said) – Blockchain & Crypto Strategy Programme, Columbia Business School – Institute of Leadership, Securities & Investment Institute – Islamic Finance.
 
-Pick the 2 MOST RECENT academic qualifications only.
+Extract ALL academic qualifications and fill EDU_1 and EDU_2 as follows:
+- EDU_1 = most recent academic qualification.
+- EDU_2 = second most recent academic qualification.
+- If there are MORE than 2 academic qualifications, still fill EDU_1 and EDU_2 with the 2 most recent, then list any additional ones verbatim in EDU_2_EXTRA (e.g. "Also: BSc (Hons) Computer Science, Cardiff University, 1991–1994").
 - EDU_1_YEAR: Graduation year or year range (e.g. "2008" or "2006 – 2008").
 - EDU_1_INSTITUTION: Full institution name.
 - EDU_1_DEGREE: Full degree name exactly as written.
 - EDU_1_EXTRA: Any extra detail line VERBATIM. Leave "" if none.
-- EDU_2_*: Second most recent academic entry. Leave all "" if only one academic qualification.
+- EDU_2_YEAR, EDU_2_INSTITUTION, EDU_2_DEGREE, EDU_2_EXTRA: Second entry same rules. Leave all "" if only one academic qualification.
 
 PROFESSIONAL QUALIFICATIONS — up to 5 entries:
 Include ALL professional certifications, chartered qualifications, licences AND executive/short programmes not included in Education.
