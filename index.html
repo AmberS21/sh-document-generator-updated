@@ -2613,6 +2613,7 @@ async function generate() {
           renderHistory();
         }
         btn.classList.remove('loading'); btn.innerHTML = '\u26a1 Generate Document';
+        logUsage(tpl, 'file', 'success');
         hideProgress(_totalFiles > 1 ? 'All done! ' + _totalFiles + ' profiles ready ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ check My History' : 'Done! Your profile is ready ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ check My History');
   }
 
