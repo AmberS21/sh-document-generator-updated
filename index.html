@@ -1867,7 +1867,7 @@ function buildCareerSummaryBizExp(companies) {
 
     var showRoleDates = roles.length > 1;
 
-    // ── For each role: title + dates, then its OWN bullets immediately below ──
+    // ── Step 1: Render ALL role titles first ──
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
       if (!role || !role.role) continue;
@@ -1880,17 +1880,34 @@ function buildCareerSummaryBizExp(companies) {
       }
       xml += '</w:r></w:p>';
 
-      // Spacer after role title
+      // Spacer between role titles (not after last)
+      if (ri < roles.length - 1) {
+        xml += '<w:p><w:pPr><w:pStyle w:val="16CV-TITLE"/></w:pPr></w:p>';
+      }
+    }
+
+    // ── Step 2: Collect ALL bullets from ALL roles (deduplicated) ──
+    // This handles both: bullets on one role only, or bullets spread across roles
+    var _allBullets = [];
+    var _seenBullets = {};
+    for (var ri2 = 0; ri2 < roles.length; ri2++) {
+      var _rBullets = (roles[ri2] && roles[ri2].bullets) ? roles[ri2].bullets : [];
+      for (var bi2 = 0; bi2 < _rBullets.length; bi2++) {
+        var _b = (_rBullets[bi2] || '').trim();
+        if (_b && !_seenBullets[_b]) {
+          _seenBullets[_b] = true;
+          _allBullets.push(_b);
+        }
+      }
+    }
+
+    // ── Step 3: Render all bullets once, after all role titles ──
+    if (_allBullets.length > 0) {
       xml += '<w:p><w:pPr><w:pStyle w:val="16CV-TITLE"/></w:pPr></w:p>';
-
-      // Bullets for THIS role only — immediately under its title
-      var bullets = role.bullets || [];
       var inResults = false;
-      for (var bi = 0; bi < bullets.length; bi++) {
-        var bullet = (bullets[bi] || '').trim();
-        if (!bullet) continue;
+      for (var bi3 = 0; bi3 < _allBullets.length; bi3++) {
+        var bullet = _allBullets[bi3];
         var isResultsLabel = /^results\s*:/i.test(bullet);
-
         if (isResultsLabel) {
           inResults = true;
           xml += '<w:p><w:pPr><w:pStyle w:val="2CV"/><w:ind w:left="450"/></w:pPr>'
@@ -1904,14 +1921,6 @@ function buildCareerSummaryBizExp(companies) {
           xml += '<w:p><w:pPr><w:pStyle w:val="10CV"/></w:pPr>'
                + '<w:r><w:t>' + csXmlEsc(csPeriod(bullet)) + '</w:t></w:r></w:p>';
         }
-      }
-
-      // Reset Results flag between roles
-      inResults = false;
-
-      // Spacer between roles (only if not last role)
-      if (ri < roles.length - 1) {
-        xml += '<w:p><w:pPr><w:pStyle w:val="14CV-BODY"/></w:pPr></w:p>';
       }
     }
   }
@@ -2613,6 +2622,7 @@ async function generate() {
           renderHistory();
         }
         btn.classList.remove('loading'); btn.innerHTML = '\u26a1 Generate Document';
+        logUsage(tpl, 'file', 'success');
         hideProgress(_totalFiles > 1 ? 'All done! ' + _totalFiles + ' profiles ready ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ check My History' : 'Done! Your profile is ready ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ check My History');
   }
 
@@ -3078,6 +3088,7 @@ ABSOLUTE RULES:
 - Extract EVERY work history entry WITHOUT EXCEPTION.
 - CRITICAL — BULLETS PER ROLE: Each role's bullets array must contain ONLY the bullet points written directly under THAT specific role in the CV. NEVER mix bullets from different roles. If the CV lists 3 bullets under Role A and 5 bullets under Role B, Role A gets exactly those 3 bullets and Role B gets exactly those 5 bullets.
 - Copy ALL bullet points VERBATIM — word for word, no changes.
+- SHARED BULLETS: Some CVs list multiple roles at a company then write bullets once beneath all roles together. Capture those bullets on whichever role they appear under in the CV — the output will automatically render them once after all role titles.
 
 COMPANIES ARRAY RULES:
 GROUPING RULE — READ CAREFULLY:
@@ -5807,6 +5818,23 @@ var _msalConfig = {
 var _msalInstance = null;
 try { _msalInstance = new msal.PublicClientApplication(_msalConfig); } catch(e) { console.warn('MSAL init failed:', e.message); }
 
+// Handle redirect response when returning from Microsoft login
+if (_msalInstance) {
+  _msalInstance.handleRedirectPromise().then(function(response) {
+    if (response && response.account) {
+      var name = response.account.name || response.account.username;
+      if (name) {
+        localStorage.setItem('sh_userName', name);
+        document.getElementById('userName').textContent = name;
+        document.getElementById('namePromptOverlay').style.display = 'none';
+        sessionStorage.removeItem('sh_msal_redirect_pending');
+      }
+    }
+  }).catch(function(err) {
+    console.warn('MSAL redirect response error:', err.message);
+  });
+}
+
 async function initUserName() {
   // Try MSAL SSO first
   if (_msalInstance) {
@@ -5820,7 +5848,7 @@ async function initUserName() {
         document.getElementById('namePromptOverlay').style.display = 'none';
         return;
       }
-      // Try silent SSO
+      // Try silent SSO first
       var silentReq = { scopes: ['User.Read'], loginHint: undefined };
       try {
         var silentResult = await _msalInstance.ssoSilent(silentReq);
@@ -5830,17 +5858,11 @@ async function initUserName() {
         document.getElementById('namePromptOverlay').style.display = 'none';
         return;
       } catch(silentErr) {
-        // Silent SSO failed - try popup
-        try {
-          var popupResult = await _msalInstance.loginPopup({ scopes: ['User.Read'] });
-          var name = popupResult.account.name || popupResult.account.username;
-          localStorage.setItem('sh_userName', name);
-          document.getElementById('userName').textContent = name;
-          document.getElementById('namePromptOverlay').style.display = 'none';
-          return;
-        } catch(popupErr) {
-          console.warn('MSAL popup failed:', popupErr.message);
-        }
+        // Silent SSO failed — use redirect login (reliable, no popup blocker issues)
+        // Store current page state so we return here after login
+        sessionStorage.setItem('sh_msal_redirect_pending', '1');
+        await _msalInstance.loginRedirect({ scopes: ['User.Read'] });
+        return; // Page will reload after redirect
       }
     } catch(msalErr) {
       console.warn('MSAL error:', msalErr.message);
