@@ -2937,9 +2937,9 @@ For this CV the correct mapping is:
 - EDU_N_INSTITUTION: Institution name only.
 - EDU_N_LOCATION: City, Country of the institution (e.g. "Fontainebleau, France", "Oxford, England"). Leave "" if not stated.
 - EDU_N_DEGREE: Degree name only — do NOT include institution name here.
-- EDU_N_EXTRA: Only use for additional detail about THAT SAME degree (e.g. honours, specialisation). Leave "" if none. NEVER put a different qualification here.
+- EDU_N_EXTRA: Any additional detail about THAT SAME degree — honours, class, scholarships, project descriptions, extracurriculars. Write as plain prose sentences separated by newlines (\n), NOT as bullet points. Do NOT use "•" or "-" characters. Leave "" if none. NEVER put a different qualification here.
 Leave EDU_3_* as "" if fewer than 3 academic qualifications.
-IMPORTANT: Create exactly ONE entry per degree. Only create as many entries as there are actual degrees — do NOT create empty or duplicate entries.
+CRITICAL — NO DUPLICATES: Create exactly ONE entry per degree. If you have already used an institution name in EDU_1 or EDU_2, do NOT create another entry for the same institution unless it is a completely different degree. Only create as many entries as there are actual distinct degrees in the CV.
 
 PROFESSIONAL QUALIFICATIONS — up to 5 entries:
 Include ALL professional certifications, chartered qualifications, licences AND executive/short programmes not included in Education.
@@ -4886,7 +4886,18 @@ async function downloadHistory(index) {
             _eiEeSearch = _eiEeC;
           }
           var _eiEePEnd = _eiDocXml.indexOf('</w:p>', _eiEeIdx) + 6;
-          _eiDocXml = _eiDocXml.substring(0, _eiEePStart) + _eiExecXml + _eiDocXml.substring(_eiEePEnd);
+          if (_eiExecXml) {
+            _eiDocXml = _eiDocXml.substring(0, _eiEePStart) + _eiExecXml + _eiDocXml.substring(_eiEePEnd);
+          } else {
+            // No exec experience — remove the token paragraph AND the heading paragraph before it
+            var _eiHeadEnd = _eiEePEnd;
+            var _eiHeadStart = _eiEePStart;
+            // Also remove the Executive Experience heading paragraph (paraId EX012E5F034)
+            var _eiHeadRe = /<w:p [^>]*w14:paraId="EX012E5F034"[^>]*>[\s\S]*?<\/w:p>\s*/;
+            _eiDocXml = _eiDocXml.replace(_eiHeadRe, '');
+            // Now remove the token paragraph
+            _eiDocXml = _eiDocXml.substring(0, _eiEePStart) + _eiDocXml.substring(_eiEePEnd);
+          }
         }
         _eiZip.file('word/document.xml', _eiDocXml);
 
