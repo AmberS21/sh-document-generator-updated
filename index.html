@@ -782,6 +782,18 @@ const TEMPLATES = {
 
   },
 
+  'global-career-summary-wam-us': {
+
+    label: 'Global Candidate Profile — with Career Summary WAM US (Tm)',
+
+    file: 'templates/SH_Global_Career_Summary_WAM_US.docx',
+
+    patchFiles: ['word/document.xml', 'word/header1.xml', 'word/header2.xml'],
+
+    preview: 'templates/previews/global-career-summary.jpg'
+
+  },
+
   'gb-profile': {
 
     label: 'GB Candidate Profile',
@@ -915,7 +927,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
 (function() {
   var sel = document.getElementById('tplSel');
   if (!sel) return;
-  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','global-no-scorecard','global-with-scorecard','global-career-summary','services-profile'];
+  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile'];
   var reportKeys  = ['project-report','project-report-ext'];
 
   var grp1 = document.createElement('optgroup');
@@ -2768,7 +2780,7 @@ async function processOneCV(inputText, tpl, btn, returnOnly) {
   btn.classList.add('loading');
   btn.innerHTML = '\u26a1 Generating profile with Claude...';
 
-var isCareerSummary = (tpl === 'global-career-summary');
+var isCareerSummary = (tpl === 'global-career-summary' || tpl === 'global-career-summary-wam-us');
 var isApac = (tpl === 'apac-profile');
 var isApacUpdated = (tpl === 'apac-profile');
 var isChineseApac = false;
