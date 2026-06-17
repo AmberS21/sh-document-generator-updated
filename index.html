@@ -5807,6 +5807,23 @@ var _msalConfig = {
 var _msalInstance = null;
 try { _msalInstance = new msal.PublicClientApplication(_msalConfig); } catch(e) { console.warn('MSAL init failed:', e.message); }
 
+// Handle redirect response when returning from Microsoft login
+if (_msalInstance) {
+  _msalInstance.handleRedirectPromise().then(function(response) {
+    if (response && response.account) {
+      var name = response.account.name || response.account.username;
+      if (name) {
+        localStorage.setItem('sh_userName', name);
+        document.getElementById('userName').textContent = name;
+        document.getElementById('namePromptOverlay').style.display = 'none';
+        sessionStorage.removeItem('sh_msal_redirect_pending');
+      }
+    }
+  }).catch(function(err) {
+    console.warn('MSAL redirect response error:', err.message);
+  });
+}
+
 async function initUserName() {
   // Try MSAL SSO first
   if (_msalInstance) {
@@ -5820,7 +5837,7 @@ async function initUserName() {
         document.getElementById('namePromptOverlay').style.display = 'none';
         return;
       }
-      // Try silent SSO
+      // Try silent SSO first
       var silentReq = { scopes: ['User.Read'], loginHint: undefined };
       try {
         var silentResult = await _msalInstance.ssoSilent(silentReq);
@@ -5830,17 +5847,11 @@ async function initUserName() {
         document.getElementById('namePromptOverlay').style.display = 'none';
         return;
       } catch(silentErr) {
-        // Silent SSO failed - try popup
-        try {
-          var popupResult = await _msalInstance.loginPopup({ scopes: ['User.Read'] });
-          var name = popupResult.account.name || popupResult.account.username;
-          localStorage.setItem('sh_userName', name);
-          document.getElementById('userName').textContent = name;
-          document.getElementById('namePromptOverlay').style.display = 'none';
-          return;
-        } catch(popupErr) {
-          console.warn('MSAL popup failed:', popupErr.message);
-        }
+        // Silent SSO failed — use redirect login (reliable, no popup blocker issues)
+        // Store current page state so we return here after login
+        sessionStorage.setItem('sh_msal_redirect_pending', '1');
+        await _msalInstance.loginRedirect({ scopes: ['User.Read'] });
+        return; // Page will reload after redirect
       }
     } catch(msalErr) {
       console.warn('MSAL error:', msalErr.message);
