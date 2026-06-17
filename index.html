@@ -4898,8 +4898,9 @@ async function downloadHistory(index) {
             // Recalculate positions after heading removal
             _eiEePStart = _eiEePStart - _eiShift;
             _eiEePEnd = _eiEePEnd - _eiShift;
-            // Now remove the token paragraph at updated positions
-            _eiDocXml = _eiDocXml.substring(0, _eiEePStart) + _eiDocXml.substring(_eiEePEnd);
+            // Replace heading+token with a single spacer paragraph
+            var _eiSpacer = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
+            _eiDocXml = _eiDocXml.substring(0, _eiEePStart) + _eiSpacer + _eiDocXml.substring(_eiEePEnd);
           }
         }
         _eiZip.file('word/document.xml', _eiDocXml);
