@@ -4891,7 +4891,7 @@ async function downloadHistory(index) {
           } else {
             // No exec experience — remove the token paragraph AND the heading paragraph
             // First remove the heading (paraId EX012E5F034) and recalculate positions
-            var _eiHeadRe = /<w:p [^>]*w14:paraId="EX012E5F034"[^>]*>[\s\S]*?<\/w:p>\s*/;
+            var _eiHeadRe = /<w:p\b[^>]*>(?:(?!<\/w:p>).)*Executive Experience(?:(?!<\/w:p>).)*<\/w:p>\s*/s;
             var _eiBeforeHead = _eiDocXml.length;
             _eiDocXml = _eiDocXml.replace(_eiHeadRe, '');
             var _eiShift = _eiBeforeHead - _eiDocXml.length;
