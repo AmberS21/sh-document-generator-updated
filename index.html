@@ -4990,6 +4990,21 @@ async function downloadHistory(index) {
             nullGetter: function() { return ''; }
           });
           _eiDoc.render(_eiRender);
+          // Post-process: remove paragraphs with empty token text (unused optional fields)
+          var _eiOutXml = _eiDoc.getZip().files['word/document.xml'].asText();
+          var _eiParaRe = /<w:p\b[^>]*>[\s\S]*?<\/w:p>/g;
+          var _eiClean = ''; var _eiPos = 0; var _eiPm;
+          _eiParaRe.lastIndex = 0;
+          while ((_eiPm = _eiParaRe.exec(_eiOutXml)) !== null) {
+            _eiClean += _eiOutXml.slice(_eiPos, _eiPm.index);
+            var _eiP = _eiPm[0];
+            var _eiTs = _eiP.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [];
+            var _eiHasContent = _eiTs.some(function(t){ return t.replace(/<[^>]+>/g,'').trim().length > 0; });
+            if (!_eiTs.length || _eiHasContent) { _eiClean += _eiP; }
+            _eiPos = _eiPm.index + _eiPm[0].length;
+          }
+          _eiClean += _eiOutXml.slice(_eiPos);
+          _eiDoc.getZip().file('word/document.xml', _eiClean);
           out = _eiDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
         } catch(_eiErr) {
           console.error('[EA India] docxtemplater error:', _eiErr.message);
