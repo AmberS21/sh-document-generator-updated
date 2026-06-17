@@ -1691,6 +1691,7 @@ function buildEaIndiaRegBizExp(companies) {
     if (!s) return '';
     s = s.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b/gi, function(m){ return _MONTHS[m.toLowerCase()]||m; });
     s = s.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, function(m, yr, mo){ return mo + ' ' + yr; });
+    s = s.replace(/\b(Ongoing|On-going|Current|Till date|Till Date|To date|To Date|Now|now)\b/g, 'Present');
     return s;
   }
   function normDateRange(s) {
@@ -1707,7 +1708,7 @@ function buildEaIndiaRegBizExp(companies) {
   var ROL_RPR   = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
   var BUL_RPR   = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/><w:lang w:eastAsia="en-US"/></w:rPr>';
   var BUL_PPR   = '<w:pStyle w:val="SHBullets"/>';
-  var SPACER    = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
+  var SPACER    = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
   for (var ci = 0; ci < companies.length; ci++) {
     var co = companies[ci];
     if (!co || !co.name) continue;
@@ -1867,7 +1868,7 @@ function buildCareerSummaryBizExp(companies) {
 
     var showRoleDates = roles.length > 1;
 
-    // ── Step 1: Render ALL role titles first ──
+    // ── For each role: title + dates, then its OWN bullets immediately below ──
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
       if (!role || !role.role) continue;
@@ -1880,34 +1881,17 @@ function buildCareerSummaryBizExp(companies) {
       }
       xml += '</w:r></w:p>';
 
-      // Spacer between role titles (not after last)
-      if (ri < roles.length - 1) {
-        xml += '<w:p><w:pPr><w:pStyle w:val="16CV-TITLE"/></w:pPr></w:p>';
-      }
-    }
-
-    // ── Step 2: Collect ALL bullets from ALL roles (deduplicated) ──
-    // This handles both: bullets on one role only, or bullets spread across roles
-    var _allBullets = [];
-    var _seenBullets = {};
-    for (var ri2 = 0; ri2 < roles.length; ri2++) {
-      var _rBullets = (roles[ri2] && roles[ri2].bullets) ? roles[ri2].bullets : [];
-      for (var bi2 = 0; bi2 < _rBullets.length; bi2++) {
-        var _b = (_rBullets[bi2] || '').trim();
-        if (_b && !_seenBullets[_b]) {
-          _seenBullets[_b] = true;
-          _allBullets.push(_b);
-        }
-      }
-    }
-
-    // ── Step 3: Render all bullets once, after all role titles ──
-    if (_allBullets.length > 0) {
+      // Spacer after role title
       xml += '<w:p><w:pPr><w:pStyle w:val="16CV-TITLE"/></w:pPr></w:p>';
+
+      // Bullets for THIS role only — immediately under its title
+      var bullets = role.bullets || [];
       var inResults = false;
-      for (var bi3 = 0; bi3 < _allBullets.length; bi3++) {
-        var bullet = _allBullets[bi3];
+      for (var bi = 0; bi < bullets.length; bi++) {
+        var bullet = (bullets[bi] || '').trim();
+        if (!bullet) continue;
         var isResultsLabel = /^results\s*:/i.test(bullet);
+
         if (isResultsLabel) {
           inResults = true;
           xml += '<w:p><w:pPr><w:pStyle w:val="2CV"/><w:ind w:left="450"/></w:pPr>'
@@ -1921,6 +1905,14 @@ function buildCareerSummaryBizExp(companies) {
           xml += '<w:p><w:pPr><w:pStyle w:val="10CV"/></w:pPr>'
                + '<w:r><w:t>' + csXmlEsc(csPeriod(bullet)) + '</w:t></w:r></w:p>';
         }
+      }
+
+      // Reset Results flag between roles
+      inResults = false;
+
+      // Spacer between roles (only if not last role)
+      if (ri < roles.length - 1) {
+        xml += '<w:p><w:pPr><w:pStyle w:val="14CV-BODY"/></w:pPr></w:p>';
       }
     }
   }
@@ -2777,7 +2769,7 @@ var isEaIndia = (tpl === 'ea-india-profile');
 var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","ADDITIONAL_INFO":"","INTERESTS":""}';
+var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","ADDITIONAL_INFO":"","PROFESSIONAL_AFFILIATIONS":"","INTERESTS":""}';
 var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
@@ -2821,16 +2813,19 @@ EDUCATION:
 - Create ONE entry per degree, even if from same institution.
 - years: e.g. "2007" or "2006 – 2007". Use 3-letter month abbreviations if months given.
 - institution: Full institution name e.g. "Stellenbosch University".
+- location: City, Country of the institution e.g. "Fontainebleau, France". Leave "" if not stated.
 - degree: Full degree name exactly as written e.g. "BSc (Hons) Financial Mathematics"
 - extra: Any additional description, ERASMUS year, honours, specialisation, or extra line given for this degree. Leave "" if none.
 - Most recent first.
+- IMPORTANT: Create exactly ONE entry per degree. If a candidate has two degrees from the same institution, create two separate entries — do NOT create extra empty entries or repeat the institution. Only create as many entries as there are actual degrees.
 
 PROFESSIONAL_QUALS: Extract ONLY professional qualifications and certifications (CFA, FRM, CAIA, ACCA, CPA etc). Format as array of {year, qualification} e.g. [{year:"2026",qualification:"CAIA charterholder, CAIA Association"},{year:"2025",qualification:"Certified FRM, Global Association of Risk Professionals"}]. Most recent first.
 TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single string exactly as written in the CV. Leave "" if none.
 NATIONALITY: Exact nationality. Leave "" if not found.
 LANGUAGES: Languages with levels. Leave "" if not found.
-ADDITIONAL_INFO: Extract the candidate's leadership character, values, cultural approach, and working style — typically found in a section labelled "Leadership Character" or similar. This is prose about HOW the candidate leads and works (e.g. "Known for collaborative, resilient leadership that builds trust. Committed to developing others..."). Leave "" if not found.
-INTERESTS: Extract ONLY outside-work hobbies, sports, personal interests — found after phrases like "Outside work:" or "Hobbies:" (e.g. "family, sports and ad-hoc challenges - New York Marathon..."). Do NOT put leadership character text here. Leave "" if not found.
+ADDITIONAL_INFO: Extract the candidate's leadership character, values, cultural approach, and working style — typically found in a section labelled "Leadership Character" or similar. This is prose about HOW the candidate leads and works. Leave "" if not found.
+INTERESTS: Extract ONLY outside-work hobbies, sports, personal interests — found after phrases like "Outside work:", "Hobbies:", or "Interests:". Examples: "family, sport, travel". Do NOT put professional memberships, awards, or affiliations here. Leave "" if not found.
+PROFESSIONAL_AFFILIATIONS: Extract professional memberships, awards, honours, fellowships, board memberships, and charitable roles — things like "Member of the CFA Institute", "Fellow of the Royal Society", "Board Member of XYZ Charity". These are professional in nature, NOT personal hobbies. Leave "" if not found.
 
 Return this JSON structure:
 ` + eaIndiaV2JsonStr + `
@@ -3088,7 +3083,6 @@ ABSOLUTE RULES:
 - Extract EVERY work history entry WITHOUT EXCEPTION.
 - CRITICAL — BULLETS PER ROLE: Each role's bullets array must contain ONLY the bullet points written directly under THAT specific role in the CV. NEVER mix bullets from different roles. If the CV lists 3 bullets under Role A and 5 bullets under Role B, Role A gets exactly those 3 bullets and Role B gets exactly those 5 bullets.
 - Copy ALL bullet points VERBATIM — word for word, no changes.
-- SHARED BULLETS: Some CVs list multiple roles at a company then write bullets once beneath all roles together. Capture those bullets on whichever role they appear under in the CV — the output will automatically render them once after all role titles.
 
 COMPANIES ARRAY RULES:
 GROUPING RULE — READ CAREFULLY:
@@ -4729,6 +4723,8 @@ async function downloadHistory(index) {
           QUAL_1:            '',
           NATIONALITY:       _ei2Cv.NATIONALITY || '',
           LANGUAGES:         _ei2Cv.LANGUAGES || '',
+          TECH_SKILLS:       _ei2Cv.TECH_SKILLS || '',
+          PROFESSIONAL_AFFILIATIONS: _ei2Cv.PROFESSIONAL_AFFILIATIONS || '',
           ADDITIONAL_INFO:   _ei2Cv.ADDITIONAL_INFO || '',
           INTERESTS:         _ei2Cv.INTERESTS || ''
         };
@@ -4754,7 +4750,7 @@ async function downloadHistory(index) {
               _eduXml += '<w:p>' + _PP
                 + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.years||'') + ':</w:t></w:r>'
                 + '<w:r><w:tab/></w:r>'
-                + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.institution||'') + '</w:t></w:r>'
+                + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.institution||'') + (e.location ? ', ' + _xe(e.location) : '') + '</w:t></w:r>'
                 + '</w:p>'
                 + '<w:p>' + _PP
                 + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(e.degree||'') + '</w:t></w:r>'
