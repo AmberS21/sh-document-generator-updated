@@ -4899,7 +4899,7 @@ async function downloadHistory(index) {
             _eiEePStart = _eiEePStart - _eiShift;
             _eiEePEnd = _eiEePEnd - _eiShift;
             // Replace heading+token with a single spacer paragraph
-            var _eiSpacer = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
+            var _eiSpacer = '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:p>';
             _eiDocXml = _eiDocXml.substring(0, _eiEePStart) + _eiSpacer + _eiDocXml.substring(_eiEePEnd);
           }
         }
