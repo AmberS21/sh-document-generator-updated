@@ -4889,13 +4889,16 @@ async function downloadHistory(index) {
           if (_eiExecXml) {
             _eiDocXml = _eiDocXml.substring(0, _eiEePStart) + _eiExecXml + _eiDocXml.substring(_eiEePEnd);
           } else {
-            // No exec experience — remove the token paragraph AND the heading paragraph before it
-            var _eiHeadEnd = _eiEePEnd;
-            var _eiHeadStart = _eiEePStart;
-            // Also remove the Executive Experience heading paragraph (paraId EX012E5F034)
+            // No exec experience — remove the token paragraph AND the heading paragraph
+            // First remove the heading (paraId EX012E5F034) and recalculate positions
             var _eiHeadRe = /<w:p [^>]*w14:paraId="EX012E5F034"[^>]*>[\s\S]*?<\/w:p>\s*/;
+            var _eiBeforeHead = _eiDocXml.length;
             _eiDocXml = _eiDocXml.replace(_eiHeadRe, '');
-            // Now remove the token paragraph
+            var _eiShift = _eiBeforeHead - _eiDocXml.length;
+            // Recalculate positions after heading removal
+            _eiEePStart = _eiEePStart - _eiShift;
+            _eiEePEnd = _eiEePEnd - _eiShift;
+            // Now remove the token paragraph at updated positions
             _eiDocXml = _eiDocXml.substring(0, _eiEePStart) + _eiDocXml.substring(_eiEePEnd);
           }
         }
