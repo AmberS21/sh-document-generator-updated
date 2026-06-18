@@ -4120,7 +4120,7 @@ async function downloadHistory(index) {
         var _apacFilled = apacFillTemplate(_apacXml, _apacCv);
         _apacZip.file('word/document.xml', _apacFilled);
         out = await _apacZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-      } else if (item.template === 'global-career-summary') {
+      } else if (item.template === 'global-career-summary' || item.template === 'global-career-summary-wam-us') {
         var _csZip;
         try {
           _csZip = new PizZip(ab);
