@@ -1612,10 +1612,10 @@ function buildEaIndiaBizExp(companies) {
   }
   var TAB_STOP  = '<w:tabs><w:tab w:val="right" w:pos="9900"/></w:tabs>';
   var CO_PPR    = '<w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/>' + TAB_STOP + '</w:pPr>';
-  var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="002060"/></w:rPr>';
+  var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="2C2E82"/></w:rPr>';
   var ROL_PPR_D = '<w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/>' + TAB_STOP + '</w:pPr>';
   var ROL_PPR_P = '<w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/></w:pPr>';
-  var ROL_RPR   = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="002060"/></w:rPr>';
+  var ROL_RPR   = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="2C2E82"/></w:rPr>';
   var BUL_RPR   = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/><w:color w:val="2C2E82"/><w:lang w:eastAsia="en-US"/></w:rPr>';
   var BUL_PPR   = '<w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="4"/></w:numPr><w:spacing w:after="0"/><w:jc w:val="both"/>';
   var SPACER    = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
@@ -1631,7 +1631,7 @@ function buildEaIndiaBizExp(companies) {
         +  '</w:p>';
     if (co.description) {
       var DESC_PPR = '<w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/></w:pPr>';
-      var DESC_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="002060"/></w:rPr>';
+      var DESC_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="2C2E82"/></w:rPr>';
       xml += '<w:p>' + DESC_PPR + '<w:r>' + DESC_RPR + '<w:t xml:space="preserve">' + xe(co.description) + '</w:t></w:r></w:p>';
     }
     xml += SPACER;
@@ -1656,7 +1656,7 @@ function buildEaIndiaBizExp(companies) {
         if (b.indexOf('>>') === 0) {
           var bh = b.substring(2).trim();
           var OVW_PPR = '<w:pPr><w:spacing w:after="0"/></w:pPr>';
-          var OVW_RPR = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          var OVW_RPR = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="2C2E82"/></w:rPr>';
           xml += '<w:p>' + OVW_PPR + '<w:r>' + OVW_RPR + '<w:t xml:space="preserve">' + xe(bh) + '</w:t></w:r></w:p>';
         } else {
           xml += '<w:p><w:pPr>' + BUL_PPR + '</w:pPr><w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(b) + '</w:t></w:r></w:p>';
@@ -1675,8 +1675,8 @@ function buildEaIndiaExecExp(execExp) {
   function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   var BUL_RPR = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/><w:color w:val="2C2E82"/><w:lang w:eastAsia="en-US"/></w:rPr>';
   var BUL_PPR = '<w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="4"/></w:numPr><w:spacing w:after="0"/><w:jc w:val="both"/>';
-  var HDG_PPR = '<w:pPr><w:spacing w:after="0"/><w:rPr><w:color w:val="002060"/></w:rPr></w:pPr>';
-  var HDG_RPR = '<w:rPr><w:color w:val="002060"/></w:rPr>';
+  var HDG_PPR = '<w:pPr><w:spacing w:after="0"/><w:rPr><w:color w:val="2C2E82"/></w:rPr></w:pPr>';
+  var HDG_RPR = '<w:rPr><w:color w:val="2C2E82"/></w:rPr>';
   var SPACER  = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
   for (var si = 0; si < execExp.length; si++) {
     var section = execExp[si];
