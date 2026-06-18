@@ -4188,7 +4188,7 @@ async function downloadHistory(index) {
         delete _csRenderData.BUSINESS_EXPERIENCE_BLOCK;
         delete _csRenderData.companies;
         var _csDoc = new window.docxtemplater(_csZip, {
-          paragraphLoop: true, linebreaks: true,
+          paragraphLoop: false, linebreaks: false,
           delimiters: {start: '{{', end: '}}'},
           nullGetter: function() { return ''; }
         });
