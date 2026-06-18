@@ -4142,9 +4142,23 @@ async function downloadHistory(index) {
         console.log('[CS DEBUG] _beXml length:', _beXml.length);
 
         // Step 2 — Inject into document.xml at the {{BUSINESS_EXPERIENCE_BLOCK}} token
+        // Must replace the ENTIRE paragraph containing the token, not just the token inside <w:t>
         if (!_csZip.files['word/document.xml']) throw new Error('Template missing document.xml — please try again.');
         var _csDocXml = _csZip.files['word/document.xml'].asText();
-        _csDocXml = _csDocXml.replace('{{BUSINESS_EXPERIENCE_BLOCK}}', _beXml);
+        var _beIdx = _csDocXml.indexOf('{{BUSINESS_EXPERIENCE_BLOCK}}');
+        if (_beIdx !== -1) {
+          var _bePStart = _beIdx;
+          var _beSrch = _beIdx;
+          while (_beSrch > 0) {
+            var _bePC = _csDocXml.lastIndexOf('<w:p', _beSrch - 1);
+            if (_bePC < 0) break;
+            var _bePCh = _csDocXml.charAt(_bePC + 4);
+            if (_bePCh === '>' || _bePCh === ' ') { _bePStart = _bePC; break; }
+            _beSrch = _bePC;
+          }
+          var _bePEnd = _csDocXml.indexOf('</w:p>', _beIdx) + 6;
+          _csDocXml = _csDocXml.substring(0, _bePStart) + _beXml + _csDocXml.substring(_bePEnd);
+        }
         _csZip.file('word/document.xml', _csDocXml);
 
         // Step 3 — Fill header4.xml with candidate name (if present)
