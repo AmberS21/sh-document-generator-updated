@@ -2922,10 +2922,10 @@ Rule 6 — role.role: Exact job title as written in the CV. Nothing added or rem
 Rule 7 — role.role_dates: REQUIRED when the company has 2 or more roles. Same 3-letter month format. Leave "" ONLY if this company has exactly ONE role.
 
 Rule 8 — role.bullets — CRITICAL:
-THIS CV STRUCTURE HAS NO PER-ROLE BULLETS IN THE WORK HISTORY SECTION.
-If the work history section lists companies and roles WITHOUT bullet points written directly under each role, then EVERY role's bullets array must be EMPTY: [].
+Capture ALL bullet points, achievements, and responsibilities written DIRECTLY under that specific role title in the work history section. Copy VERBATIM — word for word, no changes.
+If no bullet points are written under a role, leave bullets as [].
 Do NOT invent bullets. Do NOT move content from other sections into bullets.
-Only populate bullets[] if the CV explicitly writes bullet points or numbered achievements DIRECTLY under that specific role title in the work history section.
+Do NOT leave bullets empty if the CV has bullet points under that role.
 
 Rule 9 — Thematic achievement sections (e.g. "Executive Experience", "Leadership & Management", "Strategic", "Operational", "International"):
 These sections appear AFTER all job entries and summarise achievements by theme — NOT by company. They must NOT be placed in any company's bullets[]. Leave all companies' bullets[] as [] and do not extract this content — the template has no field for it.
