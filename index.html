@@ -4192,7 +4192,15 @@ async function downloadHistory(index) {
           delimiters: {start: '{{', end: '}}'},
           nullGetter: function() { return ''; }
         });
-        _csDoc.render(_csRenderData);
+        try {
+          _csDoc.render(_csRenderData);
+        } catch(_csErr) {
+          console.error('[CS RENDER ERROR]', _csErr.constructor.name, _csErr.message);
+          if (_csErr.properties && _csErr.properties.errors) {
+            _csErr.properties.errors.slice(0,5).forEach(function(e){ console.error('[CS SUB-ERROR]', JSON.stringify(e.properties||e.message||e).slice(0,300)); });
+          }
+          throw _csErr;
+        }
         out = _csDoc.getZip().generate({type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       } else if (item.template === 'gb-profile' || item.template === 'services-profile') {
         var _gbZip = new PizZip(ab);
