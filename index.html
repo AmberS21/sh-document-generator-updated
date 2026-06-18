@@ -5333,12 +5333,16 @@ async function downloadHistory(index) {
         var _newRows = '';
         _cands.forEach(function(cand, ri) {
           var _r = 3 + ri;
-          var _isExtReport = (item.template === 'project-report-ext' || item.template === 'project-report-gb');
-          var _vals = [cand.fullname||'', cand.company||'', cand.title||'', cand.location||'', cand.pipelineTag||'', cand.gender||'', cand.fitToProfile||'', cand.notes||''];
-          var _cols = ['A','B','C','D','E','F','G','H'];
+          var _isExtReport = (item.template === 'project-report-ext');
+          var _isGbReport  = (item.template === 'project-report-gb');
+          var _vals = [cand.fullname||'', cand.company||'', cand.title||'', cand.location||'', cand.pipelineTag||'', cand.gender||'', cand.notes||''];
+          var _cols = ['A','B','C','D','E','F','G'];
           if (_isExtReport) {
             _vals.push(cand.linkedin||'', cand.bio||'', cand.summary||'');
-            _cols.push('I','J','K');
+            _cols.push('H','I','J');
+          } else if (_isGbReport) {
+            _vals.push(cand.linkedin||'', cand.bio||'', cand.summary||'', cand.fitToProfile||'');
+            _cols.push('H','I','J','K');
           }
           var _cells = '';
           _vals.forEach(function(v, ci) {
