@@ -4183,12 +4183,16 @@ async function downloadHistory(index) {
         })();
 
         // Step 4 — docxtemplater fills all remaining flat {{tokens}}
+        // Remove BUSINESS_EXPERIENCE_BLOCK from render data — already injected via string replace
+        var _csRenderData = Object.assign({}, item.content);
+        delete _csRenderData.BUSINESS_EXPERIENCE_BLOCK;
+        delete _csRenderData.companies;
         var _csDoc = new window.docxtemplater(_csZip, {
           paragraphLoop: true, linebreaks: true,
           delimiters: {start: '{{', end: '}}'},
           nullGetter: function() { return ''; }
         });
-        _csDoc.render(item.content);
+        _csDoc.render(_csRenderData);
         out = _csDoc.getZip().generate({type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
       } else if (item.template === 'gb-profile' || item.template === 'services-profile') {
         var _gbZip = new PizZip(ab);
