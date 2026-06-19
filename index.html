@@ -1346,12 +1346,7 @@ function buildSvcBizExp(companies) {
           + '</w:p>';
     }
 
-    // Company description — regular text, NOT italic, one line space before
-    if (co.description && co.description.trim()) {
-      xml += SPACER;
-      xml += '<w:p><w:pPr>'+SPACING+IND+JC+'</w:pPr>'
-          + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(co.description)+'</w:t></w:r></w:p>';
-    }
+    // company.description intentionally not rendered — captured in role_description instead
 
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
@@ -3270,11 +3265,11 @@ CRITICAL RULES:
 - company.name: Full legal company name. IDENTICAL string for all roles at same company.
 - company.location: City, Country if stated — leave empty if not given.
 - company.dates: Overall tenure at that company. Always use 3-letter month abbreviations (Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec). Format: "Oct 2025 – Present" or "Mar 2016 – Jan 2024".
-- company.description: ONLY use this if the CV has a standalone sentence about what the COMPANY does — written directly under the company name BEFORE any role title. Leave EMPTY otherwise. Do NOT put role content here.
+- company.description: Leave EMPTY always. Do not use this field.
 - company.roles: ALL roles held at that company, most recent first.
   - role: Exact job title as written.
   - role_dates: Dates for THIS specific role. Always use 3-letter month abbreviations (Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec). Never spell out full month names. Format: "Oct 2025 – Present" or "Mar 2016 – Jan 2024".
-  - role_description: ONLY use this if the CV has a short prose paragraph written AFTER the role title and BEFORE the bullet points — a description of the role itself (e.g. "Eight-year progression to Enterprise Lead at one of the world's foremost data and AI companies."). Leave empty if no such paragraph exists. Do NOT put company info here. Do NOT put bullet content here.
+  - role_description: Capture any prose paragraph(s) written AFTER the role title and BEFORE the bullet points. This includes: a sentence about the company (e.g. "Faculty is the UK's leading AI advisory firm, recently acquired by Accenture.") AND/OR a description of the role itself (e.g. "A targeted hire to build out the firm's strategic and commercial AI offering."). Join them into one paragraph if both exist. Leave EMPTY only if there is genuinely no prose between the role title and the bullets.
   - bullets: ALL content written under this role — bullet points AND section heading labels. Use your judgement:
     * If the CV has named sections within a role (e.g. "AI Strategy, Thought Leadership and Investment Case:", "Commercial Ownership and Capability Development:"), include these as their own string entry in the bullets array — they will be rendered as headings above their bullets, not as bullets themselves.
     * Include ALL bullet points VERBATIM — every single one, no skipping, no summarising.
@@ -3313,7 +3308,7 @@ JSON STRUCTURE — return exactly this filled with real data:
       "name": "Full company legal name",
       "location": "City, Country",
       "dates": "Mon YYYY – Present",
-      "description": "Company intro sentence verbatim if present, else empty",
+      "description": "",
       "roles": [
         {
           "role": "Exact job title",
