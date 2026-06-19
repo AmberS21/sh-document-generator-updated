@@ -2498,7 +2498,7 @@ async function generate() {
             name: (proj.name || 'Project Report') + (proj.client && proj.client.name ? ' - ' + proj.client.name : ''),
             date: new Date().toLocaleString(),
             template: tpl,
-            fmt: tpl === 'project-report' ? 'x' : 'd',
+            fmt: (tpl === 'project-report' || tpl === 'project-report-gb' || tpl === 'project-report-ext') ? 'x' : 'd',
             content: projContent
           };
           var projHistory = JSON.parse(localStorage.getItem('sh_history') || '[]');
@@ -2542,7 +2542,7 @@ async function generate() {
           btn.innerHTML = 'Reading ' + file.name + '...';
 
           // ── Project Report: parse xlsx/docx file directly into candidate rows ──
-          if (tpl === 'project-report' && (ext === 'xlsx' || ext === 'xls' || ext === 'docx')) {
+          if ((tpl === 'project-report' || tpl === 'project-report-gb' || tpl === 'project-report-ext') && (ext === 'xlsx' || ext === 'xls' || ext === 'docx')) {
             try {
               var _prAb = await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
               var _prWb = XLSX.read(_prAb, {type:'array'});
