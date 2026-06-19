@@ -5267,7 +5267,7 @@ async function downloadHistory(index) {
 
     } else if (fmt === 'x') {
       // --- Project Report: fill xlsx template preserving ALL styles/images ---
-      if (item.template === 'services-profile' || item.template === 'project-report' || item.template === 'project-report-ext') {
+      if (item.template === 'services-profile' || item.template === 'project-report' || item.template === 'project-report-ext' || item.template === 'project-report-gb') {
         var projData2 = item.content;
         var _projTplFile = (item.template === 'project-report-ext')
           ? 'templates/SH_Project_Report_Extended_v1.xlsx'
