@@ -1414,30 +1414,29 @@ function buildSvcEducation(cv) {
   edus.forEach(function(e, i) {
     if (i > 0) xml += '<w:p><w:pPr>' + SPACING + '</w:pPr></w:p>';
 
-    // Degree line: BOLD degree, TAB, date right-aligned
-    // University name underneath on next line
-    if (e.degree) {
+    // University line: BOLD institution, TAB, date right-aligned (NOT bold)
+    if (e.inst) {
       xml += '<w:p><w:pPr>'+TAB+SPACING+IND+'<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr></w:pPr>'
-          + '<w:r>'+RPR_B+'<w:t xml:space="preserve">'+xe(e.degree)+'</w:t></w:r>'
-          + (e.years ? '<w:r>'+RPR_B+'<w:tab/><w:t>'+xe(e.years)+'</w:t></w:r>' : '')
+          + '<w:r>'+RPR_B+'<w:t xml:space="preserve">'+xe(e.inst)+'</w:t></w:r>'
+          + (e.years ? '<w:r>'+RPR+'<w:tab/><w:t>'+xe(e.years)+'</w:t></w:r>' : '')
           + '</w:p>';
     }
-    // Institution line underneath degree (not bold)
-    if (e.inst) {
+    // Degree underneath university (NOT bold)
+    if (e.degree) {
       xml += '<w:p><w:pPr>'+SPACING+IND+'</w:pPr>'
-          + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(e.inst)+'</w:t></w:r></w:p>';
+          + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(e.degree)+'</w:t></w:r></w:p>';
     }
-    // Extra info (e.g. Class 2:1) on its own line if present
+    // Extra info (e.g. Class 2:1) on its own line — NOT bold
     if (e.extra) {
       xml += '<w:p><w:pPr>'+SPACING+IND+'</w:pPr>'
           + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(e.extra)+'</w:t></w:r></w:p>';
     }
-    // Education bullet points
+    // Education bullet points — justified
     if (e.bullets && e.bullets.length > 0) {
       xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
       e.bullets.forEach(function(b) {
         if (!b || !b.trim()) return;
-        xml += '<w:p><w:pPr>'+BULLET_PPR+'<w:rPr>'+FONT+COLOR+'</w:rPr></w:pPr>'
+        xml += '<w:p><w:pPr>'+BULLET_PPR+'<w:jc w:val="both"/><w:rPr>'+FONT+COLOR+'</w:rPr></w:pPr>'
             + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(b)+'</w:t></w:r></w:p>';
       });
     }
@@ -4480,25 +4479,29 @@ async function downloadHistory(index) {
           // Services Profile: use block injection same as GB
           var _svcDocXml = _gbZip.files['word/document.xml'].asText();
 
-          // Build companies array from flat keys (grouping consecutive same-company)
+          // Build companies array — prefer companies[] from svcPrompt, fallback to flat COMPANY_N_* keys
           var _svcCos = [];
-          for (var _ci2 = 1; _ci2 <= 15; _ci2++) {
-            var _scn = _cv['COMPANY_' + _ci2 + '_NAME'] || '';
-            if (!_scn) break;
-            var _sbs = [];
-            for (var _bi = 1; _bi <= 10; _bi++) {
-              var _sb = _cv['COMPANY_' + _ci2 + '_BULLET_' + _bi] || '';
-              if (_sb) _sbs.push(_sb);
-            }
-            var _sRole = { role: _cv['COMPANY_'+_ci2+'_ROLE']||'', role_dates: _cv['COMPANY_'+_ci2+'_DATES']||'', bullets: _sbs };
-            if (_svcCos.length > 0 && _svcCos[_svcCos.length-1].name === _scn) {
-              var _sRoleNoBullets = Object.assign({}, _sRole, {bullets: []});
-              _svcCos[_svcCos.length-1].roles.push(_sRoleNoBullets);
-              var _sOldDates = _svcCos[_svcCos.length-1].dates;
-              var _sNewStart = (_cv['COMPANY_'+_ci2+'_DATES']||'').split(/[–-]/)[0].trim();
-              _svcCos[_svcCos.length-1].dates = _sNewStart + ' – ' + _sOldDates.split(/[–-]/).pop().trim();
-            } else {
-              _svcCos.push({ name: _scn, location: _cv['COMPANY_'+_ci2+'_LOCATION']||'', dates: _cv['COMPANY_'+_ci2+'_DATES']||'', roles: [_sRole] });
+          if (_cv.companies && Array.isArray(_cv.companies) && _cv.companies.length > 0) {
+            _svcCos = _cv.companies;
+          } else {
+            for (var _ci2 = 1; _ci2 <= 15; _ci2++) {
+              var _scn = _cv['COMPANY_' + _ci2 + '_NAME'] || '';
+              if (!_scn) break;
+              var _sbs = [];
+              for (var _bi = 1; _bi <= 10; _bi++) {
+                var _sb = _cv['COMPANY_' + _ci2 + '_BULLET_' + _bi] || '';
+                if (_sb) _sbs.push(_sb);
+              }
+              var _sRole = { role: _cv['COMPANY_'+_ci2+'_ROLE']||'', role_dates: _cv['COMPANY_'+_ci2+'_DATES']||'', bullets: _sbs };
+              if (_svcCos.length > 0 && _svcCos[_svcCos.length-1].name === _scn) {
+                var _sRoleNoBullets = Object.assign({}, _sRole, {bullets: []});
+                _svcCos[_svcCos.length-1].roles.push(_sRoleNoBullets);
+                var _sOldDates = _svcCos[_svcCos.length-1].dates;
+                var _sNewStart = (_cv['COMPANY_'+_ci2+'_DATES']||'').split(/[–-]/)[0].trim();
+                _svcCos[_svcCos.length-1].dates = _sNewStart + ' – ' + _sOldDates.split(/[–-]/).pop().trim();
+              } else {
+                _svcCos.push({ name: _scn, location: _cv['COMPANY_'+_ci2+'_LOCATION']||'', dates: _cv['COMPANY_'+_ci2+'_DATES']||'', roles: [_sRole] });
+              }
             }
           }
 
@@ -4580,8 +4583,6 @@ async function downloadHistory(index) {
             _svcDocXml = _svcDocXml.substring(0, _svcQPS) + _svcQualXml + _svcDocXml.substring(_svcQPE);
           }
 
-          _gbZip.file('word/document.xml', _svcDocXml);
-
           // Simple token replacement for remaining fields
           // Interests: if array, inject as bullet XML; if string, use as-is
           var _svcInterestsXml = '';
@@ -4610,6 +4611,8 @@ async function downloadHistory(index) {
               _svcDocXml = _svcDocXml.substring(0, _intPS) + _svcInterestsXml + _svcDocXml.substring(_intPE);
             }
           }
+          _gbZip.file('word/document.xml', _svcDocXml);
+
           var _svcRender = Object.assign({}, _cv, {
             CANDIDATE_NAME: _cv.CANDIDATE_NAME||'',
             NATIONALITY: _cv.NATIONALITY||'',
