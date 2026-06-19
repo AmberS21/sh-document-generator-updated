@@ -1279,7 +1279,7 @@ function buildGbBizExp(companies) {
       xml += '<w:p><w:pPr><w:pStyle w:val="SHText"/>' + TAB_STOP
           + '<w:spacing w:before="0" w:after="0"/></w:pPr>'
           + '<w:r><w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
-          + (multiRole && roleDates ? '<w:r><w:tab/></w:r><w:r><w:t>' + xe(roleDates) + '</w:t></w:r>' : '')
+          + (multiRole && roleDates ? '<w:r><w:tab/></w:r><w:r><w:t>' + xe(abbrvDates(roleDates)) + '</w:t></w:r>' : '')
           + '</w:p>';
 
       // Bullets (only under first/most recent role)
@@ -1304,6 +1304,13 @@ function buildSvcBizExp(companies) {
   if (!companies || companies.length === 0) return '';
   var xml = '';
   function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function abbrvDates(s) {
+    if (!s) return s;
+    return s.replace(/January/g,'Jan').replace(/February/g,'Feb').replace(/March/g,'Mar')
+            .replace(/April/g,'Apr').replace(/June/g,'Jun')
+            .replace(/July/g,'Jul').replace(/August/g,'Aug').replace(/September/g,'Sep')
+            .replace(/October/g,'Oct').replace(/November/g,'Nov').replace(/December/g,'Dec');
+  }
   var FONT = '<w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium" w:cs="Times New Roman"/>';
   var COLOR = '<w:color w:val="222229"/>';
   var TAB = '<w:tabs><w:tab w:val="right" w:pos="9720"/></w:tabs>';
@@ -1314,6 +1321,7 @@ function buildSvcBizExp(companies) {
   var RPR = '<w:rPr>'+FONT+COLOR+'</w:rPr>';
   var RPR_B = '<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr>';
   var BULLET_PPR = '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr><w:ind w:left="360" w:hanging="360"/>'+SPACING+IND+JC;
+  var SPACER = '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
 
   for (var ci = 0; ci < companies.length; ci++) {
     var co = companies[ci];
@@ -1321,14 +1329,24 @@ function buildSvcBizExp(companies) {
     var roles = co.roles || [];
     var multiRole = roles.length > 1;
 
-    // Spacer before each company
-    xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
+    // Spacer before each company (except first)
+    if (ci > 0) xml += SPACER;
 
-    // Company line: BOLD name, TAB, BOLD overall dates (ALWAYS on company line)
-    xml += '<w:p><w:pPr>'+PPR+'<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr></w:pPr>'
-        + '<w:r>'+RPR_B+'<w:t xml:space="preserve">'+xe(co.name)+'</w:t></w:r>'
-        + (co.dates ? '<w:r>'+RPR_B+'<w:tab/><w:t>'+xe(co.dates)+'</w:t></w:r>' : '')
-        + '</w:p>';
+    // Company line: BOLD name, BOLD location after comma, TAB, BOLD overall dates
+    if (co.location && co.location.trim()) {
+      xml += '<w:p><w:pPr>'+PPR+'<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr></w:pPr>'
+          + '<w:r>'+RPR_B+'<w:t xml:space="preserve">'+xe(co.name)+', </w:t></w:r>'
+          + '<w:r>'+RPR_B+'<w:t xml:space="preserve">'+xe(co.location)+'</w:t></w:r>'
+          + (co.dates ? '<w:r>'+RPR_B+'<w:tab/><w:t>'+xe(abbrvDates(co.dates))+'</w:t></w:r>' : '')
+          + '</w:p>';
+    } else {
+      xml += '<w:p><w:pPr>'+PPR+'<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr></w:pPr>'
+          + '<w:r>'+RPR_B+'<w:t xml:space="preserve">'+xe(co.name)+'</w:t></w:r>'
+          + (co.dates ? '<w:r>'+RPR_B+'<w:tab/><w:t>'+xe(co.dates)+'</w:t></w:r>' : '')
+          + '</w:p>';
+    }
+
+    // company.description intentionally not rendered — captured in role_description instead
 
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
@@ -1337,26 +1355,43 @@ function buildSvcBizExp(companies) {
       // For single-role companies, don't show dates on role line (already on company)
       if (!multiRole) roleDates = '';
 
-      // Line space before role
-      xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
+      // One line space before role
+      xml += SPACER;
 
-      // Role line only if there's a role title
+      // Role line: regular (NOT italic), TAB, dates
       if (role.role) {
-        xml += '<w:p><w:pPr>'+PPR+RPR+'</w:pPr>'
+        xml += '<w:p><w:pPr>'+PPR+'</w:pPr>'
             + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(role.role)+'</w:t></w:r>'
             + (roleDates ? '<w:r>'+RPR+'<w:tab/><w:t>'+xe(roleDates)+'</w:t></w:r>' : '')
             + '</w:p>';
       }
 
-      // Line space before bullets
+      // Role description: regular text, one line space before, after role title
+      if (role.role_description && role.role_description.trim()) {
+        xml += SPACER;
+        xml += '<w:p><w:pPr>'+SPACING+IND+JC+'</w:pPr>'
+            + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(role.role_description)+'</w:t></w:r></w:p>';
+      }
+
+      // Bullets — one line space before
       var bullets = role.bullets || [];
       if (bullets.length > 0) {
-        xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
+        xml += SPACER;
         for (var bi = 0; bi < bullets.length; bi++) {
-          if (!bullets[bi] || !bullets[bi].trim()) continue;
-          // Bullet with numPr
-          xml += '<w:p><w:pPr>'+BULLET_PPR+'<w:rPr>'+FONT+COLOR+'</w:rPr></w:pPr>'
-              + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(bullets[bi])+'</w:t></w:r></w:p>';
+          var btext = (bullets[bi] || '').trim();
+          if (!btext) continue;
+          // Section headings within bullets (e.g. "AI Strategy:" or "Commercial Ownership:")
+          // Detected as: short text ending with colon, no period, likely < 80 chars
+          var isHeading = btext.endsWith(':') && btext.length < 80 && !btext.match(/\.\.\./);
+          if (isHeading) {
+            // Render as regular paragraph heading (not a bullet), one line space above if not first
+            if (bi > 0) xml += SPACER;
+            xml += '<w:p><w:pPr>'+SPACING+IND+'</w:pPr>'
+                + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(btext)+'</w:t></w:r></w:p>';
+          } else {
+            xml += '<w:p><w:pPr>'+BULLET_PPR+'<w:rPr>'+FONT+COLOR+'</w:rPr></w:pPr>'
+                + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(btext)+'</w:t></w:r></w:p>';
+          }
         }
       }
     }
@@ -1369,41 +1404,54 @@ function buildSvcEducation(cv) {
   function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   var FONT = '<w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium" w:cs="Times New Roman"/>';
   var COLOR = '<w:color w:val="222229"/>';
+  var TAB = '<w:tabs><w:tab w:val="right" w:pos="9720"/></w:tabs>';
   var SPACING = '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>';
   var IND = '<w:ind w:right="26"/>';
-  var BFONT = FONT + '<w:b/>';
-  
-  // Education can be in education[] array (CS JSON) or flat EDU_N_* keys
+  var RPR = '<w:rPr>'+FONT+COLOR+'</w:rPr>';
+  var RPR_B = '<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr>';
+  var BULLET_PPR = '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr><w:ind w:left="360" w:hanging="360"/>'+SPACING+IND;
+
+  // Build education entries from new svcPrompt JSON keys or legacy flat keys
   var edus = [];
-  if (cv.education && cv.education.length) {
-    cv.education.forEach(function(e) {
-      if (e.institution || e.degree) edus.push({
-        inst: e.institution || '', degree: e.degree || '',
-        years: e.years || (e.startDate ? e.startDate + (e.endDate ? ' – ' + e.endDate : '') : '')
-      });
-    });
-  } else {
-    for (var i = 1; i <= 5; i++) {
-      var inst = cv['EDU_' + i + '_INSTITUTION'] || cv['EDU_INSTITUTION'] || '';
-      var deg = cv['EDU_' + i + '_DEGREE'] || '';
-      var yr = cv['EDU_' + i + '_YEARS'] || '';
-      if (!yr && cv['EDU_' + i + '_START']) yr = cv['EDU_' + i + '_START'] + (cv['EDU_' + i + '_END'] ? ' – ' + cv['EDU_' + i + '_END'] : '');
-      if (!inst && !deg) break;
-      edus.push({ inst: inst, degree: deg, years: yr });
-      if (i === 1 && !cv['EDU_2_INSTITUTION'] && !cv.education) break;
-    }
+  for (var i = 1; i <= 5; i++) {
+    var inst = cv['EDU_' + i + '_INSTITUTION'] || '';
+    var deg  = cv['EDU_' + i + '_DEGREE'] || '';
+    var yr   = cv['EDU_' + i + '_YEARS'] || '';
+    var extra = cv['EDU_' + i + '_EXTRA'] || '';
+    var bullets = cv['EDU_' + i + '_BULLETS'] || [];
+    if (!yr && cv['EDU_' + i + '_START']) yr = cv['EDU_' + i + '_START'] + (cv['EDU_' + i + '_END'] ? ' – ' + cv['EDU_' + i + '_END'] : '');
+    if (!inst && !deg) break;
+    edus.push({ inst: inst, degree: deg, years: yr, extra: extra, bullets: Array.isArray(bullets) ? bullets : [] });
   }
-  
+
   edus.forEach(function(e, i) {
     if (i > 0) xml += '<w:p><w:pPr>' + SPACING + '</w:pPr></w:p>';
-    // Institution line: bold institution (no years in Services format)
-    xml += '<w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="9720"/></w:tabs>' + SPACING + IND + '<w:rPr>' + FONT + '<w:b/>' + COLOR + '</w:rPr></w:pPr>'
-        + '<w:r><w:rPr>' + FONT + '<w:b/>' + COLOR + '</w:rPr><w:t>' + xe(e.inst) + '</w:t></w:r>'
-        + '</w:p>';
-    // Degree line
+
+    // University line: regular (NOT bold), TAB, date right-aligned (NOT bold)
+    if (e.inst) {
+      xml += '<w:p><w:pPr>'+TAB+SPACING+IND+'</w:pPr>'
+          + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(e.inst)+'</w:t></w:r>'
+          + (e.years ? '<w:r>'+RPR+'<w:tab/><w:t>'+xe(e.years)+'</w:t></w:r>' : '')
+          + '</w:p>';
+    }
+    // Degree underneath university (NOT bold)
     if (e.degree) {
-      xml += '<w:p><w:pPr>' + SPACING + IND + '<w:rPr>' + FONT + COLOR + '</w:rPr></w:pPr>'
-          + '<w:r><w:rPr>' + FONT + COLOR + '</w:rPr><w:t>' + xe(e.degree) + '</w:t></w:r></w:p>';
+      xml += '<w:p><w:pPr>'+SPACING+IND+'</w:pPr>'
+          + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(e.degree)+'</w:t></w:r></w:p>';
+    }
+    // Extra info (e.g. Class 2:1) on its own line — NOT bold
+    if (e.extra) {
+      xml += '<w:p><w:pPr>'+SPACING+IND+'</w:pPr>'
+          + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(e.extra)+'</w:t></w:r></w:p>';
+    }
+    // Education bullet points — justified
+    if (e.bullets && e.bullets.length > 0) {
+      xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
+      e.bullets.forEach(function(b) {
+        if (!b || !b.trim()) return;
+        xml += '<w:p><w:pPr>'+BULLET_PPR+'<w:jc w:val="both"/><w:rPr>'+FONT+COLOR+'</w:rPr></w:pPr>'
+            + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(b)+'</w:t></w:r></w:p>';
+      });
     }
   });
   return xml;
@@ -2798,6 +2846,7 @@ async function processOneCV(inputText, tpl, btn, returnOnly) {
   btn.innerHTML = '\u26a1 Generating profile with Claude...';
 
 var isCareerSummary = (tpl === 'global-career-summary' || tpl === 'global-career-summary-wam-us');
+var isServicesProfile = (tpl === 'services-profile');
 var isApac = (tpl === 'apac-profile');
 var isApacUpdated = (tpl === 'apac-profile');
 var isChineseApac = false;
@@ -3193,6 +3242,98 @@ CANDIDATE SOURCE:
 
 ` + inputText;
 
+var svcPrompt = `You are a Sheffield Haworth executive search document assistant for the Services Candidate Profile template.
+
+Extract information from the candidate CV below. Follow every rule exactly.
+
+CRITICAL RULES:
+1. CANDIDATE_NAME: Full name exactly as written.
+2. CURRENT_EMPLOYER: Current/most recent employer exactly.
+3. CLIENT_COMPANY: Leave EMPTY.
+4. SEARCH_TITLE: Leave EMPTY.
+5. DATE: Today in format "Month YYYY" (e.g. "June 2026").
+
+6. SUMMARY — EXECUTIVE SUMMARY:
+- The CV may have a summary/profile/executive summary section.
+- Capture it as SEPARATE PARAGRAPHS. Each paragraph in the CV becomes a separate string in the summary_paragraphs array.
+- Copy VERBATIM — word for word, no changes, no rewriting.
+- Also put the full combined text into SUMMARY field (paragraphs joined with \n\n).
+- If no summary exists, leave SUMMARY empty and summary_paragraphs as [].
+
+7. PROFESSIONAL EXPERIENCE — CRITICAL:
+- Extract ALL work history entries WITHOUT EXCEPTION. Every single job must appear.
+- company.name: Full legal company name. IDENTICAL string for all roles at same company.
+- company.location: City, Country if stated — leave empty if not given.
+- company.dates: Overall tenure at that company. Always use 3-letter month abbreviations (Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec). Format: "Oct 2025 – Present" or "Mar 2016 – Jan 2024".
+- company.description: Leave EMPTY always. Do not use this field.
+- company.roles: ALL roles held at that company, most recent first.
+  - role: Exact job title as written.
+  - role_dates: Dates for THIS specific role. Always use 3-letter month abbreviations (Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec). Never spell out full month names. Format: "Oct 2025 – Present" or "Mar 2016 – Jan 2024".
+  - role_description: Capture any prose paragraph(s) written AFTER the role title and BEFORE the bullet points. This includes: a sentence about the company (e.g. "Faculty is the UK's leading AI advisory firm, recently acquired by Accenture.") AND/OR a description of the role itself (e.g. "A targeted hire to build out the firm's strategic and commercial AI offering."). Join them into one paragraph if both exist. Leave EMPTY only if there is genuinely no prose between the role title and the bullets.
+  - bullets: ALL content written under this role — bullet points AND section heading labels. Use your judgement:
+    * If the CV has named sections within a role (e.g. "AI Strategy, Thought Leadership and Investment Case:", "Commercial Ownership and Capability Development:"), include these as their own string entry in the bullets array — they will be rendered as headings above their bullets, not as bullets themselves.
+    * Include ALL bullet points VERBATIM — every single one, no skipping, no summarising.
+    * Keep the ORDER exactly as in the CV — heading string, then its bullets, then next heading, then its bullets.
+    * "Results:", "Key Achievements:" and similar labels — include as a string entry (they become headings above their result bullets).
+    * NEVER invent content. NEVER merge bullets. NEVER skip any line.
+
+COMPANY GROUPING RULE: If a candidate held multiple roles at the SAME company (e.g. promoted within), ALL those roles go under ONE company entry with multiple objects in roles[]. Use IDENTICAL company name string to trigger grouping. If roles at the same company are NOT consecutive in the CV, keep them as separate company entries.
+
+8. EDUCATION:
+- EDU_1_YEARS: Year range (e.g. "2003 – 2007").
+- EDU_1_INSTITUTION: Full institution name only (e.g. "University of Cambridge").
+- EDU_1_LOCATION: Location if stated (e.g. "Cambridge, UK") — leave empty if not given.
+- EDU_1_DEGREE: Full degree description (e.g. "BA (Hons) & MA (Hons) Philosophy").
+- EDU_1_EXTRA: Any additional info about this education entry (e.g. "Class 2:1").
+- EDU_1_BULLETS: Array of bullet points listed under this education entry — capture VERBATIM. Empty array [] if no bullets.
+- Fill EDU_2_* the same way for second education entry. Leave empty if fewer entries.
+
+9. QUALIFICATIONS: QUAL_1, QUAL_2, QUAL_3 — professional qualifications/certifications exactly as stated.
+10. NATIONALITY: Exact nationality as stated. Leave empty if not mentioned.
+11. LANGUAGES: All languages exactly as stated.
+12. INTERESTS: Array of interest bullet points. Each separate interest/hobby = one string in the array. Copy VERBATIM.
+13. CERTIFICATIONS: Any professional certifications not captured in qualifications.
+
+JSON STRUCTURE — return exactly this filled with real data:
+{
+  "CANDIDATE_NAME": "",
+  "CURRENT_EMPLOYER": "",
+  "CLIENT_COMPANY": "",
+  "SEARCH_TITLE": "",
+  "PROFILE_MONTH": "` + (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})() + `",
+  "SUMMARY": "",
+  "summary_paragraphs": ["paragraph 1 verbatim", "paragraph 2 verbatim", "paragraph 3 verbatim"],
+  "companies": [
+    {
+      "name": "Full company legal name",
+      "location": "City, Country",
+      "dates": "Mon YYYY – Present",
+      "description": "",
+      "roles": [
+        {
+          "role": "Exact job title",
+          "role_dates": "Mon YYYY – Mon YYYY",
+          "role_description": "Short role description paragraph if present, else empty",
+          "bullets": ["bullet 1 verbatim", "bullet 2 verbatim"]
+        }
+      ]
+    }
+  ],
+  "EDU_1_YEARS": "", "EDU_1_INSTITUTION": "", "EDU_1_LOCATION": "", "EDU_1_DEGREE": "", "EDU_1_EXTRA": "", "EDU_1_BULLETS": [],
+  "EDU_2_YEARS": "", "EDU_2_INSTITUTION": "", "EDU_2_LOCATION": "", "EDU_2_DEGREE": "", "EDU_2_EXTRA": "", "EDU_2_BULLETS": [],
+  "QUAL_1": "", "QUAL_2": "", "QUAL_3": "",
+  "NATIONALITY": "",
+  "LANGUAGES": "",
+  "INTERESTS": [],
+  "CERTIFICATIONS": ""
+}
+
+Return ONLY valid JSON. No markdown. No code blocks. No explanation.
+
+CANDIDATE SOURCE — extract ALL information from this text:
+
+` + inputText;
+
 var prompt = isApacEy
   ? apacEyPrompt
   : isEaIndiaV2
@@ -3361,6 +3502,8 @@ FORMATTING RULES:
 - Return ONLY valid JSON. No markdown. No code blocks. No explanation.
 
 Use this exact JSON structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ extract ALL information from this text:\n\n' + inputText
+  : isServicesProfile
+  ? svcPrompt
   : `You are a Sheffield Haworth executive search document assistant.
 
 Extract information from the candidate CV below for the Global Candidate Profile template.
@@ -4356,32 +4499,47 @@ async function downloadHistory(index) {
           // Services Profile: use block injection same as GB
           var _svcDocXml = _gbZip.files['word/document.xml'].asText();
 
-          // Build companies array from flat keys (grouping consecutive same-company)
+          // Build companies array — prefer companies[] from svcPrompt, fallback to flat COMPANY_N_* keys
           var _svcCos = [];
-          for (var _ci2 = 1; _ci2 <= 15; _ci2++) {
-            var _scn = _cv['COMPANY_' + _ci2 + '_NAME'] || '';
-            if (!_scn) break;
-            var _sbs = [];
-            for (var _bi = 1; _bi <= 10; _bi++) {
-              var _sb = _cv['COMPANY_' + _ci2 + '_BULLET_' + _bi] || '';
-              if (_sb) _sbs.push(_sb);
-            }
-            var _sRole = { role: _cv['COMPANY_'+_ci2+'_ROLE']||'', role_dates: _cv['COMPANY_'+_ci2+'_DATES']||'', bullets: _sbs };
-            if (_svcCos.length > 0 && _svcCos[_svcCos.length-1].name === _scn) {
-              var _sRoleNoBullets = Object.assign({}, _sRole, {bullets: []});
-              _svcCos[_svcCos.length-1].roles.push(_sRoleNoBullets);
-              var _sOldDates = _svcCos[_svcCos.length-1].dates;
-              var _sNewStart = (_cv['COMPANY_'+_ci2+'_DATES']||'').split(/[–-]/)[0].trim();
-              _svcCos[_svcCos.length-1].dates = _sNewStart + ' – ' + _sOldDates.split(/[–-]/).pop().trim();
-            } else {
-              _svcCos.push({ name: _scn, location: _cv['COMPANY_'+_ci2+'_LOCATION']||'', dates: _cv['COMPANY_'+_ci2+'_DATES']||'', roles: [_sRole] });
+          if (_cv.companies && Array.isArray(_cv.companies) && _cv.companies.length > 0) {
+            _svcCos = _cv.companies;
+          } else {
+            for (var _ci2 = 1; _ci2 <= 15; _ci2++) {
+              var _scn = _cv['COMPANY_' + _ci2 + '_NAME'] || '';
+              if (!_scn) break;
+              var _sbs = [];
+              for (var _bi = 1; _bi <= 10; _bi++) {
+                var _sb = _cv['COMPANY_' + _ci2 + '_BULLET_' + _bi] || '';
+                if (_sb) _sbs.push(_sb);
+              }
+              var _sRole = { role: _cv['COMPANY_'+_ci2+'_ROLE']||'', role_dates: _cv['COMPANY_'+_ci2+'_DATES']||'', bullets: _sbs };
+              if (_svcCos.length > 0 && _svcCos[_svcCos.length-1].name === _scn) {
+                var _sRoleNoBullets = Object.assign({}, _sRole, {bullets: []});
+                _svcCos[_svcCos.length-1].roles.push(_sRoleNoBullets);
+                var _sOldDates = _svcCos[_svcCos.length-1].dates;
+                var _sNewStart = (_cv['COMPANY_'+_ci2+'_DATES']||'').split(/[–-]/)[0].trim();
+                _svcCos[_svcCos.length-1].dates = _sNewStart + ' – ' + _sOldDates.split(/[–-]/).pop().trim();
+              } else {
+                _svcCos.push({ name: _scn, location: _cv['COMPANY_'+_ci2+'_LOCATION']||'', dates: _cv['COMPANY_'+_ci2+'_DATES']||'', roles: [_sRole] });
+              }
             }
           }
 
           // Inject summary
           var _svcSummary = _cv.SUMMARY || '';
-          if (_svcSummary) {
-            var _svcSumXml = '<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:right="26"/><w:jc w:val="both"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium" w:cs="Times New Roman"/><w:color w:val="222229"/></w:rPr><w:t xml:space="preserve">' + _svcSummary.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</w:t></w:r></w:p>';
+          var _svcSumParas = (_cv.summary_paragraphs && Array.isArray(_cv.summary_paragraphs) && _cv.summary_paragraphs.length > 0)
+            ? _cv.summary_paragraphs
+            : (_svcSummary ? _svcSummary.split(/\n\n+/).filter(function(p){ return p.trim(); }) : []);
+          if (_svcSumParas.length === 0 && _svcSummary) _svcSumParas = [_svcSummary];
+          if (_svcSumParas.length > 0) {
+            function _svcXe(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+            var _paraXml = '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:right="26"/><w:jc w:val="both"/></w:pPr>';
+            var _rprXml = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium" w:cs="Times New Roman"/><w:color w:val="222229"/></w:rPr>';
+            var _svcSumXml = '';
+            for (var _pi = 0; _pi < _svcSumParas.length; _pi++) {
+              if (_pi > 0) _svcSumXml += '<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:p>';
+              _svcSumXml += '<w:p>'+_paraXml+'<w:r>'+_rprXml+'<w:t xml:space="preserve">'+_svcXe(_svcSumParas[_pi].trim())+'</w:t></w:r></w:p>';
+            }
             var _svcSumIdx = _svcDocXml.indexOf('{{SUMMARY_BLOCK}}');
             if (_svcSumIdx !== -1) {
               var _svcSPS = _svcSumIdx, _svcSSF = _svcSumIdx;
@@ -4445,15 +4603,42 @@ async function downloadHistory(index) {
             _svcDocXml = _svcDocXml.substring(0, _svcQPS) + _svcQualXml + _svcDocXml.substring(_svcQPE);
           }
 
+          // Simple token replacement for remaining fields
+          // Interests: if array, inject as bullet XML; if string, use as-is
+          var _svcInterestsXml = '';
+          var _svcInterestsArr = Array.isArray(_cv.INTERESTS) ? _cv.INTERESTS : [];
+          if (_svcInterestsArr.length === 0 && typeof _cv.INTERESTS === 'string' && _cv.INTERESTS) {
+            // Split string by common delimiters into bullets
+            _svcInterestsArr = _cv.INTERESTS.split(/\n|\. (?=[A-Z])/).map(function(s){ return s.trim(); }).filter(Boolean);
+          }
+          if (_svcInterestsArr.length > 1) {
+            // Inject as bullet XML directly — replace {{INTERESTS}} token paragraph
+            var _intFont = '<w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium" w:cs="Times New Roman"/>';
+            var _intColor = '<w:color w:val="222229"/>';
+            var _intBPPR = '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr><w:ind w:left="360" w:hanging="360"/><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:right="26"/>';
+            var _intRPR = '<w:rPr>'+_intFont+_intColor+'</w:rPr>';
+            _svcInterestsArr.forEach(function(item) {
+              if (!item.trim()) return;
+              function _ixe(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+              _svcInterestsXml += '<w:p><w:pPr>'+_intBPPR+'<w:rPr>'+_intFont+_intColor+'</w:rPr></w:pPr><w:r>'+_intRPR+'<w:t xml:space="preserve">'+_ixe(item)+'</w:t></w:r></w:p>';
+            });
+            // Inject interests XML directly
+            var _intIdx = _svcDocXml.indexOf('{{INTERESTS}}');
+            if (_intIdx !== -1) {
+              var _intPS = _intIdx, _intSF = _intIdx;
+              while (_intSF > 0) { var _intC = _svcDocXml.lastIndexOf('<w:p', _intSF-1); if (_intC<0) break; if (_svcDocXml.charAt(_intC+4)==='>'||_svcDocXml.charAt(_intC+4)===' '){_intPS=_intC;break;} _intSF=_intC; }
+              var _intPE = _svcDocXml.indexOf('</w:p>', _intIdx) + 6;
+              _svcDocXml = _svcDocXml.substring(0, _intPS) + _svcInterestsXml + _svcDocXml.substring(_intPE);
+            }
+          }
           _gbZip.file('word/document.xml', _svcDocXml);
 
-          // Simple token replacement for remaining fields
           var _svcRender = Object.assign({}, _cv, {
             CANDIDATE_NAME: _cv.CANDIDATE_NAME||'',
             NATIONALITY: _cv.NATIONALITY||'',
             LANGUAGES: _cv.LANGUAGES||'',
             LANG_LEVEL: _cv.LANGUAGES_LEVEL||_cv.LANG_LEVEL||'',
-            INTERESTS: _cv.INTERESTS||'',
+            INTERESTS: _svcInterestsArr.length <= 1 ? (_svcInterestsArr[0]||_cv.INTERESTS||'') : '',
             CERTIFICATIONS: (_cv.CERTIFICATIONS||[_cv.QUAL_1||'', _cv.QUAL_2||'', _cv.QUAL_3||''].filter(Boolean).join(', '))||''
           });
           try {
