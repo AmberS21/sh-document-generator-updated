@@ -1279,7 +1279,7 @@ function buildGbBizExp(companies) {
       xml += '<w:p><w:pPr><w:pStyle w:val="SHText"/>' + TAB_STOP
           + '<w:spacing w:before="0" w:after="0"/></w:pPr>'
           + '<w:r><w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
-          + (multiRole && roleDates ? '<w:r><w:tab/></w:r><w:r><w:t>' + xe(roleDates) + '</w:t></w:r>' : '')
+          + (multiRole && roleDates ? '<w:r><w:tab/></w:r><w:r><w:t>' + xe(abbrvDates(roleDates)) + '</w:t></w:r>' : '')
           + '</w:p>';
 
       // Bullets (only under first/most recent role)
@@ -1304,6 +1304,13 @@ function buildSvcBizExp(companies) {
   if (!companies || companies.length === 0) return '';
   var xml = '';
   function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function abbrvDates(s) {
+    if (!s) return s;
+    return s.replace(/January/g,'Jan').replace(/February/g,'Feb').replace(/March/g,'Mar')
+            .replace(/April/g,'Apr').replace(/June/g,'Jun')
+            .replace(/July/g,'Jul').replace(/August/g,'Aug').replace(/September/g,'Sep')
+            .replace(/October/g,'Oct').replace(/November/g,'Nov').replace(/December/g,'Dec');
+  }
   var FONT = '<w:rFonts w:ascii="Raleway Medium" w:hAnsi="Raleway Medium" w:cs="Times New Roman"/>';
   var COLOR = '<w:color w:val="222229"/>';
   var TAB = '<w:tabs><w:tab w:val="right" w:pos="9720"/></w:tabs>';
@@ -1330,7 +1337,7 @@ function buildSvcBizExp(companies) {
       xml += '<w:p><w:pPr>'+PPR+'<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr></w:pPr>'
           + '<w:r>'+RPR_B+'<w:t xml:space="preserve">'+xe(co.name)+', </w:t></w:r>'
           + '<w:r>'+RPR_B+'<w:t xml:space="preserve">'+xe(co.location)+'</w:t></w:r>'
-          + (co.dates ? '<w:r>'+RPR_B+'<w:tab/><w:t>'+xe(co.dates)+'</w:t></w:r>' : '')
+          + (co.dates ? '<w:r>'+RPR_B+'<w:tab/><w:t>'+xe(abbrvDates(co.dates))+'</w:t></w:r>' : '')
           + '</w:p>';
     } else {
       xml += '<w:p><w:pPr>'+PPR+'<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr></w:pPr>'
@@ -3262,12 +3269,12 @@ CRITICAL RULES:
 - Extract ALL work history entries WITHOUT EXCEPTION. Every single job must appear.
 - company.name: Full legal company name. IDENTICAL string for all roles at same company.
 - company.location: City, Country if stated — leave empty if not given.
-- company.dates: Overall tenure at that company (e.g. "Mar 2016 – Jan 2024").
-- company.description: If the CV has an introductory sentence about the company written under the company name (e.g. "Faculty is the UK's leading AI advisory..."), capture it VERBATIM here.
+- company.dates: Overall tenure at that company. Always use 3-letter month abbreviations (Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec). Format: "Oct 2025 – Present" or "Mar 2016 – Jan 2024".
+- company.description: ONLY use this if the CV has a standalone sentence about what the COMPANY does — written directly under the company name BEFORE any role title. Leave EMPTY otherwise. Do NOT put role content here.
 - company.roles: ALL roles held at that company, most recent first.
   - role: Exact job title as written.
-  - role_dates: Dates for THIS specific role.
-  - role_description: If the CV has a short introductory paragraph about the role written BEFORE the bullet points (not a heading, not a bullet — just a prose description), capture it VERBATIM here. Leave empty if no such paragraph exists.
+  - role_dates: Dates for THIS specific role. Always use 3-letter month abbreviations (Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec). Never spell out full month names. Format: "Oct 2025 – Present" or "Mar 2016 – Jan 2024".
+  - role_description: ONLY use this if the CV has a short prose paragraph written AFTER the role title and BEFORE the bullet points — a description of the role itself (e.g. "Eight-year progression to Enterprise Lead at one of the world's foremost data and AI companies."). Leave empty if no such paragraph exists. Do NOT put company info here. Do NOT put bullet content here.
   - bullets: ALL content written under this role — bullet points AND section heading labels. Use your judgement:
     * If the CV has named sections within a role (e.g. "AI Strategy, Thought Leadership and Investment Case:", "Commercial Ownership and Capability Development:"), include these as their own string entry in the bullets array — they will be rendered as headings above their bullets, not as bullets themselves.
     * Include ALL bullet points VERBATIM — every single one, no skipping, no summarising.
