@@ -818,6 +818,18 @@ const TEMPLATES = {
 
   },
 
+  'project-report-gb': {
+
+    label: 'Project Report — GB',
+
+    file: 'templates/SH_GB_Project_Report_Template.xlsx',
+
+    isProjectReport: true,
+
+    promptType: 'none'
+
+  },
+
   'project-report-ext': {
 
     label: 'Project Report — Pipeline Dashboard - Extended',
@@ -928,7 +940,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
   var sel = document.getElementById('tplSel');
   if (!sel) return;
   var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile'];
-  var reportKeys  = ['project-report','project-report-ext'];
+  var reportKeys  = ['project-report','project-report-gb','project-report-ext'];
 
   var grp1 = document.createElement('optgroup');
   grp1.label = 'PROFILES ──';
@@ -2403,6 +2415,7 @@ async function generate() {
               // Gender + Notes — from additional-info (custom values endpoint)
               var _gender2 = '';
               var _notes = '';
+              var _fitToProfile = '';
               if (cand._additionalInfo) {
                 var _addArr = Array.isArray(cand._additionalInfo) ? cand._additionalInfo : [cand._additionalInfo];
                 _addArr.forEach(function(item) {
@@ -2417,6 +2430,8 @@ async function generate() {
                     _notes = _val;
                   } else if (_lbl.includes('pipeline') || _lbl.includes('status') || _lbl.includes('stage')) {
                     if (!_fullCand._pipelineTag) _fullCand._pipelineTag = _val;
+                  } else if (_hid === 'boYj' || _lbl.includes('fit to profile') || _lbl === 'fit to profile') {
+                    _fitToProfile = _val;
                   }
                 });
               }
@@ -2428,6 +2443,7 @@ async function generate() {
                     var hashId = (cv.field && cv.field.hashId) ? cv.field.hashId : '';
                     if (!_gender2 && (label.includes('gender') || label.includes('sex'))) _gender2 = cv.value || '';
                     if (!_notes && (hashId === 'boYK' || label.includes('progress') || label.includes('note'))) _notes = cv.value || '';
+                    if (!_fitToProfile && (hashId === 'boYj' || label.includes('fit to profile'))) _fitToProfile = cv.value || '';
                   });
                 }
               }
@@ -2470,6 +2486,7 @@ async function generate() {
                 location: _loc,
                 pipelineTag: _tag,
                 gender:   _gender,
+                fitToProfile: _fitToProfile,
                 notes:    _notes,
                 linkedin: _linkedin,
                 bio:      _bio,
@@ -2481,7 +2498,7 @@ async function generate() {
             name: (proj.name || 'Project Report') + (proj.client && proj.client.name ? ' - ' + proj.client.name : ''),
             date: new Date().toLocaleString(),
             template: tpl,
-            fmt: tpl === 'project-report' ? 'x' : 'd',
+            fmt: (tpl === 'project-report' || tpl === 'project-report-gb' || tpl === 'project-report-ext') ? 'x' : 'd',
             content: projContent
           };
           var projHistory = JSON.parse(localStorage.getItem('sh_history') || '[]');
@@ -2525,7 +2542,7 @@ async function generate() {
           btn.innerHTML = 'Reading ' + file.name + '...';
 
           // ── Project Report: parse xlsx/docx file directly into candidate rows ──
-          if (tpl === 'project-report' && (ext === 'xlsx' || ext === 'xls' || ext === 'docx')) {
+          if ((tpl === 'project-report' || tpl === 'project-report-gb' || tpl === 'project-report-ext') && (ext === 'xlsx' || ext === 'xls' || ext === 'docx')) {
             try {
               var _prAb = await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
               var _prWb = XLSX.read(_prAb, {type:'array'});
@@ -3865,8 +3882,8 @@ async function downloadHistory(index) {
   if (!item) return;
   var fmt = item.fmt || 'd';
   // Override: project-report always downloads as xlsx
-  if (item.template === 'project-report' || item.template === 'project-report-ext') fmt = 'x';
-  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'global-career-summary-wam-us' ? 'with Career Summary WAM US' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile-v2' ? 'EA India v2' : item.template === 'ea-india-profile' ? 'EA India' : item.template === 'change-consulting-profile' ? 'Change Consulting' : item.template === 'apac-profile-deal-list' ? 'APAC Deal List' : item.template === 'apac-profile-v2' ? 'APAC v2' : item.template === 'apac-ey-profile' ? 'EY Shortlisted' : 'No Scorecard';
+  if (item.template === 'project-report' || item.template === 'project-report-ext' || item.template === 'project-report-gb') fmt = 'x';
+  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'global-career-summary-wam-us' ? 'with Career Summary WAM US' : item.template === 'project-report-gb' ? 'GB' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile-v2' ? 'EA India v2' : item.template === 'ea-india-profile' ? 'EA India' : item.template === 'change-consulting-profile' ? 'Change Consulting' : item.template === 'apac-profile-deal-list' ? 'APAC Deal List' : item.template === 'apac-profile-v2' ? 'APAC v2' : item.template === 'apac-ey-profile' ? 'EY Shortlisted' : 'No Scorecard';
   var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : item.template === 'ea-india-profile' ? 'Global' : 'Global';
   var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
@@ -5250,10 +5267,12 @@ async function downloadHistory(index) {
 
     } else if (fmt === 'x') {
       // --- Project Report: fill xlsx template preserving ALL styles/images ---
-      if (item.template === 'services-profile' || item.template === 'project-report' || item.template === 'project-report-ext') {
+      if (item.template === 'services-profile' || item.template === 'project-report' || item.template === 'project-report-ext' || item.template === 'project-report-gb') {
         var projData2 = item.content;
         var _projTplFile = (item.template === 'project-report-ext')
           ? 'templates/SH_Project_Report_Extended_v1.xlsx'
+          : (item.template === 'project-report-gb')
+          ? 'templates/SH_GB_Project_Report_Template.xlsx'
           : (item.template === 'project-report')
           ? 'templates/SH_Project_Report_Template_v4.xlsx'
           : 'Service%20Team%20-%20Project%20Report%20(with%20Notes).xlsx';
@@ -5317,11 +5336,15 @@ async function downloadHistory(index) {
         _cands.forEach(function(cand, ri) {
           var _r = 3 + ri;
           var _isExtReport = (item.template === 'project-report-ext');
+          var _isGbReport  = (item.template === 'project-report-gb');
           var _vals = [cand.fullname||'', cand.company||'', cand.title||'', cand.location||'', cand.pipelineTag||'', cand.gender||'', cand.notes||''];
           var _cols = ['A','B','C','D','E','F','G'];
           if (_isExtReport) {
             _vals.push(cand.linkedin||'', cand.bio||'', cand.summary||'');
             _cols.push('H','I','J');
+          } else if (_isGbReport) {
+            _vals.push(cand.linkedin||'', cand.bio||'', cand.summary||'', cand.fitToProfile||'');
+            _cols.push('H','I','J','K');
           }
           var _cells = '';
           _vals.forEach(function(v, ci) {
