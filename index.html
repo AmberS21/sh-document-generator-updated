@@ -1314,6 +1314,7 @@ function buildSvcBizExp(companies) {
   var RPR = '<w:rPr>'+FONT+COLOR+'</w:rPr>';
   var RPR_B = '<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr>';
   var BULLET_PPR = '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="7"/></w:numPr><w:ind w:left="360" w:hanging="360"/>'+SPACING+IND+JC;
+  var SPACER = '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
 
   for (var ci = 0; ci < companies.length; ci++) {
     var co = companies[ci];
@@ -1321,13 +1322,11 @@ function buildSvcBizExp(companies) {
     var roles = co.roles || [];
     var multiRole = roles.length > 1;
 
-    // Spacer before each company
-    xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
+    // Spacer before each company (except first)
+    if (ci > 0) xml += SPACER;
 
     // Company line: BOLD name, BOLD location after comma, TAB, BOLD overall dates
-    var companyText = xe(co.name);
     if (co.location && co.location.trim()) {
-      // Name in bold, comma, then location in bold
       xml += '<w:p><w:pPr>'+PPR+'<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr></w:pPr>'
           + '<w:r>'+RPR_B+'<w:t xml:space="preserve">'+xe(co.name)+', </w:t></w:r>'
           + '<w:r>'+RPR_B+'<w:t xml:space="preserve">'+xe(co.location)+'</w:t></w:r>'
@@ -1340,10 +1339,11 @@ function buildSvcBizExp(companies) {
           + '</w:p>';
     }
 
-    // Company description (intro sentence about the company)
+    // Company description — regular text, NOT italic, one line space before
     if (co.description && co.description.trim()) {
-      xml += '<w:p><w:pPr>'+SPACING+IND+JC+'<w:rPr>'+FONT+'<w:i/>'+COLOR+'</w:rPr></w:pPr>'
-          + '<w:r><w:rPr>'+FONT+'<w:i/>'+COLOR+'</w:rPr><w:t xml:space="preserve">'+xe(co.description)+'</w:t></w:r></w:p>';
+      xml += SPACER;
+      xml += '<w:p><w:pPr>'+SPACING+IND+JC+'</w:pPr>'
+          + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(co.description)+'</w:t></w:r></w:p>';
     }
 
     for (var ri = 0; ri < roles.length; ri++) {
@@ -1353,32 +1353,43 @@ function buildSvcBizExp(companies) {
       // For single-role companies, don't show dates on role line (already on company)
       if (!multiRole) roleDates = '';
 
-      // Line space before role
-      xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
+      // One line space before role
+      xml += SPACER;
 
-      // Role line: italic role title, TAB, dates
+      // Role line: regular (NOT italic), TAB, dates
       if (role.role) {
-        xml += '<w:p><w:pPr>'+PPR+'<w:rPr>'+FONT+'<w:i/>'+COLOR+'</w:rPr></w:pPr>'
-            + '<w:r><w:rPr>'+FONT+'<w:i/>'+COLOR+'</w:rPr><w:t xml:space="preserve">'+xe(role.role)+'</w:t></w:r>'
-            + (roleDates ? '<w:r><w:rPr>'+FONT+'<w:i/>'+COLOR+'</w:rPr><w:tab/><w:t>'+xe(roleDates)+'</w:t></w:r>' : '')
+        xml += '<w:p><w:pPr>'+PPR+'</w:pPr>'
+            + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(role.role)+'</w:t></w:r>'
+            + (roleDates ? '<w:r>'+RPR+'<w:tab/><w:t>'+xe(roleDates)+'</w:t></w:r>' : '')
             + '</w:p>';
       }
 
-      // Role description (short paragraph after role title, before bullets)
+      // Role description: regular text, one line space before, after role title
       if (role.role_description && role.role_description.trim()) {
-        xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
+        xml += SPACER;
         xml += '<w:p><w:pPr>'+SPACING+IND+JC+'</w:pPr>'
             + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(role.role_description)+'</w:t></w:r></w:p>';
       }
 
-      // Line space before bullets
+      // Bullets — one line space before
       var bullets = role.bullets || [];
       if (bullets.length > 0) {
-        xml += '<w:p><w:pPr>'+SPACING+'</w:pPr></w:p>';
+        xml += SPACER;
         for (var bi = 0; bi < bullets.length; bi++) {
-          if (!bullets[bi] || !bullets[bi].trim()) continue;
-          xml += '<w:p><w:pPr>'+BULLET_PPR+'<w:rPr>'+FONT+COLOR+'</w:rPr></w:pPr>'
-              + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(bullets[bi])+'</w:t></w:r></w:p>';
+          var btext = (bullets[bi] || '').trim();
+          if (!btext) continue;
+          // Section headings within bullets (e.g. "AI Strategy:" or "Commercial Ownership:")
+          // Detected as: short text ending with colon, no period, likely < 80 chars
+          var isHeading = btext.endsWith(':') && btext.length < 80 && !btext.match(/\.\.\./);
+          if (isHeading) {
+            // Render as regular paragraph heading (not a bullet), one line space above if not first
+            if (bi > 0) xml += SPACER;
+            xml += '<w:p><w:pPr>'+SPACING+IND+'</w:pPr>'
+                + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(btext)+'</w:t></w:r></w:p>';
+          } else {
+            xml += '<w:p><w:pPr>'+BULLET_PPR+'<w:rPr>'+FONT+COLOR+'</w:rPr></w:pPr>'
+                + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(btext)+'</w:t></w:r></w:p>';
+          }
         }
       }
     }
@@ -1414,10 +1425,10 @@ function buildSvcEducation(cv) {
   edus.forEach(function(e, i) {
     if (i > 0) xml += '<w:p><w:pPr>' + SPACING + '</w:pPr></w:p>';
 
-    // University line: BOLD institution, TAB, date right-aligned (NOT bold)
+    // University line: regular (NOT bold), TAB, date right-aligned (NOT bold)
     if (e.inst) {
-      xml += '<w:p><w:pPr>'+TAB+SPACING+IND+'<w:rPr>'+FONT+'<w:b/>'+COLOR+'</w:rPr></w:pPr>'
-          + '<w:r>'+RPR_B+'<w:t xml:space="preserve">'+xe(e.inst)+'</w:t></w:r>'
+      xml += '<w:p><w:pPr>'+TAB+SPACING+IND+'</w:pPr>'
+          + '<w:r>'+RPR+'<w:t xml:space="preserve">'+xe(e.inst)+'</w:t></w:r>'
           + (e.years ? '<w:r>'+RPR+'<w:tab/><w:t>'+xe(e.years)+'</w:t></w:r>' : '')
           + '</w:p>';
     }
@@ -3256,8 +3267,15 @@ CRITICAL RULES:
 - company.roles: ALL roles held at that company, most recent first.
   - role: Exact job title as written.
   - role_dates: Dates for THIS specific role.
-  - role_description: If the CV has a short descriptive paragraph about the role BEFORE the bullet points, capture it VERBATIM here. Leave empty if no such description exists.
-  - bullets: ALL bullet points written directly under this role, VERBATIM, every single one. Include "Results:" lines and sub-results. Never skip any bullet.
+  - role_description: If the CV has a short introductory paragraph about the role written BEFORE the bullet points (not a heading, not a bullet — just a prose description), capture it VERBATIM here. Leave empty if no such paragraph exists.
+  - bullets: ALL content written under this role — bullet points AND section heading labels. Use your judgement:
+    * If the CV has named sections within a role (e.g. "AI Strategy, Thought Leadership and Investment Case:", "Commercial Ownership and Capability Development:"), include these as their own string entry in the bullets array — they will be rendered as headings above their bullets, not as bullets themselves.
+    * Include ALL bullet points VERBATIM — every single one, no skipping, no summarising.
+    * Keep the ORDER exactly as in the CV — heading string, then its bullets, then next heading, then its bullets.
+    * "Results:", "Key Achievements:" and similar labels — include as a string entry (they become headings above their result bullets).
+    * NEVER invent content. NEVER merge bullets. NEVER skip any line.
+
+COMPANY GROUPING RULE: If a candidate held multiple roles at the SAME company (e.g. promoted within), ALL those roles go under ONE company entry with multiple objects in roles[]. Use IDENTICAL company name string to trigger grouping. If roles at the same company are NOT consecutive in the CV, keep them as separate company entries.
 
 8. EDUCATION:
 - EDU_1_YEARS: Year range (e.g. "2003 – 2007").
