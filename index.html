@@ -2599,17 +2599,43 @@ async function generate() {
           // ── PPT: parse pasted tab-separated candidate data ──────────────────
           if (tpl === 'ppt-candidate-update' && activeType === 'text' && inputText.trim()) {
             var _pptPasted = [];
-            inputText.trim().split(/\r?\n/).forEach(function(line) {
+            var _pptLines = inputText.trim().split(/\r?\n/);
+            // Auto-detect header row and column positions
+            var _nameCol=-1, _companyCol=-1, _roleCol=-1, _statusCol=-1, _startRow=0;
+            var _firstRow = (_pptLines[0]||'').split(/\t/).map(function(c){ return c.toLowerCase().trim(); });
+            if (_firstRow.some(function(c){ return c.includes('candidate') || c.includes('name'); })) {
+              // Has header row — detect column positions
+              _startRow = 1;
+              _firstRow.forEach(function(h,i){
+                if (h.includes('candidate') || (h.includes('name') && !h.includes('company'))) _nameCol=i;
+                else if (h.includes('company') || h.includes('organisation') || h.includes('organization')) _companyCol=i;
+                else if (h.includes('role') || h.includes('title') || h.includes('position') || h.includes('designation')) _roleCol=i;
+                else if (h.includes('status')) _statusCol=i;
+              });
+            }
+            // Fallback to positional if header detection failed
+            // Expected order from your Excel: S.No, Candidate Name, Role, Company, Status
+            // Check if first col looks like a number (S.No column)
+            var _hasSerialCol = _firstRow[0] && (_firstRow[0] === 's.no' || _firstRow[0] === 's no' || _firstRow[0] === 'sr' || _firstRow[0] === 'no' || _firstRow[0] === 'sr.');
+            if (_nameCol < 0) _nameCol = _hasSerialCol ? 1 : 0;
+            if (_roleCol < 0) _roleCol = _hasSerialCol ? 2 : 1;
+            if (_companyCol < 0) _companyCol = _hasSerialCol ? 3 : 2;
+            if (_statusCol < 0) _statusCol = _hasSerialCol ? 4 : 3;
+
+            _pptLines.slice(_startRow).forEach(function(line) {
               if (!line.trim()) return;
               var cols = line.split(/\t/);
               if (cols.length < 2) return;
-              // No header expected — col1=Name, col2=Company, col3=Role, col4=Status
-              var c = { name:(cols[0]||'').trim(), company:(cols[1]||'').trim(),
-                        title:(cols[2]||'').trim(), status:(cols[3]||'').trim() };
-              if (c.name) _pptPasted.push(c);
+              var cand = {
+                name:    (cols[_nameCol]    ||'').trim(),
+                title:   (cols[_roleCol]    ||'').trim(),
+                company: (cols[_companyCol] ||'').trim(),
+                status:  (cols[_statusCol]  ||'').trim()
+              };
+              if (cand.name) _pptPasted.push(cand);
             });
             if (!_pptPasted.length) {
-              notify('No candidates found. Paste columns: Name, Company, Role, Status (no header row)');
+              notify('No candidates found. Please paste your candidate data including columns: Candidate Name, Company, Role, Status');
               btn.classList.remove('loading'); btn.innerHTML = '\u26a1 Generate Document'; return;
             }
             var _pptPastedItem = {
