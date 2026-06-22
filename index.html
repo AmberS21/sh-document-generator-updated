@@ -2634,6 +2634,16 @@ async function generate() {
               };
               if (cand.name) _pptPasted.push(cand);
             });
+            console.log('PPT paste debug:', {
+              totalLines: _pptLines.length,
+              startRow: _startRow,
+              nameCol: _nameCol,
+              roleCol: _roleCol,
+              companyCol: _companyCol,
+              statusCol: _statusCol,
+              candidatesFound: _pptPasted.length,
+              firstCandidate: _pptPasted[0]||null
+            });
             if (!_pptPasted.length) {
               notify('No candidates found. Please paste your candidate data including columns: Candidate Name, Company, Role, Status');
               btn.classList.remove('loading'); btn.innerHTML = '\u26a1 Generate Document'; return;
@@ -4139,6 +4149,14 @@ async function downloadHistory(index) {
               return {name:c.fullname||c.name||'',company:c.company||'',title:c.title||'',status:c.status||''};
             }) : []);
 
+        console.log('PPT download debug:', {
+          template: item.template,
+          fmt: item.fmt,
+          pptCandidatesCount: (_pptContent.pptCandidates||[]).length,
+          candidatesCount: (_pptContent.candidates||[]).length,
+          pptCandsCount: _pptCands.length,
+          firstCand: _pptCands[0]||null
+        });
         var _RAW2 = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
         var _tplResp = await fetch(_RAW2 + 'templates/SH_Candidate_Update_Report_TEMPLATE.pptx');
         if (!_tplResp.ok) throw new Error('Failed to fetch PPT template');
