@@ -4104,6 +4104,120 @@ async function downloadHistory(index) {
   var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
+      // ── PPT Candidate Update Report ─────────────────────────────
+      // ── PPT Candidate Update Report ──────────────────────────────────────
+      if (item.template === 'ppt-candidate-update') {
+        var _pptContent = item.content;
+        var _pptCands = Array.isArray(_pptContent.pptCandidates) ? _pptContent.pptCandidates
+          : (Array.isArray(_pptContent.candidates) ? _pptContent.candidates.map(function(c){
+              return {name:c.fullname||c.name||'',company:c.company||'',title:c.title||'',status:c.status||''};
+            }) : []);
+
+        var _RAW2 = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+        var _tplResp = await fetch(_RAW2 + 'templates/SH_Candidate_Update_Report_TEMPLATE.pptx');
+        if (!_tplResp.ok) throw new Error('Failed to fetch PPT template');
+        var _pptZip = await JSZip.loadAsync(await _tplResp.arrayBuffer());
+
+        function _xe(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function _rep(xml, ph, val) {
+          return xml.split('<a:t>' + ph + '</a:t>').join('<a:t>' + _xe(val||ph) + '</a:t>');
+        }
+        function _repHdr(xml, slideNum, client, role, title) {
+          var oldH = slideNum + '  |  [Client] - [Role] – [Report Title]';
+          var newH = slideNum + '  |  ' + (client||'') + ' - ' + (role||'') + ' – ' + (title||'');
+          return xml.split('<a:t>' + oldH + '</a:t>').join('<a:t>' + _xe(newH) + '</a:t>');
+        }
+
+        var _cl = _pptContent.clientName  || '';
+        var _ro = _pptContent.reportTitle || '';
+        var _c1 = _pptContent.consultant1 || '';
+        var _c2 = _pptContent.consultant2 || '';
+        var _pr = _pptContent.practice    || '';
+        var _pt = _pptContent.presentedTo || '';
+        var _dt = _pptContent.reportDate  || new Date().toLocaleDateString('en-GB').replace(/\//g,'.');
+
+        // Slide 1
+        var _s1 = await _pptZip.file('ppt/slides/slide1.xml').async('string');
+        _s1 = _rep(_s1,'[Client Name]',_cl);
+        _s1 = _rep(_s1,'[Role / Report Title]',_ro);
+        _s1 = _rep(_s1,'[Name, Title]',_pt);
+        _s1 = _rep(_s1,'[Consultant Name, Title]',_c1);
+        _s1 = _rep(_s1,'[Consultant 2 Name, Title]',_c2);
+        _s1 = _rep(_s1,'[Practice]',_pr);
+        _s1 = _rep(_s1,'[DD.MM.YYYY]',_dt);
+        _pptZip.file('ppt/slides/slide1.xml',_s1);
+
+        // Slide 2 — build table + clone for extra chunks
+        var _s2Base = await _pptZip.file('ppt/slides/slide2.xml').async('string');
+        var _s2Rels = await _pptZip.file('ppt/slides/_rels/slide2.xml.rels').async('string');
+        _s2Base = _repHdr(_s2Base,'2',_cl,_ro,_ro);
+
+        var _tm = _s2Base.match(/(<a:tbl>)([\s\S]*?)(<\/a:tbl>)/);
+        var _tRows = _tm ? (_tm[2].match(/<a:tr[\s\S]*?<\/a:tr>/g)||[]) : [];
+        var _hRow = _tRows[0]||''; var _dRow = _tRows[1]||'';
+
+        function _bldRow(cand, n) {
+          var r = _dRow; var ci=[0];
+          return r.replace(/<a:tc>[\s\S]*?<\/a:tc>/g, function(cell) {
+            var i=ci[0]++;
+            var v = i===0?String(n):i===1?(cand.name||''):i===2?(cand.company||''):i===3?(cand.title||''):(cand.status||'');
+            return cell.replace(/<a:t>[^<]*<\/a:t>/,'<a:t>'+_xe(v)+'</a:t>');
+          });
+        }
+
+        var RPER=10, _chunks=[];
+        for(var _i=0;_i<Math.max(_pptCands.length,1);_i+=RPER)
+          _chunks.push(_pptCands.slice(_i,_i+RPER));
+
+        // Build slide 2
+        var _t2 = _hRow + _chunks[0].map(function(c,i){return _bldRow(c,i+1);}).join('');
+        _pptZip.file('ppt/slides/slide2.xml', _s2Base.replace(_tm[0],'<a:tbl>'+_t2+'</a:tbl>'));
+
+        // Clone for extra chunks
+        if (_chunks.length > 1) {
+          var _prsX = await _pptZip.file('ppt/presentation.xml').async('string');
+          var _prsR = await _pptZip.file('ppt/_rels/presentation.xml.rels').async('string');
+          var _ctX  = await _pptZip.file('[Content_Types].xml').async('string');
+          var _mRid = Math.max.apply(null,(_prsR.match(/rId(\d+)/g)||['rId1']).map(function(r){return parseInt(r.replace('rId',''));}));
+          var _mSid = Math.max.apply(null,(_prsX.match(/ id="(\d+)"/g)||[' id="1"']).map(function(r){return parseInt(r.match(/\d+/)[0]);}));
+          var _s3rm = _prsR.match(/Id="([^"]+)"[^>]*Target="slides\/slide3\.xml"/);
+          var _s3ri = _s3rm ? _s3rm[1] : null;
+
+          for (var _ci=1;_ci<_chunks.length;_ci++) {
+            var _nn=100+_ci, _nr='rId'+(++_mRid), _ns=++_mSid;
+            var _chunk = _chunks[_ci];
+            var _nt = _hRow + _chunk.map(function(c,i){return _bldRow(c,_ci*RPER+i+1);}).join('');
+            var _nsx = _s2Base.replace(_tm[0],'<a:tbl>'+_nt+'</a:tbl>');
+            _nsx = _nsx.replace(/2  \|  /g, (_ci+2)+'  |  ');
+            _pptZip.file('ppt/slides/slide'+_nn+'.xml',_nsx);
+            _pptZip.file('ppt/slides/_rels/slide'+_nn+'.xml.rels',_s2Rels);
+            if(_s3ri){
+              var _rt='<Relationship Id="'+_s3ri+'"';
+              _prsR=_prsR.replace(_rt,'<Relationship Id="'+_nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+_nn+'.xml"/>'+_rt);
+              var _sit=_prsX.match(new RegExp('<p:sldId[^/]*r:id="'+_s3ri+'"[^/]*/>'))[0];
+              _prsX=_prsX.replace(_sit,'<p:sldId id="'+_ns+'" r:id="'+_nr+'"/>'+_sit);
+            }
+            _ctX=_ctX.replace('</Types>','<Override PartName="/ppt/slides/slide'+_nn+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');
+          }
+          _pptZip.file('ppt/presentation.xml',_prsX);
+          _pptZip.file('ppt/_rels/presentation.xml.rels',_prsR);
+          _pptZip.file('[Content_Types].xml',_ctX);
+        }
+
+        // Slide 3 — contact
+        var _s3 = await _pptZip.file('ppt/slides/slide3.xml').async('string');
+        _s3 = _repHdr(_s3,'3',_cl,_ro,_ro);
+        _pptZip.file('ppt/slides/slide3.xml',_s3);
+
+        // Download
+        var _out = await _pptZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+        var _url = URL.createObjectURL(_out);
+        var _a = document.createElement('a');
+        _a.href=_url; _a.download=(_cl?_cl+' - ':'')+(item.name||'Candidate Update Report')+'.pptx';
+        _a.click(); setTimeout(function(){URL.revokeObjectURL(_url);},2000);
+        return;
+      }
+
       if (item.type === 'combined' && Array.isArray(item.content)) {
         var _tplUrlC = getTemplateFile(item.template);
         var _isDocm = _tplUrlC.endsWith('.docm');
@@ -5525,118 +5639,7 @@ async function downloadHistory(index) {
 
     } else if (fmt === 'x') {
       // --- Project Report: fill xlsx template preserving ALL styles/images ---
-      // ── PPT Candidate Update Report ──────────────────────────────────────
-      if (item.template === 'ppt-candidate-update') {
-        var _pptContent = item.content;
-        var _pptCands = Array.isArray(_pptContent.pptCandidates) ? _pptContent.pptCandidates
-          : (Array.isArray(_pptContent.candidates) ? _pptContent.candidates.map(function(c){
-              return {name:c.fullname||c.name||'',company:c.company||'',title:c.title||'',status:c.status||''};
-            }) : []);
-
-        var _RAW2 = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
-        var _tplResp = await fetch(_RAW2 + 'templates/SH_Candidate_Update_Report_TEMPLATE.pptx');
-        if (!_tplResp.ok) throw new Error('Failed to fetch PPT template');
-        var _pptZip = await JSZip.loadAsync(await _tplResp.arrayBuffer());
-
-        function _xe(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-        function _rep(xml, ph, val) {
-          return xml.split('<a:t>' + ph + '</a:t>').join('<a:t>' + _xe(val||ph) + '</a:t>');
-        }
-        function _repHdr(xml, slideNum, client, role, title) {
-          var oldH = slideNum + '  |  [Client] - [Role] – [Report Title]';
-          var newH = slideNum + '  |  ' + (client||'') + ' - ' + (role||'') + ' – ' + (title||'');
-          return xml.split('<a:t>' + oldH + '</a:t>').join('<a:t>' + _xe(newH) + '</a:t>');
-        }
-
-        var _cl = _pptContent.clientName  || '';
-        var _ro = _pptContent.reportTitle || '';
-        var _c1 = _pptContent.consultant1 || '';
-        var _c2 = _pptContent.consultant2 || '';
-        var _pr = _pptContent.practice    || '';
-        var _pt = _pptContent.presentedTo || '';
-        var _dt = _pptContent.reportDate  || new Date().toLocaleDateString('en-GB').replace(/\//g,'.');
-
-        // Slide 1
-        var _s1 = await _pptZip.file('ppt/slides/slide1.xml').async('string');
-        _s1 = _rep(_s1,'[Client Name]',_cl);
-        _s1 = _rep(_s1,'[Role / Report Title]',_ro);
-        _s1 = _rep(_s1,'[Name, Title]',_pt);
-        _s1 = _rep(_s1,'[Consultant Name, Title]',_c1);
-        _s1 = _rep(_s1,'[Consultant 2 Name, Title]',_c2);
-        _s1 = _rep(_s1,'[Practice]',_pr);
-        _s1 = _rep(_s1,'[DD.MM.YYYY]',_dt);
-        _pptZip.file('ppt/slides/slide1.xml',_s1);
-
-        // Slide 2 — build table + clone for extra chunks
-        var _s2Base = await _pptZip.file('ppt/slides/slide2.xml').async('string');
-        var _s2Rels = await _pptZip.file('ppt/slides/_rels/slide2.xml.rels').async('string');
-        _s2Base = _repHdr(_s2Base,'2',_cl,_ro,_ro);
-
-        var _tm = _s2Base.match(/(<a:tbl>)([\s\S]*?)(<\/a:tbl>)/);
-        var _tRows = _tm ? (_tm[2].match(/<a:tr[\s\S]*?<\/a:tr>/g)||[]) : [];
-        var _hRow = _tRows[0]||''; var _dRow = _tRows[1]||'';
-
-        function _bldRow(cand, n) {
-          var r = _dRow; var ci=[0];
-          return r.replace(/<a:tc>[\s\S]*?<\/a:tc>/g, function(cell) {
-            var i=ci[0]++;
-            var v = i===0?String(n):i===1?(cand.name||''):i===2?(cand.company||''):i===3?(cand.title||''):(cand.status||'');
-            return cell.replace(/<a:t>[^<]*<\/a:t>/,'<a:t>'+_xe(v)+'</a:t>');
-          });
-        }
-
-        var RPER=10, _chunks=[];
-        for(var _i=0;_i<Math.max(_pptCands.length,1);_i+=RPER)
-          _chunks.push(_pptCands.slice(_i,_i+RPER));
-
-        // Build slide 2
-        var _t2 = _hRow + _chunks[0].map(function(c,i){return _bldRow(c,i+1);}).join('');
-        _pptZip.file('ppt/slides/slide2.xml', _s2Base.replace(_tm[0],'<a:tbl>'+_t2+'</a:tbl>'));
-
-        // Clone for extra chunks
-        if (_chunks.length > 1) {
-          var _prsX = await _pptZip.file('ppt/presentation.xml').async('string');
-          var _prsR = await _pptZip.file('ppt/_rels/presentation.xml.rels').async('string');
-          var _ctX  = await _pptZip.file('[Content_Types].xml').async('string');
-          var _mRid = Math.max.apply(null,(_prsR.match(/rId(\d+)/g)||['rId1']).map(function(r){return parseInt(r.replace('rId',''));}));
-          var _mSid = Math.max.apply(null,(_prsX.match(/ id="(\d+)"/g)||[' id="1"']).map(function(r){return parseInt(r.match(/\d+/)[0]);}));
-          var _s3rm = _prsR.match(/Id="([^"]+)"[^>]*Target="slides\/slide3\.xml"/);
-          var _s3ri = _s3rm ? _s3rm[1] : null;
-
-          for (var _ci=1;_ci<_chunks.length;_ci++) {
-            var _nn=100+_ci, _nr='rId'+(++_mRid), _ns=++_mSid;
-            var _chunk = _chunks[_ci];
-            var _nt = _hRow + _chunk.map(function(c,i){return _bldRow(c,_ci*RPER+i+1);}).join('');
-            var _nsx = _s2Base.replace(_tm[0],'<a:tbl>'+_nt+'</a:tbl>');
-            _nsx = _nsx.replace(/2  \|  /g, (_ci+2)+'  |  ');
-            _pptZip.file('ppt/slides/slide'+_nn+'.xml',_nsx);
-            _pptZip.file('ppt/slides/_rels/slide'+_nn+'.xml.rels',_s2Rels);
-            if(_s3ri){
-              var _rt='<Relationship Id="'+_s3ri+'"';
-              _prsR=_prsR.replace(_rt,'<Relationship Id="'+_nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+_nn+'.xml"/>'+_rt);
-              var _sit=_prsX.match(new RegExp('<p:sldId[^/]*r:id="'+_s3ri+'"[^/]*/>'))[0];
-              _prsX=_prsX.replace(_sit,'<p:sldId id="'+_ns+'" r:id="'+_nr+'"/>'+_sit);
-            }
-            _ctX=_ctX.replace('</Types>','<Override PartName="/ppt/slides/slide'+_nn+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');
-          }
-          _pptZip.file('ppt/presentation.xml',_prsX);
-          _pptZip.file('ppt/_rels/presentation.xml.rels',_prsR);
-          _pptZip.file('[Content_Types].xml',_ctX);
-        }
-
-        // Slide 3 — contact
-        var _s3 = await _pptZip.file('ppt/slides/slide3.xml').async('string');
-        _s3 = _repHdr(_s3,'3',_cl,_ro,_ro);
-        _pptZip.file('ppt/slides/slide3.xml',_s3);
-
-        // Download
-        var _out = await _pptZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
-        var _url = URL.createObjectURL(_out);
-        var _a = document.createElement('a');
-        _a.href=_url; _a.download=(_cl?_cl+' - ':'')+(item.name||'Candidate Update Report')+'.pptx';
-        _a.click(); setTimeout(function(){URL.revokeObjectURL(_url);},2000);
-        return;
-      }
+      
 
       if (item.template === 'services-profile' || item.template === 'project-report' || item.template === 'project-report-ext' || item.template === 'project-report-gb') {
         var projData2 = item.content;
