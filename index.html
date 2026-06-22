@@ -4153,8 +4153,14 @@ async function downloadHistory(index) {
         _s2Base = _repHdr(_s2Base,'2',_cl,_ro,_ro);
 
         var _tm = _s2Base.match(/(<a:tbl>)([\s\S]*?)(<\/a:tbl>)/);
-        var _tRows = _tm ? (_tm[2].match(/<a:tr[\s\S]*?<\/a:tr>/g)||[]) : [];
+        var _tblInner = _tm ? _tm[2] : '';
+        // Preserve tblPr and tblGrid (everything before first <a:tr>)
+        var _firstTrIdx = _tblInner.indexOf('<a:tr');
+        var _tblPrefix = _firstTrIdx > 0 ? _tblInner.substring(0, _firstTrIdx) : '';
+        var _tRows = _tblInner.match(/<a:tr[\s\S]*?<\/a:tr>/g) || [];
         var _hRow = _tRows[0]||''; var _dRow = _tRows[1]||'';
+
+        if (!_dRow) { throw new Error('PPT template: could not find data row in table'); }
 
         function _bldRow(cand, n) {
           var r = _dRow; var ci=[0];
@@ -4169,8 +4175,8 @@ async function downloadHistory(index) {
         for(var _i=0;_i<Math.max(_pptCands.length,1);_i+=RPER)
           _chunks.push(_pptCands.slice(_i,_i+RPER));
 
-        // Build slide 2
-        var _t2 = _hRow + _chunks[0].map(function(c,i){return _bldRow(c,i+1);}).join('');
+        // Build slide 2 — preserve tblPrefix (tblPr + tblGrid)
+        var _t2 = _tblPrefix + _hRow + _chunks[0].map(function(c,i){return _bldRow(c,i+1);}).join('');
         _pptZip.file('ppt/slides/slide2.xml', _s2Base.replace(_tm[0],'<a:tbl>'+_t2+'</a:tbl>'));
 
         // Clone for extra chunks
@@ -4186,7 +4192,7 @@ async function downloadHistory(index) {
           for (var _ci=1;_ci<_chunks.length;_ci++) {
             var _nn=100+_ci, _nr='rId'+(++_mRid), _ns=++_mSid;
             var _chunk = _chunks[_ci];
-            var _nt = _hRow + _chunk.map(function(c,i){return _bldRow(c,_ci*RPER+i+1);}).join('');
+            var _nt = _tblPrefix + _hRow + _chunk.map(function(c,i){return _bldRow(c,_ci*RPER+i+1);}).join('');
             var _nsx = _s2Base.replace(_tm[0],'<a:tbl>'+_nt+'</a:tbl>');
             _nsx = _nsx.replace(/2  \|  /g, (_ci+2)+'  |  ');
             _pptZip.file('ppt/slides/slide'+_nn+'.xml',_nsx);
