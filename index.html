@@ -4204,6 +4204,17 @@ async function downloadHistory(index) {
         var _tRows = _tblInner.match(/<a:tr[\s\S]*?<\/a:tr>/g) || [];
         var _hRow = _tRows[0]||''; var _dRow = _tRows[1]||'';
 
+        console.log('PPT table debug:', {
+          tmMatch: !!_tm,
+          tblInnerLen: _tblInner.length,
+          firstTrIdx: _firstTrIdx,
+          tblPrefixLen: _tblPrefix.length,
+          tRowsCount: _tRows.length,
+          hRowLen: _hRow.length,
+          dRowLen: _dRow.length,
+          chunksCount: 0,
+          pptCandsCount: _pptCands.length
+        });
         if (!_dRow) { throw new Error('PPT template: could not find data row in table'); }
 
         function _bldRow(cand, n) {
