@@ -4275,8 +4275,9 @@ async function downloadHistory(index) {
             // Add to presentation rels
             var _newRel = '<Relationship Id="'+_nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+_nn+'.xml"/>';
             if (_s3ri) {
-              // Insert before slide3 rel
-              _prsR = _prsR.replace('Id="'+_s3ri+'"', _newRel + ' Id="'+_s3ri+'"');
+              // Insert a new rel entry before the slide3 relationship tag
+              var _s3RelFull = _prsR.match(new RegExp('<Relationship[^>]*Id="'+_s3ri+'"[^/]*/>'))[0];
+              _prsR = _prsR.replace(_s3RelFull, _newRel + _s3RelFull);
             } else {
               // Append before </Relationships>
               _prsR = _prsR.replace('</Relationships>', _newRel + '</Relationships>');
