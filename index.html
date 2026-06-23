@@ -4162,9 +4162,15 @@ async function downloadHistory(index) {
           return xml.split('<a:t>' + ph + '</a:t>').join('<a:t>' + _xe(val||ph) + '</a:t>');
         }
         function _repHdr(xml, slideNum, client, role, title) {
-          var oldH = slideNum + '  |  [Client] - [Role] – [Report Title]';
           var newH = slideNum + '  |  ' + (client||'') + ' - ' + (role||'') + ' – ' + (title||'');
-          return xml.split('<a:t>' + oldH + '</a:t>').join('<a:t>' + _xe(newH) + '</a:t>');
+          // Handle both '3  |  [Client]...' and '|  [Client]...' formats
+          var oldH1 = slideNum + '  |  [Client] - [Role] – [Report Title]';
+          if (xml.indexOf('<a:t>' + oldH1 + '</a:t>') >= 0)
+            return xml.split('<a:t>' + oldH1 + '</a:t>').join('<a:t>' + _xe(newH) + '</a:t>');
+          var oldH2 = '|  [Client] - [Role] – [Report Title]';
+          if (xml.indexOf('<a:t>' + oldH2 + '</a:t>') >= 0)
+            return xml.split('<a:t>' + oldH2 + '</a:t>').join('<a:t>' + _xe(newH) + '</a:t>');
+          return xml;
         }
 
         var _cl = _pptContent.clientName  || '';
