@@ -2170,12 +2170,71 @@ function csFillTemplate(xmlStr, cv) {
 
 async function generate() {
   var tpl = document.getElementById('tplSel').value;
+  console.log('GENERATE called:', {tpl:tpl, activeType: document.querySelector('.itab.on') ? document.querySelector('.itab.on').getAttribute('data-type') : 'unknown'});
   var btn = document.getElementById('genBtn');
   if (!tpl) { notify('Please select a template first'); return; }
 
   var inputText = '';
   var activeTab = document.querySelector('.itab.on');
   var activeType = activeTab ? activeTab.getAttribute('data-type') : 'text';
+
+  // ── PPT: parse pasted tab-separated candidate data (before file loop) ──
+  if (tpl === 'ppt-candidate-update' && activeType === 'text' && inputText.trim()) {
+    var _pptPasted = [];
+    var _pptLines = inputText.trim().split(/\r?\n/);
+    var _nameCol=-1, _companyCol=-1, _roleCol=-1, _statusCol=-1, _startRow=0;
+    var _firstRow = (_pptLines[0]||'').split(/\t/).map(function(c){ return c.toLowerCase().trim(); });
+    if (_firstRow.some(function(c){ return c.includes('candidate') || c.includes('name'); })) {
+      _startRow = 1;
+      _firstRow.forEach(function(h,i){
+        if (h.includes('candidate') || (h.includes('name') && !h.includes('company'))) _nameCol=i;
+        else if (h.includes('company') || h.includes('organisation') || h.includes('organization')) _companyCol=i;
+        else if (h.includes('role') || h.includes('title') || h.includes('position') || h.includes('designation')) _roleCol=i;
+        else if (h.includes('status')) _statusCol=i;
+      });
+    }
+    var _hasSerial = _firstRow[0] && ['s.no','s no','sr','no','sr.'].indexOf(_firstRow[0]) >= 0;
+    if (_nameCol < 0) _nameCol = _hasSerial ? 1 : 0;
+    if (_roleCol < 0) _roleCol = _hasSerial ? 2 : 1;
+    if (_companyCol < 0) _companyCol = _hasSerial ? 3 : 2;
+    if (_statusCol < 0) _statusCol = _hasSerial ? 4 : 3;
+    _pptLines.slice(_startRow).forEach(function(line) {
+      if (!line.trim()) return;
+      var cols = line.split(/\t/);
+      if (cols.length < 2) return;
+      var cand = {
+        name:    (cols[_nameCol]    ||'').trim(),
+        title:   (cols[_roleCol]    ||'').trim(),
+        company: (cols[_companyCol] ||'').trim(),
+        status:  (cols[_statusCol]  ||'').trim()
+      };
+      if (cand.name) _pptPasted.push(cand);
+    });
+    console.log('PPT paste debug:', {lines:_pptLines.length, startRow:_startRow, nameCol:_nameCol, found:_pptPasted.length, first:_pptPasted[0]||null});
+    if (!_pptPasted.length) {
+      notify('No candidates found. Paste your data including: Candidate Name, Company, Role, Status');
+      btn.classList.remove('loading'); btn.innerHTML = '\u26a1 Generate Document'; return;
+    }
+    var _pptPastedItem = {
+      name: 'Candidate Update Report',
+      date: new Date().toLocaleString(), template: tpl, fmt: 'p',
+      content: {
+        reportTitle:'Candidate Update Report', clientName:'',
+        consultant1:'', consultant2:'', practice:'', presentedTo:'',
+        reportDate: new Date().toLocaleDateString('en-GB').replace(/\//g,'.'),
+        pptCandidates: _pptPasted, candidates: _pptPasted
+      }
+    };
+    var _ppH = JSON.parse(localStorage.getItem('sh_history')||'[]');
+    _ppH.unshift(_pptPastedItem);
+    localStorage.setItem('sh_history', JSON.stringify(_ppH));
+    renderHistory();
+    btn.classList.remove('loading');
+    btn.innerHTML = '\u2705 Done \u2014 Check My History';
+    notify('Done! Go to My History to download your PPT.');
+    setTimeout(function(){ btn.innerHTML = '\u26a1 Generate Document'; }, 3500);
+    return;
+  }
 
   if (activeType === 'url') {
     var urlVal = (document.getElementById('urlInput') || {value:''}).value.trim();
@@ -2596,79 +2655,7 @@ async function generate() {
           var ext = file.name.split('.').pop().toLowerCase();
           btn.innerHTML = 'Reading ' + file.name + '...';
 
-          // ── PPT: parse pasted tab-separated candidate data ──────────────────
-          if (tpl === 'ppt-candidate-update' && activeType === 'text' && inputText.trim()) {
-            var _pptPasted = [];
-            var _pptLines = inputText.trim().split(/\r?\n/);
-            // Auto-detect header row and column positions
-            var _nameCol=-1, _companyCol=-1, _roleCol=-1, _statusCol=-1, _startRow=0;
-            var _firstRow = (_pptLines[0]||'').split(/\t/).map(function(c){ return c.toLowerCase().trim(); });
-            if (_firstRow.some(function(c){ return c.includes('candidate') || c.includes('name'); })) {
-              // Has header row — detect column positions
-              _startRow = 1;
-              _firstRow.forEach(function(h,i){
-                if (h.includes('candidate') || (h.includes('name') && !h.includes('company'))) _nameCol=i;
-                else if (h.includes('company') || h.includes('organisation') || h.includes('organization')) _companyCol=i;
-                else if (h.includes('role') || h.includes('title') || h.includes('position') || h.includes('designation')) _roleCol=i;
-                else if (h.includes('status')) _statusCol=i;
-              });
-            }
-            // Fallback to positional if header detection failed
-            // Expected order from your Excel: S.No, Candidate Name, Role, Company, Status
-            // Check if first col looks like a number (S.No column)
-            var _hasSerialCol = _firstRow[0] && (_firstRow[0] === 's.no' || _firstRow[0] === 's no' || _firstRow[0] === 'sr' || _firstRow[0] === 'no' || _firstRow[0] === 'sr.');
-            if (_nameCol < 0) _nameCol = _hasSerialCol ? 1 : 0;
-            if (_roleCol < 0) _roleCol = _hasSerialCol ? 2 : 1;
-            if (_companyCol < 0) _companyCol = _hasSerialCol ? 3 : 2;
-            if (_statusCol < 0) _statusCol = _hasSerialCol ? 4 : 3;
-
-            _pptLines.slice(_startRow).forEach(function(line) {
-              if (!line.trim()) return;
-              var cols = line.split(/\t/);
-              if (cols.length < 2) return;
-              var cand = {
-                name:    (cols[_nameCol]    ||'').trim(),
-                title:   (cols[_roleCol]    ||'').trim(),
-                company: (cols[_companyCol] ||'').trim(),
-                status:  (cols[_statusCol]  ||'').trim()
-              };
-              if (cand.name) _pptPasted.push(cand);
-            });
-            console.log('PPT paste debug:', {
-              totalLines: _pptLines.length,
-              startRow: _startRow,
-              nameCol: _nameCol,
-              roleCol: _roleCol,
-              companyCol: _companyCol,
-              statusCol: _statusCol,
-              candidatesFound: _pptPasted.length,
-              firstCandidate: _pptPasted[0]||null
-            });
-            if (!_pptPasted.length) {
-              notify('No candidates found. Please paste your candidate data including columns: Candidate Name, Company, Role, Status');
-              btn.classList.remove('loading'); btn.innerHTML = '\u26a1 Generate Document'; return;
-            }
-            var _pptPastedItem = {
-              name: 'Candidate Update Report',
-              date: new Date().toLocaleString(), template: tpl, fmt: 'p',
-              content: {
-                reportTitle:'Candidate Update Report', clientName:'',
-                consultant1:'', consultant2:'', practice:'', presentedTo:'',
-                reportDate: new Date().toLocaleDateString('en-GB').replace(/\//g,'.'),
-                pptCandidates: _pptPasted, candidates: _pptPasted
-              }
-            };
-            var _ppH = JSON.parse(localStorage.getItem('sh_history')||'[]');
-            _ppH.unshift(_pptPastedItem);
-            localStorage.setItem('sh_history', JSON.stringify(_ppH));
-            renderHistory();
-            btn.classList.remove('loading');
-            btn.innerHTML = '\u2705 Done \u2014 Check My History';
-            notify('Done! Go to My History to download your PPT.');
-            setTimeout(function(){ btn.innerHTML = '\u26a1 Generate Document'; }, 3500);
-            return;
-          }
-
+          // ── PPT paste path handled above, before file loop ──────────────
           // ── Project Report: parse xlsx/docx file directly into candidate rows ──
           if ((tpl === 'project-report' || tpl === 'project-report-gb' || tpl === 'project-report-ext' || tpl === 'ppt-candidate-update') && (ext === 'xlsx' || ext === 'xls' || ext === 'docx')) {
             try {
@@ -4231,8 +4218,12 @@ async function downloadHistory(index) {
           _chunks.push(_pptCands.slice(_i,_i+RPER));
 
         // Build slide 2 — preserve tblPrefix (tblPr + tblGrid)
-        var _t2 = _tblPrefix + _hRow + _chunks[0].map(function(c,i){return _bldRow(c,i+1);}).join('');
-        _pptZip.file('ppt/slides/slide2.xml', _s2Base.replace(_tm[0],'<a:tbl>'+_t2+'</a:tbl>'));
+        var _builtRows = _chunks[0].map(function(c,i){return _bldRow(c,i+1);});
+        console.log('PPT build debug:', {chunks:_chunks.length, chunk0len:_chunks[0].length, builtRowsLen:_builtRows.length, firstRowLen:_builtRows[0]?_builtRows[0].length:0});
+        var _t2 = _tblPrefix + _hRow + _builtRows.join('');
+        var _newS2 = _s2Base.replace(_tm[0],'<a:tbl>'+_t2+'</a:tbl>');
+        console.log('PPT replace debug:', {tmGroup0Len:_tm[0].length, replacedLen:_newS2.length, originalLen:_s2Base.length, changed:_newS2.length!==_s2Base.length});
+        _pptZip.file('ppt/slides/slide2.xml', _newS2);
 
         // Clone for extra chunks
         if (_chunks.length > 1) {
