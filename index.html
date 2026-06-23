@@ -4252,8 +4252,13 @@ async function downloadHistory(index) {
           // Use original _s2Base (unmodified) as clone template
           var _cloneBase = _s2Base;
 
+          // Build all new rels, sldIds and CT entries as single strings
+          var _allNewRels = '';
+          var _allNewSldIds = '';
+          var _allNewCT = '';
+
           for (var _ci=1; _ci<_chunks.length; _ci++) {
-            var _nn  = 200 + _ci; // use 200+ to avoid any conflicts
+            var _nn  = 200 + _ci;
             var _nr  = 'rId' + (++_mRid);
             var _ns  = ++_mSid;
             var _chunk = _chunks[_ci];
@@ -4265,50 +4270,44 @@ async function downloadHistory(index) {
 
             // Build slide XML from clean base
             var _nsx = _cloneBase.replace(_tm[0], '<a:tbl>'+_nt+'</a:tbl>');
-            // Update slide number in header
             _nsx = _nsx.replace(/>2  \|  /g, '>'+(_ci+2)+'  |  ');
-
-            // Save slide files
             _pptZip.file('ppt/slides/slide'+_nn+'.xml', _nsx);
             _pptZip.file('ppt/slides/_rels/slide'+_nn+'.xml.rels', _s2Rels);
 
-            // Add to presentation rels
-            var _newRel = '<Relationship Id="'+_nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+_nn+'.xml"/>';
-            if (_s3ri) {
-              // Find complete slide3 Relationship tag and insert new one before it
-              var _s3RelIdx = _prsR.indexOf('Id="'+_s3ri+'"');
-              if (_s3RelIdx >= 0) {
-                // Walk back to find the opening < of this tag
-                var _tagStart = _prsR.lastIndexOf('<Relationship', _s3RelIdx);
-                // Walk forward to find the closing />
-                var _tagEnd = _prsR.indexOf('/>', _s3RelIdx) + 2;
-                var _s3RelFull = _prsR.substring(_tagStart, _tagEnd);
-                _prsR = _prsR.replace(_s3RelFull, _newRel + _s3RelFull);
-              } else {
-                _prsR = _prsR.replace('</Relationships>', _newRel + '</Relationships>');
-              }
-            } else {
-              _prsR = _prsR.replace('</Relationships>', _newRel + '</Relationships>');
-            }
-
-            // Add to sldIdLst in presentation.xml
-            var _newSldId = '<p:sldId id="'+_ns+'" r:id="'+_nr+'"/>';
-            if (_s3ri) {
-              // Insert before slide3 sldId
-              var _s3SldId = _prsX.match(/<p:sldId[^/]*r:id="'+_s3ri+'"[^/]*\/>/);
-              if (_s3SldId) {
-                _prsX = _prsX.replace(_s3SldId[0], _newSldId + _s3SldId[0]);
-              } else {
-                _prsX = _prsX.replace('</p:sldIdLst>', _newSldId + '</p:sldIdLst>');
-              }
-            } else {
-              _prsX = _prsX.replace('</p:sldIdLst>', _newSldId + '</p:sldIdLst>');
-            }
-
-            // Add to Content_Types
-            _ctX = _ctX.replace('</Types>',
-              '<Override PartName="/ppt/slides/slide'+_nn+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');
+            // Accumulate rels, sldIds, CT entries
+            _allNewRels += '<Relationship Id="'+_nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+_nn+'.xml"/>';
+            _allNewSldIds += '<p:sldId id="'+_ns+'" r:id="'+_nr+'"/>';
+            _allNewCT += '<Override PartName="/ppt/slides/slide'+_nn+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>';
           }
+
+          // Insert all rels before slide3 in one operation
+          if (_s3ri && _allNewRels) {
+            var _s3RelIdx = _prsR.indexOf('Id="'+_s3ri+'"');
+            if (_s3RelIdx >= 0) {
+              var _tagStart = _prsR.lastIndexOf('<Relationship', _s3RelIdx);
+              var _tagEnd   = _prsR.indexOf('/>', _s3RelIdx) + 2;
+              var _s3RelFull = _prsR.substring(_tagStart, _tagEnd);
+              _prsR = _prsR.replace(_s3RelFull, _allNewRels + _s3RelFull);
+            } else {
+              _prsR = _prsR.replace('</Relationships>', _allNewRels + '</Relationships>');
+            }
+          }
+
+          // Insert all sldIds before slide3 in one operation
+          if (_s3ri && _allNewSldIds) {
+            var _s3SldIdx = _prsX.indexOf('r:id="'+_s3ri+'"');
+            if (_s3SldIdx >= 0) {
+              var _sldTagStart = _prsX.lastIndexOf('<p:sldId', _s3SldIdx);
+              var _sldTagEnd   = _prsX.indexOf('/>', _s3SldIdx) + 2;
+              var _s3SldFull   = _prsX.substring(_sldTagStart, _sldTagEnd);
+              _prsX = _prsX.replace(_s3SldFull, _allNewSldIds + _s3SldFull);
+            } else {
+              _prsX = _prsX.replace('</p:sldIdLst>', _allNewSldIds + '</p:sldIdLst>');
+            }
+          }
+
+          // Add all CT entries at once
+          _ctX = _ctX.replace('</Types>', _allNewCT + '</Types>');
 
           _pptZip.file('ppt/presentation.xml', _prsX);
           _pptZip.file('ppt/_rels/presentation.xml.rels', _prsR);
