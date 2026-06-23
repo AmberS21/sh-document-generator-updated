@@ -4275,11 +4275,19 @@ async function downloadHistory(index) {
             // Add to presentation rels
             var _newRel = '<Relationship Id="'+_nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+_nn+'.xml"/>';
             if (_s3ri) {
-              // Insert a new rel entry before the slide3 relationship tag
-              var _s3RelFull = _prsR.match(new RegExp('<Relationship[^>]*Id="'+_s3ri+'"[^/]*/>'))[0];
-              _prsR = _prsR.replace(_s3RelFull, _newRel + _s3RelFull);
+              // Find complete slide3 Relationship tag and insert new one before it
+              var _s3RelIdx = _prsR.indexOf('Id="'+_s3ri+'"');
+              if (_s3RelIdx >= 0) {
+                // Walk back to find the opening < of this tag
+                var _tagStart = _prsR.lastIndexOf('<Relationship', _s3RelIdx);
+                // Walk forward to find the closing />
+                var _tagEnd = _prsR.indexOf('/>', _s3RelIdx) + 2;
+                var _s3RelFull = _prsR.substring(_tagStart, _tagEnd);
+                _prsR = _prsR.replace(_s3RelFull, _newRel + _s3RelFull);
+              } else {
+                _prsR = _prsR.replace('</Relationships>', _newRel + '</Relationships>');
+              }
             } else {
-              // Append before </Relationships>
               _prsR = _prsR.replace('</Relationships>', _newRel + '</Relationships>');
             }
 
