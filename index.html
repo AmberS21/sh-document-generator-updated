@@ -4316,8 +4316,9 @@ async function downloadHistory(index) {
 
         // Slide 3 — contact
         var _s3 = await _pptZip.file('ppt/slides/slide3.xml').async('string');
-        _s3 = _repHdr(_s3,'3',_cl,_ro,_ro);
-        _pptZip.file('ppt/slides/slide3.xml',_s3);
+        var _contactNum = 1 + _chunks.length + 1; // title(1) + candidate slides + 1
+        _s3 = _repHdr(_s3, String(_contactNum), _cl, _ro, _ro);
+        _pptZip.file('ppt/slides/slide3.xml', _s3);
 
         // Download
         var _out = await _pptZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
