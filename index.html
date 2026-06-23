@@ -2170,7 +2170,6 @@ function csFillTemplate(xmlStr, cv) {
 
 async function generate() {
   var tpl = document.getElementById('tplSel').value;
-  console.log('GENERATE called:', {tpl:tpl, activeType: document.querySelector('.itab.on') ? document.querySelector('.itab.on').getAttribute('data-type') : 'unknown'});
   var btn = document.getElementById('genBtn');
   if (!tpl) { notify('Please select a template first'); return; }
 
@@ -2218,7 +2217,6 @@ async function generate() {
       };
       if (cand.name) _pptPasted.push(cand);
     });
-    console.log('PPT paste debug:', {lines:_pptLines.length, startRow:_startRow, nameCol:_nameCol, found:_pptPasted.length, first:_pptPasted[0]||null});
     if (!_pptPasted.length) {
       notify('No candidates found. Paste your data including: Candidate Name, Company, Role, Status');
       btn.classList.remove('loading'); btn.innerHTML = '\u26a1 Generate Document'; return;
@@ -4144,14 +4142,6 @@ async function downloadHistory(index) {
               return {name:c.fullname||c.name||'',company:c.company||'',title:c.title||'',status:c.status||''};
             }) : []);
 
-        console.log('PPT download debug:', {
-          template: item.template,
-          fmt: item.fmt,
-          pptCandidatesCount: (_pptContent.pptCandidates||[]).length,
-          candidatesCount: (_pptContent.candidates||[]).length,
-          pptCandsCount: _pptCands.length,
-          firstCand: _pptCands[0]||null
-        });
         var _RAW2 = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
         var _tplResp = await fetch(_RAW2 + 'templates/SH_Candidate_Update_Report_TEMPLATE.pptx');
         if (!_tplResp.ok) throw new Error('Failed to fetch PPT template');
@@ -4205,17 +4195,6 @@ async function downloadHistory(index) {
         var _tRows = _tblInner.match(/<a:tr[\s\S]*?<\/a:tr>/g) || [];
         var _hRow = _tRows[0]||''; var _dRow = _tRows[1]||'';
 
-        console.log('PPT table debug:', {
-          tmMatch: !!_tm,
-          tblInnerLen: _tblInner.length,
-          firstTrIdx: _firstTrIdx,
-          tblPrefixLen: _tblPrefix.length,
-          tRowsCount: _tRows.length,
-          hRowLen: _hRow.length,
-          dRowLen: _dRow.length,
-          chunksCount: 0,
-          pptCandsCount: _pptCands.length
-        });
         if (!_dRow) { throw new Error('PPT template: could not find data row in table'); }
 
         function _bldRow(cand, n) {
@@ -4233,10 +4212,8 @@ async function downloadHistory(index) {
 
         // Build slide 2 — preserve tblPrefix (tblPr + tblGrid)
         var _builtRows = _chunks[0].map(function(c,i){return _bldRow(c,i+1);});
-        console.log('PPT build debug:', {chunks:_chunks.length, chunk0len:_chunks[0].length, builtRowsLen:_builtRows.length, firstRowLen:_builtRows[0]?_builtRows[0].length:0});
         var _t2 = _tblPrefix + _hRow + _builtRows.join('');
         var _newS2 = _s2Base.replace(_tm[0],'<a:tbl>'+_t2+'</a:tbl>');
-        console.log('PPT replace debug:', {tmGroup0Len:_tm[0].length, replacedLen:_newS2.length, originalLen:_s2Base.length, changed:_newS2.length!==_s2Base.length});
         _pptZip.file('ppt/slides/slide2.xml', _newS2);
 
         // Clone for extra chunks
