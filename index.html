@@ -2190,7 +2190,9 @@ async function generate() {
     var _pptLines = inputText.trim().split(/\r?\n/);
     var _nameCol=-1, _companyCol=-1, _roleCol=-1, _statusCol=-1, _startRow=0;
     var _firstRow = (_pptLines[0]||'').split(/\t/).map(function(c){ return c.toLowerCase().trim(); });
-    if (_firstRow.some(function(c){ return c.includes('candidate') || c.includes('name'); })) {
+    // Detect header: if any cell contains text (not just a number), treat as header
+    var _firstRowHasText = _firstRow.some(function(c){ return c.length > 0 && isNaN(c.replace('.','').replace(' ','')); });
+    if (_firstRowHasText) {
       _startRow = 1;
       _firstRow.forEach(function(h,i){
         if (h.includes('candidate') || (h.includes('name') && !h.includes('company'))) _nameCol=i;
@@ -2199,7 +2201,7 @@ async function generate() {
         else if (h.includes('status')) _statusCol=i;
       });
     }
-    var _hasSerial = _firstRow[0] && ['s.no','s no','sr','no','sr.'].indexOf(_firstRow[0]) >= 0;
+    var _hasSerial = _firstRow[0] && ['s.no','s no','sr','no','sr.','s.no.'].indexOf(_firstRow[0]) >= 0;
     if (_nameCol < 0) _nameCol = _hasSerial ? 1 : 0;
     if (_roleCol < 0) _roleCol = _hasSerial ? 2 : 1;
     if (_companyCol < 0) _companyCol = _hasSerial ? 3 : 2;
@@ -4318,6 +4320,8 @@ async function downloadHistory(index) {
         var _s3 = await _pptZip.file('ppt/slides/slide3.xml').async('string');
         var _contactNum = 1 + _chunks.length + 1; // title(1) + candidate slides + 1
         _s3 = _repHdr(_s3, String(_contactNum), _cl, _ro, _ro);
+        // Also update standalone slide number
+        _s3 = _rep(_s3, '3', String(_contactNum));
         _pptZip.file('ppt/slides/slide3.xml', _s3);
 
         // Download
