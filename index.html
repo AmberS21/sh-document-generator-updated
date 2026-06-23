@@ -4236,30 +4236,74 @@ async function downloadHistory(index) {
           var _prsX = await _pptZip.file('ppt/presentation.xml').async('string');
           var _prsR = await _pptZip.file('ppt/_rels/presentation.xml.rels').async('string');
           var _ctX  = await _pptZip.file('[Content_Types].xml').async('string');
-          var _mRid = Math.max.apply(null,(_prsR.match(/rId(\d+)/g)||['rId1']).map(function(r){return parseInt(r.replace('rId',''));}));
-          var _mSid = Math.max.apply(null,(_prsX.match(/ id="(\d+)"/g)||[' id="1"']).map(function(r){return parseInt(r.match(/\d+/)[0]);}));
-          var _s3rm = _prsR.match(/Id="([^"]+)"[^>]*Target="slides\/slide3\.xml"/);
+
+          // Get max rId number safely
+          var _ridNums = (_prsR.match(/Id="rId(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));});
+          var _mRid = _ridNums.length ? Math.max.apply(null,_ridNums) : 10;
+
+          // Get max sldId number safely
+          var _sidNums = (_prsX.match(/id="(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));}).filter(function(n){return n<2000000000;});
+          var _mSid = _sidNums.length ? Math.max.apply(null,_sidNums) : 300;
+
+          // Find slide3 rId to insert new slides before contact slide
+          var _s3rm = _prsR.match(/Id="(rId\d+)"[^>]*Target="slides\/slide3\.xml"/);
           var _s3ri = _s3rm ? _s3rm[1] : null;
 
-          for (var _ci=1;_ci<_chunks.length;_ci++) {
-            var _nn=100+_ci, _nr='rId'+(++_mRid), _ns=++_mSid;
+          // Use original _s2Base (unmodified) as clone template
+          var _cloneBase = _s2Base;
+
+          for (var _ci=1; _ci<_chunks.length; _ci++) {
+            var _nn  = 200 + _ci; // use 200+ to avoid any conflicts
+            var _nr  = 'rId' + (++_mRid);
+            var _ns  = ++_mSid;
             var _chunk = _chunks[_ci];
-            var _nt = _tblPrefix + _hRow + _chunk.map(function(c,i){return _bldRow(c,_ci*RPER+i+1);}).join('');
-            var _nsx = _s2Base.replace(_tm[0],'<a:tbl>'+_nt+'</a:tbl>');
-            _nsx = _nsx.replace(/2  \|  /g, (_ci+2)+'  |  ');
-            _pptZip.file('ppt/slides/slide'+_nn+'.xml',_nsx);
-            _pptZip.file('ppt/slides/_rels/slide'+_nn+'.xml.rels',_s2Rels);
-            if(_s3ri){
-              var _rt='<Relationship Id="'+_s3ri+'"';
-              _prsR=_prsR.replace(_rt,'<Relationship Id="'+_nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+_nn+'.xml"/>'+_rt);
-              var _sit=_prsX.match(new RegExp('<p:sldId[^/]*r:id="'+_s3ri+'"[^/]*/>'))[0];
-              _prsX=_prsX.replace(_sit,'<p:sldId id="'+_ns+'" r:id="'+_nr+'"/>'+_sit);
+
+            // Build table for this chunk
+            var _nt = _tblPrefix + _hRow + _chunk.map(function(c,i){
+              return _bldRow(c, _ci*RPER + i + 1);
+            }).join('');
+
+            // Build slide XML from clean base
+            var _nsx = _cloneBase.replace(_tm[0], '<a:tbl>'+_nt+'</a:tbl>');
+            // Update slide number in header
+            _nsx = _nsx.replace(/>2  \|  /g, '>'+(_ci+2)+'  |  ');
+
+            // Save slide files
+            _pptZip.file('ppt/slides/slide'+_nn+'.xml', _nsx);
+            _pptZip.file('ppt/slides/_rels/slide'+_nn+'.xml.rels', _s2Rels);
+
+            // Add to presentation rels
+            var _newRel = '<Relationship Id="'+_nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+_nn+'.xml"/>';
+            if (_s3ri) {
+              // Insert before slide3 rel
+              _prsR = _prsR.replace('Id="'+_s3ri+'"', _newRel + ' Id="'+_s3ri+'"');
+            } else {
+              // Append before </Relationships>
+              _prsR = _prsR.replace('</Relationships>', _newRel + '</Relationships>');
             }
-            _ctX=_ctX.replace('</Types>','<Override PartName="/ppt/slides/slide'+_nn+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');
+
+            // Add to sldIdLst in presentation.xml
+            var _newSldId = '<p:sldId id="'+_ns+'" r:id="'+_nr+'"/>';
+            if (_s3ri) {
+              // Insert before slide3 sldId
+              var _s3SldId = _prsX.match(/<p:sldId[^/]*r:id="'+_s3ri+'"[^/]*\/>/);
+              if (_s3SldId) {
+                _prsX = _prsX.replace(_s3SldId[0], _newSldId + _s3SldId[0]);
+              } else {
+                _prsX = _prsX.replace('</p:sldIdLst>', _newSldId + '</p:sldIdLst>');
+              }
+            } else {
+              _prsX = _prsX.replace('</p:sldIdLst>', _newSldId + '</p:sldIdLst>');
+            }
+
+            // Add to Content_Types
+            _ctX = _ctX.replace('</Types>',
+              '<Override PartName="/ppt/slides/slide'+_nn+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');
           }
-          _pptZip.file('ppt/presentation.xml',_prsX);
-          _pptZip.file('ppt/_rels/presentation.xml.rels',_prsR);
-          _pptZip.file('[Content_Types].xml',_ctX);
+
+          _pptZip.file('ppt/presentation.xml', _prsX);
+          _pptZip.file('ppt/_rels/presentation.xml.rels', _prsR);
+          _pptZip.file('[Content_Types].xml', _ctX);
         }
 
         // Slide 3 — contact
