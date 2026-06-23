@@ -2178,6 +2178,12 @@ async function generate() {
   var activeTab = document.querySelector('.itab.on');
   var activeType = activeTab ? activeTab.getAttribute('data-type') : 'text';
 
+  // Populate inputText early so PPT paste path can use it
+  if (activeType === 'text') {
+    var _textEl = document.getElementById('textInput') || document.querySelector('textarea');
+    if (_textEl) inputText = _textEl.value || '';
+  }
+
   // ── PPT: parse pasted tab-separated candidate data (before file loop) ──
   if (tpl === 'ppt-candidate-update' && activeType === 'text' && inputText.trim()) {
     var _pptPasted = [];
