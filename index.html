@@ -3281,25 +3281,25 @@ Extract the following and return ONLY valid JSON, no markdown:
   "CANDIDATE_NAME": "Full name exactly as written",
   "companies": [
     {
-      "COMPANY_DATES": "Month YYYY - Present or Month YYYY - Month YYYY (overall tenure at company)",
+      "COMPANY_DATES": "Month YYYY - Present or Month YYYY - Month YYYY (overall tenure at company, full month names)",
       "COMPANY_NAME": "Company name only — no location, no country",
-      "COMPANY_LOCATION": "City, Country (use short country name e.g. United Kingdom not England, United Kingdom)",
+      "COMPANY_LOCATION": "City, Country — use UK not United Kingdom, USA not United States",
       "roles": [
         {
-          "ROLE_START_DATE": "Full month name YYYY e.g. January 2022",
-          "ROLE_END_DATE": "Full month name YYYY e.g. January 2025 or Present",
+          "ROLE_START_DATE": "Full month name YYYY e.g. January 2022 — leave empty string if company has only one role",
+          "ROLE_END_DATE": "Full month name YYYY e.g. January 2025 or Present — leave empty string if company has only one role",
           "ROLE_TITLE": "Exact job title only — do NOT include department or function here",
-          "ROLE_FUNCTION": "Department or function ONLY if it adds meaningful information beyond the job title — leave empty string if it would just repeat the title"
+          "ROLE_FUNCTION": "Department or function ONLY if it adds meaningful new information beyond the job title — empty string otherwise"
         }
       ]
     }
   ],
   "education": [
     {
-      "EDU_YEARS": "YYYY - YYYY",
+      "EDU_YEARS": "Month YYYY - Month YYYY or YYYY - YYYY — use Sept not Sep, use full source dates",
       "EDU_INSTITUTION": "Full institution name only",
-      "EDU_LOCATION": "City, Country — leave empty if not stated",
-      "EDU_DEGREE": "Degree type only e.g. BSc, MBA, MSc, Master's degree",
+      "EDU_LOCATION": "City, Country — leave empty string if not stated",
+      "EDU_DEGREE": "Full degree name — expand: MSc=Master of Science, BSc=Bachelor of Science, BA=Bachelor of Arts, MA=Master of Arts, MBA=Master of Business Administration",
       "EDU_MAJOR": "Subject / Major / Area of Study only"
     }
   ]
@@ -5803,7 +5803,7 @@ async function downloadHistory(index) {
       if (item.template === 'gm-global-profile-basic') {
         var _gmCv = item.content;
         var _gmRaw = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
-        var _gmTplResp = await fetch(_gmRaw + 'templates/SH_GM_Candidate_Profile_Basic.docx');
+        var _gmTplResp = await fetch(_gmRaw + 'templates/SH_GM_Candidate_Profile_Basic.docx?v=' + Date.now());
         if (!_gmTplResp.ok) throw new Error('Failed to fetch GM template');
         var _gmAb = await _gmTplResp.arrayBuffer();
         var _gmZip = new PizZip(_gmAb);
