@@ -4196,7 +4196,66 @@ async function downloadHistory(index) {
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
       // ── PPT Candidate Update Report ─────────────────────────────
-      // ── PPT Candidate Update Report ──────────────────────────────────────
+            // ── GM Global Profile Basic ──────────────────────────────────────────
+      if (item.template === 'gm-global-profile-basic') {
+        var _gmCv = item.content;
+        var _gmRaw = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+        var _gmTplResp = await fetch(_gmRaw + 'templates/SH_GM_Candidate_Profile_Basic.docx?v=' + Date.now());
+        if (!_gmTplResp.ok) throw new Error('Failed to fetch GM template');
+        var _gmAb = await _gmTplResp.arrayBuffer();
+        var _gmZip = new PizZip(_gmAb);
+        var _gmDoc = new docxtemplater(_gmZip, {
+          paragraphLoop: true,
+          linebreaks: true,
+          delimiters: { start: '{{', end: '}}' }
+        });
+        _gmDoc.render({
+          CANDIDATE_NAME: _gmCv.CANDIDATE_NAME || '',
+          companies: (_gmCv.companies || []).map(function(co) {
+            var coLoc = (co.COMPANY_LOCATION || '').trim();
+            var coLine = (co.COMPANY_DATES || '') + ': ' + (co.COMPANY_NAME || '');
+            if (coLoc) coLine += ', ' + coLoc;
+            return {
+              COMPANY_LINE: coLine,
+              roles: (co.roles || []).map(function(r) {
+                var rStart = (r.ROLE_START_DATE || '').trim();
+                var rEnd   = (r.ROLE_END_DATE   || '').trim();
+                var rTitle = (r.ROLE_TITLE      || '').trim();
+                var rFunc  = (r.ROLE_FUNCTION   || '').trim();
+                var rLine  = '';
+                if (rStart && rEnd) rLine += rStart + ' \u2013 ' + rEnd + ': ';
+                rLine += rTitle;
+                if (rFunc && rFunc.toLowerCase() !== rTitle.toLowerCase()) rLine += ', ' + rFunc;
+                return { ROLE_LINE: rLine };
+              })
+            };
+          }),
+          education: (_gmCv.education || []).map(function(e) {
+            var eYears = (e.EDU_YEARS       || '').trim();
+            var eInst  = (e.EDU_INSTITUTION || '').trim();
+            var eLoc   = (e.EDU_LOCATION    || '').trim();
+            var eDeg   = (e.EDU_DEGREE      || '').trim();
+            var eMaj   = (e.EDU_MAJOR       || '').trim();
+            var eduLine = '';
+            if (eYears) eduLine += eYears + ': ';
+            eduLine += eInst;
+            if (eLoc) eduLine += ', ' + eLoc;
+            var degLine = eDeg;
+            if (eMaj && eMaj !== eDeg) degLine += ', ' + eMaj;
+            return { EDU_LINE: eduLine, EDU_DEGREE_LINE: degLine };
+          })
+        });
+        var _gmOut = _gmDoc.getZip().generate({ type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        var _gmUrl = URL.createObjectURL(_gmOut);
+        var _gmA = document.createElement('a');
+        _gmA.href = _gmUrl;
+        _gmA.download = (_gmCv.CANDIDATE_NAME || item.name || 'GM Profile') + '.docx';
+        _gmA.click();
+        setTimeout(function(){ URL.revokeObjectURL(_gmUrl); }, 2000);
+        return;
+      }
+
+// ── PPT Candidate Update Report ──────────────────────────────────────
       if (item.template === 'ppt-candidate-update') {
         var _pptContent = item.content;
         var _pptCands = Array.isArray(_pptContent.pptCandidates) ? _pptContent.pptCandidates
@@ -5799,67 +5858,7 @@ async function downloadHistory(index) {
       // --- Project Report: fill xlsx template preserving ALL styles/images ---
       
 
-      // ── GM Global Profile Basic ──────────────────────────────────────────
-      if (item.template === 'gm-global-profile-basic') {
-        var _gmCv = item.content;
-        var _gmRaw = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
-        var _gmTplResp = await fetch(_gmRaw + 'templates/SH_GM_Candidate_Profile_Basic.docx?v=' + Date.now());
-        if (!_gmTplResp.ok) throw new Error('Failed to fetch GM template');
-        var _gmAb = await _gmTplResp.arrayBuffer();
-        var _gmZip = new PizZip(_gmAb);
-        var _gmDoc = new docxtemplater(_gmZip, {
-          paragraphLoop: true,
-          linebreaks: true,
-          delimiters: { start: '{{', end: '}}' }
-        });
-        _gmDoc.render({
-          CANDIDATE_NAME: _gmCv.CANDIDATE_NAME || '',
-          companies: (_gmCv.companies || []).map(function(co) {
-            var coLoc = (co.COMPANY_LOCATION || '').trim();
-            var coLine = (co.COMPANY_DATES || '') + ': ' + (co.COMPANY_NAME || '');
-            if (coLoc) coLine += ', ' + coLoc;
-            return {
-              COMPANY_LINE: coLine,
-              roles: (co.roles || []).map(function(r) {
-                var rStart = (r.ROLE_START_DATE || '').trim();
-                var rEnd   = (r.ROLE_END_DATE   || '').trim();
-                var rTitle = (r.ROLE_TITLE      || '').trim();
-                var rFunc  = (r.ROLE_FUNCTION   || '').trim();
-                var rLine  = '';
-                if (rStart && rEnd) rLine += rStart + ' \u2013 ' + rEnd + ': ';
-                rLine += rTitle;
-                if (rFunc && rFunc.toLowerCase() !== rTitle.toLowerCase()) rLine += ', ' + rFunc;
-                return { ROLE_LINE: rLine };
-              })
-            };
-          }),
-          education: (_gmCv.education || []).map(function(e) {
-            var eYears = (e.EDU_YEARS       || '').trim();
-            var eInst  = (e.EDU_INSTITUTION || '').trim();
-            var eLoc   = (e.EDU_LOCATION    || '').trim();
-            var eDeg   = (e.EDU_DEGREE      || '').trim();
-            var eMaj   = (e.EDU_MAJOR       || '').trim();
-            var eduLine = '';
-            if (eYears) eduLine += eYears + ': ';
-            eduLine += eInst;
-            if (eLoc) eduLine += ', ' + eLoc;
-            var degLine = eDeg;
-            if (eMaj && eMaj !== eDeg) degLine += ', ' + eMaj;
-            return {
-              EDU_LINE:  eduLine,
-              EDU_DEGREE_LINE: degLine
-            };
-          })
-        });
-        var _gmOut = _gmDoc.getZip().generate({ type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-        var _gmUrl = URL.createObjectURL(_gmOut);
-        var _gmA = document.createElement('a');
-        _gmA.href = _gmUrl;
-        _gmA.download = (_gmCv.CANDIDATE_NAME || item.name || 'GM Profile') + '.docx';
-        _gmA.click();
-        setTimeout(function(){ URL.revokeObjectURL(_gmUrl); }, 2000);
-        return;
-      }
+
 
       if (item.template === 'services-profile' || item.template === 'project-report' || item.template === 'project-report-ext' || item.template === 'project-report-gb') {
         var projData2 = item.content;
