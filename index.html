@@ -3309,12 +3309,16 @@ Rules:
 - Group consecutive roles at the same company under one company entry
 - COMPANY_DATES = overall tenure (earliest start to latest end) using full month names e.g. January 2022 - Present
 - ROLE_START_DATE and ROLE_END_DATE: always use FULL month names (January February March April May June July August September October November December)
-- EDU_YEARS: use standard month abbreviations if months given (Jan Feb Mar Apr May Jun Jul Aug Sept Oct Nov Dec) — year only is also fine
+- EDU_YEARS: always include months if stated in source — use standard abbreviations (Jan Feb Mar Apr May Jun Jul Aug Sept Oct Nov Dec) e.g. "Sept 2018 - June 2022". Year only if months not given.
 - current / till date / ongoing = Present
-- ROLE_FUNCTION: only fill if it genuinely adds context — if the function name is just a repeat or variation of the job title, leave as empty string
+- ROLE_FUNCTION: only fill if it genuinely adds context beyond the job title — if the function is already implied by or identical to the title, leave as empty string. NEVER repeat content from ROLE_TITLE in ROLE_FUNCTION.
 - COMPANY_NAME: company name only — no location suffix
 - COMPANY_LOCATION: city and country only — use concise country names (United Kingdom not England, United Kingdom)
 - EDU_INSTITUTION: institution name only — no location in this field
+- EDU_DEGREE: always expand abbreviations to full degree name — MSc = Master of Science, BSc = Bachelor of Science, BA = Bachelor of Arts, MA = Master of Arts, MBA = Master of Business Administration, PhD = Doctor of Philosophy, LLB = Bachelor of Laws, LLM = Master of Laws. If source has both short and full form (e.g. "Master of Science - MSc"), use the full form only.
+- ROLE_FUNCTION deduplication: if the same text appears in the CV as a department label under multiple consecutive roles at the same company, only include it in ROLE_FUNCTION for the role it specifically describes — do NOT copy it to other roles at the same company.
+- For a company with only ONE role: ROLE_START_DATE and ROLE_END_DATE should be left as empty strings — the dates are already in COMPANY_DATES
+- For a company with MULTIPLE roles: fill ROLE_START_DATE and ROLE_END_DATE for every role
 - Return only the JSON object, nothing else
 
 CANDIDATE SOURCE:
