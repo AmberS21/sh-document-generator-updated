@@ -3281,15 +3281,15 @@ Extract the following and return ONLY valid JSON, no markdown:
   "CANDIDATE_NAME": "Full name exactly as written",
   "companies": [
     {
-      "COMPANY_DATES": "Mon YYYY - Present or Mon YYYY - Mon YYYY (overall tenure at company)",
-      "COMPANY_NAME": "Company name exactly",
-      "COMPANY_LOCATION": "City, Country or City, ST",
+      "COMPANY_DATES": "Month YYYY - Present or Month YYYY - Month YYYY (overall tenure at company)",
+      "COMPANY_NAME": "Company name only — no location, no country",
+      "COMPANY_LOCATION": "City, Country (use short country name e.g. United Kingdom not England, United Kingdom)",
       "roles": [
         {
-          "ROLE_START_DATE": "Mon YYYY",
-          "ROLE_END_DATE": "Mon YYYY or Present",
-          "ROLE_TITLE": "Exact job title",
-          "ROLE_FUNCTION": "Function or department if stated, else empty string"
+          "ROLE_START_DATE": "Full month name YYYY e.g. January 2022",
+          "ROLE_END_DATE": "Full month name YYYY e.g. January 2025 or Present",
+          "ROLE_TITLE": "Exact job title only — do NOT include department or function here",
+          "ROLE_FUNCTION": "Department or function ONLY if it adds meaningful information beyond the job title — leave empty string if it would just repeat the title"
         }
       ]
     }
@@ -3297,21 +3297,24 @@ Extract the following and return ONLY valid JSON, no markdown:
   "education": [
     {
       "EDU_YEARS": "YYYY - YYYY",
-      "EDU_INSTITUTION": "Full institution name",
-      "EDU_LOCATION": "City, ST or City, Country",
-      "EDU_DEGREE": "Degree type e.g. BSc, MBA, BA (Hons)",
-      "EDU_MAJOR": "Subject, Major, Area of Study"
+      "EDU_INSTITUTION": "Full institution name only",
+      "EDU_LOCATION": "City, Country — leave empty if not stated",
+      "EDU_DEGREE": "Degree type only e.g. BSc, MBA, MSc, Master's degree",
+      "EDU_MAJOR": "Subject / Major / Area of Study only"
     }
   ]
 }
 
 Rules:
 - Group consecutive roles at the same company under one company entry
-- COMPANY_DATES = overall tenure (earliest start to latest end)
-- Dates use 3-letter months: Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
+- COMPANY_DATES = overall tenure (earliest start to latest end) using full month names e.g. January 2022 - Present
+- ROLE_START_DATE and ROLE_END_DATE: always use FULL month names (January February March April May June July August September October November December)
+- EDU_YEARS: use standard month abbreviations if months given (Jan Feb Mar Apr May Jun Jul Aug Sept Oct Nov Dec) — year only is also fine
 - current / till date / ongoing = Present
-- If ROLE_FUNCTION not stated use empty string
-- If EDU_LOCATION not stated use empty string
+- ROLE_FUNCTION: only fill if it genuinely adds context — if the function name is just a repeat or variation of the job title, leave as empty string
+- COMPANY_NAME: company name only — no location suffix
+- COMPANY_LOCATION: city and country only — use concise country names (United Kingdom not England, United Kingdom)
+- EDU_INSTITUTION: institution name only — no location in this field
 - Return only the JSON object, nothing else
 
 CANDIDATE SOURCE:
