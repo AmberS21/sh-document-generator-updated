@@ -3312,7 +3312,11 @@ Rules:
 - current / till date / ongoing = Present
 - If ROLE_FUNCTION not stated use empty string
 - If EDU_LOCATION not stated use empty string
-- Return only the JSON object, nothing else`;
+- Return only the JSON object, nothing else
+
+CANDIDATE SOURCE:
+
+` + inputText;
 
   csPrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
 
