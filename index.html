@@ -3313,7 +3313,7 @@ Rules:
 - current / till date / ongoing = Present
 - ROLE_FUNCTION: only fill if it genuinely adds context beyond the job title — if the function is already implied by or identical to the title, leave as empty string. NEVER repeat content from ROLE_TITLE in ROLE_FUNCTION.
 - COMPANY_NAME: company name only — no location suffix
-- COMPANY_LOCATION: city and country only — use concise country names (United Kingdom not England, United Kingdom)
+- COMPANY_LOCATION: city and country only — use short country codes: UK (not United Kingdom), USA (not United States or United States of America), UAE (not United Arab Emirates). For all other countries use the standard short name.
 - EDU_INSTITUTION: institution name only — no location in this field
 - EDU_DEGREE: always expand abbreviations to full degree name — MSc = Master of Science, BSc = Bachelor of Science, BA = Bachelor of Arts, MA = Master of Arts, MBA = Master of Business Administration, PhD = Doctor of Philosophy, LLB = Bachelor of Laws, LLM = Master of Laws. If source has both short and full form (e.g. "Master of Science - MSc"), use the full form only.
 - ROLE_FUNCTION deduplication: if the same text appears in the CV as a department label under multiple consecutive roles at the same company, only include it in ROLE_FUNCTION for the role it specifically describes — do NOT copy it to other roles at the same company.
@@ -5815,27 +5815,39 @@ async function downloadHistory(index) {
         _gmDoc.render({
           CANDIDATE_NAME: _gmCv.CANDIDATE_NAME || '',
           companies: (_gmCv.companies || []).map(function(co) {
+            var coLoc = (co.COMPANY_LOCATION || '').trim();
+            var coLine = (co.COMPANY_DATES || '') + ': ' + (co.COMPANY_NAME || '');
+            if (coLoc) coLine += ', ' + coLoc;
             return {
-              COMPANY_DATES:    co.COMPANY_DATES || '',
-              COMPANY_NAME:     co.COMPANY_NAME  || '',
-              COMPANY_LOCATION: co.COMPANY_LOCATION || '',
+              COMPANY_LINE: coLine,
               roles: (co.roles || []).map(function(r) {
-                return {
-                  ROLE_START_DATE: r.ROLE_START_DATE || '',
-                  ROLE_END_DATE:   r.ROLE_END_DATE   || '',
-                  ROLE_TITLE:      r.ROLE_TITLE      || '',
-                  ROLE_FUNCTION:   r.ROLE_FUNCTION   || ''
-                };
+                var rStart = (r.ROLE_START_DATE || '').trim();
+                var rEnd   = (r.ROLE_END_DATE   || '').trim();
+                var rTitle = (r.ROLE_TITLE      || '').trim();
+                var rFunc  = (r.ROLE_FUNCTION   || '').trim();
+                var rLine  = '';
+                if (rStart && rEnd) rLine += rStart + ' \u2013 ' + rEnd + ': ';
+                rLine += rTitle;
+                if (rFunc && rFunc.toLowerCase() !== rTitle.toLowerCase()) rLine += ', ' + rFunc;
+                return { ROLE_LINE: rLine };
               })
             };
           }),
           education: (_gmCv.education || []).map(function(e) {
+            var eYears = (e.EDU_YEARS       || '').trim();
+            var eInst  = (e.EDU_INSTITUTION || '').trim();
+            var eLoc   = (e.EDU_LOCATION    || '').trim();
+            var eDeg   = (e.EDU_DEGREE      || '').trim();
+            var eMaj   = (e.EDU_MAJOR       || '').trim();
+            var eduLine = '';
+            if (eYears) eduLine += eYears + ': ';
+            eduLine += eInst;
+            if (eLoc) eduLine += ', ' + eLoc;
+            var degLine = eDeg;
+            if (eMaj && eMaj !== eDeg) degLine += ', ' + eMaj;
             return {
-              EDU_YEARS:       e.EDU_YEARS       || '',
-              EDU_INSTITUTION: e.EDU_INSTITUTION || '',
-              EDU_LOCATION:    e.EDU_LOCATION    || '',
-              EDU_DEGREE:      e.EDU_DEGREE      || '',
-              EDU_MAJOR:       e.EDU_MAJOR       || ''
+              EDU_LINE:  eduLine,
+              EDU_DEGREE_LINE: degLine
             };
           })
         });
