@@ -722,6 +722,13 @@ function switchInp(type, el) {
 // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ TEMPLATES REGISTRY ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 const TEMPLATES = {
 
+  'gm-global-profile-basic': {
+    label: 'GM Global Candidate Profile (Basic)',
+    file: 'templates/SH_GM_Candidate_Profile_Basic.docx',
+    promptType: 'gm-basic',
+    isGmBasic: true
+  },
+
   'global-no-scorecard': {
 
     label: 'Global Candidate Profile — No Scorecard',
@@ -946,7 +953,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
 (function() {
   var sel = document.getElementById('tplSel');
   if (!sel) return;
-  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile'];
+  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile'];
   var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update'];
 
   var grp1 = document.createElement('optgroup');
@@ -2177,6 +2184,71 @@ async function generate() {
   var activeTab = document.querySelector('.itab.on');
   var activeType = activeTab ? activeTab.getAttribute('data-type') : 'text';
 
+  // Populate inputText early so PPT paste path can use it
+  if (activeType === 'text') {
+    var _textEl = document.getElementById('textInput') || document.querySelector('textarea');
+    if (_textEl) inputText = _textEl.value || '';
+  }
+
+  // ── PPT: parse pasted tab-separated candidate data (before file loop) ──
+  if (tpl === 'ppt-candidate-update' && activeType === 'text' && inputText.trim()) {
+    var _pptPasted = [];
+    var _pptLines = inputText.trim().split(/\r?\n/);
+    var _nameCol=-1, _companyCol=-1, _roleCol=-1, _statusCol=-1, _startRow=0;
+    var _firstRow = (_pptLines[0]||'').split(/\t/).map(function(c){ return c.toLowerCase().trim(); });
+    // Detect header: if any cell contains text (not just a number), treat as header
+    var _firstRowHasText = _firstRow.some(function(c){ return c.length > 0 && isNaN(c.replace('.','').replace(' ','')); });
+    if (_firstRowHasText) {
+      _startRow = 1;
+      _firstRow.forEach(function(h,i){
+        if (h.includes('candidate') || (h.includes('name') && !h.includes('company'))) _nameCol=i;
+        else if (h.includes('company') || h.includes('organisation') || h.includes('organization')) _companyCol=i;
+        else if (h.includes('role') || h.includes('title') || h.includes('position') || h.includes('designation')) _roleCol=i;
+        else if (h.includes('status')) _statusCol=i;
+      });
+    }
+    var _hasSerial = _firstRow[0] && ['s.no','s no','sr','no','sr.','s.no.'].indexOf(_firstRow[0]) >= 0;
+    if (_nameCol < 0) _nameCol = _hasSerial ? 1 : 0;
+    if (_roleCol < 0) _roleCol = _hasSerial ? 2 : 1;
+    if (_companyCol < 0) _companyCol = _hasSerial ? 3 : 2;
+    if (_statusCol < 0) _statusCol = _hasSerial ? 4 : 3;
+    _pptLines.slice(_startRow).forEach(function(line) {
+      if (!line.trim()) return;
+      var cols = line.split(/\t/);
+      if (cols.length < 2) return;
+      var cand = {
+        name:    (cols[_nameCol]    ||'').trim(),
+        title:   (cols[_roleCol]    ||'').trim(),
+        company: (cols[_companyCol] ||'').trim(),
+        status:  (cols[_statusCol]  ||'').trim()
+      };
+      if (cand.name) _pptPasted.push(cand);
+    });
+    if (!_pptPasted.length) {
+      notify('No candidates found. Paste your data including: Candidate Name, Company, Role, Status');
+      btn.classList.remove('loading'); btn.innerHTML = '\u26a1 Generate Document'; return;
+    }
+    var _pptPastedItem = {
+      name: 'Candidate Update Report',
+      date: new Date().toLocaleString(), template: tpl, fmt: 'p',
+      content: {
+        reportTitle:'Candidate Update Report', clientName:'',
+        consultant1:'', consultant2:'', practice:'', presentedTo:'',
+        reportDate: new Date().toLocaleDateString('en-GB').replace(/\//g,'.'),
+        pptCandidates: _pptPasted, candidates: _pptPasted
+      }
+    };
+    var _ppH = JSON.parse(localStorage.getItem('sh_history')||'[]');
+    _ppH.unshift(_pptPastedItem);
+    localStorage.setItem('sh_history', JSON.stringify(_ppH));
+    renderHistory();
+    btn.classList.remove('loading');
+    btn.innerHTML = '\u2705 Done \u2014 Check My History';
+    notify('Done! Go to My History to download your PPT.');
+    setTimeout(function(){ btn.innerHTML = '\u26a1 Generate Document'; }, 3500);
+    return;
+  }
+
   if (activeType === 'url') {
     var urlVal = (document.getElementById('urlInput') || {value:''}).value.trim();
     if (!urlVal) { notify('Please enter a URL'); return; }
@@ -2596,43 +2668,7 @@ async function generate() {
           var ext = file.name.split('.').pop().toLowerCase();
           btn.innerHTML = 'Reading ' + file.name + '...';
 
-          // ── PPT: parse pasted tab-separated candidate data ──────────────────
-          if (tpl === 'ppt-candidate-update' && activeType === 'text' && inputText.trim()) {
-            var _pptPasted = [];
-            inputText.trim().split(/\r?\n/).forEach(function(line) {
-              if (!line.trim()) return;
-              var cols = line.split(/\t/);
-              if (cols.length < 2) return;
-              // No header expected — col1=Name, col2=Company, col3=Role, col4=Status
-              var c = { name:(cols[0]||'').trim(), company:(cols[1]||'').trim(),
-                        title:(cols[2]||'').trim(), status:(cols[3]||'').trim() };
-              if (c.name) _pptPasted.push(c);
-            });
-            if (!_pptPasted.length) {
-              notify('No candidates found. Paste columns: Name, Company, Role, Status (no header row)');
-              btn.classList.remove('loading'); btn.innerHTML = '\u26a1 Generate Document'; return;
-            }
-            var _pptPastedItem = {
-              name: 'Candidate Update Report',
-              date: new Date().toLocaleString(), template: tpl, fmt: 'p',
-              content: {
-                reportTitle:'Candidate Update Report', clientName:'',
-                consultant1:'', consultant2:'', practice:'', presentedTo:'',
-                reportDate: new Date().toLocaleDateString('en-GB').replace(/\//g,'.'),
-                pptCandidates: _pptPasted, candidates: _pptPasted
-              }
-            };
-            var _ppH = JSON.parse(localStorage.getItem('sh_history')||'[]');
-            _ppH.unshift(_pptPastedItem);
-            localStorage.setItem('sh_history', JSON.stringify(_ppH));
-            renderHistory();
-            btn.classList.remove('loading');
-            btn.innerHTML = '\u2705 Done \u2014 Check My History';
-            notify('Done! Go to My History to download your PPT.');
-            setTimeout(function(){ btn.innerHTML = '\u26a1 Generate Document'; }, 3500);
-            return;
-          }
-
+          // ── PPT paste path handled above, before file loop ──────────────
           // ── Project Report: parse xlsx/docx file directly into candidate rows ──
           if ((tpl === 'project-report' || tpl === 'project-report-gb' || tpl === 'project-report-ext' || tpl === 'ppt-candidate-update') && (ext === 'xlsx' || ext === 'xls' || ext === 'docx')) {
             try {
@@ -2924,6 +2960,7 @@ var isApac = (tpl === 'apac-profile');
 var isApacUpdated = (tpl === 'apac-profile');
 var isChineseApac = false;
 var isGbProfile = (tpl === 'gb-profile');
+var isGmBasic = (tpl === 'gm-global-profile-basic');
 var isServicesProfile = (tpl === 'services-profile');
 var isEaIndia = (tpl === 'ea-india-profile');
 var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
@@ -3236,7 +3273,59 @@ CANDIDATE SOURCE:
 
 ` + inputText;
 
-var csPrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
+var gmBasicPrompt = `You are extracting structured data from a CV/resume to populate a GM Global Candidate Profile (Basic format).
+
+Extract the following and return ONLY valid JSON, no markdown:
+
+{
+  "CANDIDATE_NAME": "Full name exactly as written",
+  "companies": [
+    {
+      "COMPANY_DATES": "Month YYYY - Present or Month YYYY - Month YYYY (overall tenure at company, full month names)",
+      "COMPANY_NAME": "Company name only — no location, no country",
+      "COMPANY_LOCATION": "City, Country — use UK not United Kingdom, USA not United States",
+      "roles": [
+        {
+          "ROLE_START_DATE": "Full month name YYYY e.g. January 2022 — leave empty string if company has only one role",
+          "ROLE_END_DATE": "Full month name YYYY e.g. January 2025 or Present — leave empty string if company has only one role",
+          "ROLE_TITLE": "Exact job title only — do NOT include department or function here",
+          "ROLE_FUNCTION": "Department or function ONLY if it adds meaningful new information beyond the job title — empty string otherwise"
+        }
+      ]
+    }
+  ],
+  "education": [
+    {
+      "EDU_YEARS": "Month YYYY - Month YYYY or YYYY - YYYY — use Sept not Sep, use full source dates",
+      "EDU_INSTITUTION": "Full institution name only",
+      "EDU_LOCATION": "City, Country — leave empty string if not stated",
+      "EDU_DEGREE": "Full degree name — expand: MSc=Master of Science, BSc=Bachelor of Science, BA=Bachelor of Arts, MA=Master of Arts, MBA=Master of Business Administration",
+      "EDU_MAJOR": "Subject / Major / Area of Study only"
+    }
+  ]
+}
+
+Rules:
+- Group consecutive roles at the same company under one company entry
+- COMPANY_DATES = overall tenure (earliest start to latest end) using full month names e.g. January 2022 - Present
+- ROLE_START_DATE and ROLE_END_DATE: always use FULL month names (January February March April May June July August September October November December)
+- EDU_YEARS: always include months if stated in source — use standard abbreviations (Jan Feb Mar Apr May Jun Jul Aug Sept Oct Nov Dec) e.g. "Sept 2018 - June 2022". Year only if months not given.
+- current / till date / ongoing = Present
+- ROLE_FUNCTION: only fill if it genuinely adds context beyond the job title — if the function is already implied by or identical to the title, leave as empty string. NEVER repeat content from ROLE_TITLE in ROLE_FUNCTION.
+- COMPANY_NAME: company name only — no location suffix
+- COMPANY_LOCATION: city and country only — use short country codes: UK (not United Kingdom), USA (not United States or United States of America), UAE (not United Arab Emirates). For all other countries use the standard short name.
+- EDU_INSTITUTION: institution name only — no location in this field
+- EDU_DEGREE: always expand abbreviations to full degree name — MSc = Master of Science, BSc = Bachelor of Science, BA = Bachelor of Arts, MA = Master of Arts, MBA = Master of Business Administration, PhD = Doctor of Philosophy, LLB = Bachelor of Laws, LLM = Master of Laws. If source has both short and full form (e.g. "Master of Science - MSc"), use the full form only.
+- ROLE_FUNCTION deduplication: if the same text appears in the CV as a department label under multiple consecutive roles at the same company, only include it in ROLE_FUNCTION for the role it specifically describes — do NOT copy it to other roles at the same company.
+- For a company with only ONE role: ROLE_START_DATE and ROLE_END_DATE should be left as empty strings — the dates are already in COMPANY_DATES
+- For a company with MULTIPLE roles: fill ROLE_START_DATE and ROLE_END_DATE for every role
+- Return only the JSON object, nothing else
+
+CANDIDATE SOURCE:
+
+` + inputText;
+
+  csPrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
 - Return ONLY raw JSON. No markdown, no code blocks, no commentary.
@@ -3575,6 +3664,8 @@ FORMATTING RULES:
 - Return ONLY valid JSON. No markdown. No code blocks. No explanation.
 
 Use this exact JSON structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ extract ALL information from this text:\n\n' + inputText
+  : isGmBasic
+  ? gmBasicPrompt
   : isServicesProfile
   ? svcPrompt
   : `You are a Sheffield Haworth executive search document assistant.
@@ -4105,7 +4196,66 @@ async function downloadHistory(index) {
   var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
   try {
       // ── PPT Candidate Update Report ─────────────────────────────
-      // ── PPT Candidate Update Report ──────────────────────────────────────
+            // ── GM Global Profile Basic ──────────────────────────────────────────
+      if (item.template === 'gm-global-profile-basic') {
+        var _gmCv = item.content;
+        var _gmRaw = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+        var _gmTplResp = await fetch(_gmRaw + 'templates/SH_GM_Candidate_Profile_Basic.docx?v=' + Date.now());
+        if (!_gmTplResp.ok) throw new Error('Failed to fetch GM template');
+        var _gmAb = await _gmTplResp.arrayBuffer();
+        var _gmZip = new PizZip(_gmAb);
+        var _gmDoc = new docxtemplater(_gmZip, {
+          paragraphLoop: true,
+          linebreaks: true,
+          delimiters: { start: '{{', end: '}}' }
+        });
+        _gmDoc.render({
+          CANDIDATE_NAME: _gmCv.CANDIDATE_NAME || '',
+          companies: (_gmCv.companies || []).map(function(co) {
+            var coLoc = (co.COMPANY_LOCATION || '').trim();
+            var coLine = (co.COMPANY_DATES || '') + ': ' + (co.COMPANY_NAME || '');
+            if (coLoc) coLine += ', ' + coLoc;
+            return {
+              COMPANY_LINE: coLine,
+              roles: (co.roles || []).map(function(r) {
+                var rStart = (r.ROLE_START_DATE || '').trim();
+                var rEnd   = (r.ROLE_END_DATE   || '').trim();
+                var rTitle = (r.ROLE_TITLE      || '').trim();
+                var rFunc  = (r.ROLE_FUNCTION   || '').trim();
+                var rLine  = '';
+                if (rStart && rEnd) rLine += rStart + ' \u2013 ' + rEnd + ': ';
+                rLine += rTitle;
+                if (rFunc && rFunc.toLowerCase() !== rTitle.toLowerCase()) rLine += ', ' + rFunc;
+                return { ROLE_LINE: rLine };
+              })
+            };
+          }),
+          education: (_gmCv.education || []).map(function(e) {
+            var eYears = (e.EDU_YEARS       || '').trim();
+            var eInst  = (e.EDU_INSTITUTION || '').trim();
+            var eLoc   = (e.EDU_LOCATION    || '').trim();
+            var eDeg   = (e.EDU_DEGREE      || '').trim();
+            var eMaj   = (e.EDU_MAJOR       || '').trim();
+            var eduLine = '';
+            if (eYears) eduLine += eYears + ': ';
+            eduLine += eInst;
+            if (eLoc) eduLine += ', ' + eLoc;
+            var degLine = eDeg;
+            if (eMaj && eMaj !== eDeg) degLine += ', ' + eMaj;
+            return { EDU_LINE: eduLine, EDU_DEGREE_LINE: degLine };
+          })
+        });
+        var _gmOut = _gmDoc.getZip().generate({ type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        var _gmUrl = URL.createObjectURL(_gmOut);
+        var _gmA = document.createElement('a');
+        _gmA.href = _gmUrl;
+        _gmA.download = (_gmCv.CANDIDATE_NAME || item.name || 'GM Profile') + '.docx';
+        _gmA.click();
+        setTimeout(function(){ URL.revokeObjectURL(_gmUrl); }, 2000);
+        return;
+      }
+
+// ── PPT Candidate Update Report ──────────────────────────────────────
       if (item.template === 'ppt-candidate-update') {
         var _pptContent = item.content;
         var _pptCands = Array.isArray(_pptContent.pptCandidates) ? _pptContent.pptCandidates
@@ -4123,9 +4273,15 @@ async function downloadHistory(index) {
           return xml.split('<a:t>' + ph + '</a:t>').join('<a:t>' + _xe(val||ph) + '</a:t>');
         }
         function _repHdr(xml, slideNum, client, role, title) {
-          var oldH = slideNum + '  |  [Client] - [Role] – [Report Title]';
           var newH = slideNum + '  |  ' + (client||'') + ' - ' + (role||'') + ' – ' + (title||'');
-          return xml.split('<a:t>' + oldH + '</a:t>').join('<a:t>' + _xe(newH) + '</a:t>');
+          // Handle both '3  |  [Client]...' and '|  [Client]...' formats
+          var oldH1 = slideNum + '  |  [Client] - [Role] – [Report Title]';
+          if (xml.indexOf('<a:t>' + oldH1 + '</a:t>') >= 0)
+            return xml.split('<a:t>' + oldH1 + '</a:t>').join('<a:t>' + _xe(newH) + '</a:t>');
+          var oldH2 = '|  [Client] - [Role] – [Report Title]';
+          if (xml.indexOf('<a:t>' + oldH2 + '</a:t>') >= 0)
+            return xml.split('<a:t>' + oldH2 + '</a:t>').join('<a:t>' + _xe(newH) + '</a:t>');
+          return xml;
         }
 
         var _cl = _pptContent.clientName  || '';
@@ -4176,44 +4332,99 @@ async function downloadHistory(index) {
           _chunks.push(_pptCands.slice(_i,_i+RPER));
 
         // Build slide 2 — preserve tblPrefix (tblPr + tblGrid)
-        var _t2 = _tblPrefix + _hRow + _chunks[0].map(function(c,i){return _bldRow(c,i+1);}).join('');
-        _pptZip.file('ppt/slides/slide2.xml', _s2Base.replace(_tm[0],'<a:tbl>'+_t2+'</a:tbl>'));
+        var _builtRows = _chunks[0].map(function(c,i){return _bldRow(c,i+1);});
+        var _t2 = _tblPrefix + _hRow + _builtRows.join('');
+        var _newS2 = _s2Base.replace(_tm[0],'<a:tbl>'+_t2+'</a:tbl>');
+        _pptZip.file('ppt/slides/slide2.xml', _newS2);
 
         // Clone for extra chunks
         if (_chunks.length > 1) {
           var _prsX = await _pptZip.file('ppt/presentation.xml').async('string');
           var _prsR = await _pptZip.file('ppt/_rels/presentation.xml.rels').async('string');
           var _ctX  = await _pptZip.file('[Content_Types].xml').async('string');
-          var _mRid = Math.max.apply(null,(_prsR.match(/rId(\d+)/g)||['rId1']).map(function(r){return parseInt(r.replace('rId',''));}));
-          var _mSid = Math.max.apply(null,(_prsX.match(/ id="(\d+)"/g)||[' id="1"']).map(function(r){return parseInt(r.match(/\d+/)[0]);}));
-          var _s3rm = _prsR.match(/Id="([^"]+)"[^>]*Target="slides\/slide3\.xml"/);
+
+          // Get max rId number safely
+          var _ridNums = (_prsR.match(/Id="rId(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));});
+          var _mRid = _ridNums.length ? Math.max.apply(null,_ridNums) : 10;
+
+          // Get max sldId number safely
+          var _sidNums = (_prsX.match(/id="(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));}).filter(function(n){return n<2000000000;});
+          var _mSid = _sidNums.length ? Math.max.apply(null,_sidNums) : 300;
+
+          // Find slide3 rId to insert new slides before contact slide
+          var _s3rm = _prsR.match(/Id="(rId\d+)"[^>]*Target="slides\/slide3\.xml"/);
           var _s3ri = _s3rm ? _s3rm[1] : null;
 
-          for (var _ci=1;_ci<_chunks.length;_ci++) {
-            var _nn=100+_ci, _nr='rId'+(++_mRid), _ns=++_mSid;
+          // Use original _s2Base (unmodified) as clone template
+          var _cloneBase = _s2Base;
+
+          // Build all new rels, sldIds and CT entries as single strings
+          var _allNewRels = '';
+          var _allNewSldIds = '';
+          var _allNewCT = '';
+
+          for (var _ci=1; _ci<_chunks.length; _ci++) {
+            var _nn  = 200 + _ci;
+            var _nr  = 'rId' + (++_mRid);
+            var _ns  = ++_mSid;
             var _chunk = _chunks[_ci];
-            var _nt = _tblPrefix + _hRow + _chunk.map(function(c,i){return _bldRow(c,_ci*RPER+i+1);}).join('');
-            var _nsx = _s2Base.replace(_tm[0],'<a:tbl>'+_nt+'</a:tbl>');
-            _nsx = _nsx.replace(/2  \|  /g, (_ci+2)+'  |  ');
-            _pptZip.file('ppt/slides/slide'+_nn+'.xml',_nsx);
-            _pptZip.file('ppt/slides/_rels/slide'+_nn+'.xml.rels',_s2Rels);
-            if(_s3ri){
-              var _rt='<Relationship Id="'+_s3ri+'"';
-              _prsR=_prsR.replace(_rt,'<Relationship Id="'+_nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+_nn+'.xml"/>'+_rt);
-              var _sit=_prsX.match(new RegExp('<p:sldId[^/]*r:id="'+_s3ri+'"[^/]*/>'))[0];
-              _prsX=_prsX.replace(_sit,'<p:sldId id="'+_ns+'" r:id="'+_nr+'"/>'+_sit);
-            }
-            _ctX=_ctX.replace('</Types>','<Override PartName="/ppt/slides/slide'+_nn+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/></Types>');
+
+            // Build table for this chunk
+            var _nt = _tblPrefix + _hRow + _chunk.map(function(c,i){
+              return _bldRow(c, _ci*RPER + i + 1);
+            }).join('');
+
+            // Build slide XML from clean base
+            var _nsx = _cloneBase.replace(_tm[0], '<a:tbl>'+_nt+'</a:tbl>');
+            _nsx = _nsx.replace(/>2  \|  /g, '>'+(_ci+2)+'  |  ');
+            _pptZip.file('ppt/slides/slide'+_nn+'.xml', _nsx);
+            _pptZip.file('ppt/slides/_rels/slide'+_nn+'.xml.rels', _s2Rels);
+
+            // Accumulate rels, sldIds, CT entries
+            _allNewRels += '<Relationship Id="'+_nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+_nn+'.xml"/>';
+            _allNewSldIds += '<p:sldId id="'+_ns+'" r:id="'+_nr+'"/>';
+            _allNewCT += '<Override PartName="/ppt/slides/slide'+_nn+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>';
           }
-          _pptZip.file('ppt/presentation.xml',_prsX);
-          _pptZip.file('ppt/_rels/presentation.xml.rels',_prsR);
-          _pptZip.file('[Content_Types].xml',_ctX);
+
+          // Insert all rels before slide3 in one operation
+          if (_s3ri && _allNewRels) {
+            var _s3RelIdx = _prsR.indexOf('Id="'+_s3ri+'"');
+            if (_s3RelIdx >= 0) {
+              var _tagStart = _prsR.lastIndexOf('<Relationship', _s3RelIdx);
+              var _tagEnd   = _prsR.indexOf('/>', _s3RelIdx) + 2;
+              var _s3RelFull = _prsR.substring(_tagStart, _tagEnd);
+              _prsR = _prsR.replace(_s3RelFull, _allNewRels + _s3RelFull);
+            } else {
+              _prsR = _prsR.replace('</Relationships>', _allNewRels + '</Relationships>');
+            }
+          }
+
+          // Insert all sldIds before slide3 in one operation
+          if (_s3ri && _allNewSldIds) {
+            var _s3SldIdx = _prsX.indexOf('r:id="'+_s3ri+'"');
+            if (_s3SldIdx >= 0) {
+              var _sldTagStart = _prsX.lastIndexOf('<p:sldId', _s3SldIdx);
+              var _sldTagEnd   = _prsX.indexOf('/>', _s3SldIdx) + 2;
+              var _s3SldFull   = _prsX.substring(_sldTagStart, _sldTagEnd);
+              _prsX = _prsX.replace(_s3SldFull, _allNewSldIds + _s3SldFull);
+            } else {
+              _prsX = _prsX.replace('</p:sldIdLst>', _allNewSldIds + '</p:sldIdLst>');
+            }
+          }
+
+          // Add all CT entries at once
+          _ctX = _ctX.replace('</Types>', _allNewCT + '</Types>');
+
+          _pptZip.file('ppt/presentation.xml', _prsX);
+          _pptZip.file('ppt/_rels/presentation.xml.rels', _prsR);
+          _pptZip.file('[Content_Types].xml', _ctX);
         }
 
         // Slide 3 — contact
         var _s3 = await _pptZip.file('ppt/slides/slide3.xml').async('string');
-        _s3 = _repHdr(_s3,'3',_cl,_ro,_ro);
-        _pptZip.file('ppt/slides/slide3.xml',_s3);
+        var _contactNum = 1 + _chunks.length + 1; // title(1) + candidate slides + 1
+        _s3 = _repHdr(_s3, String(_contactNum), _cl, _ro, _ro);
+        _pptZip.file('ppt/slides/slide3.xml', _s3);
 
         // Download
         var _out = await _pptZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
@@ -5646,6 +5857,8 @@ async function downloadHistory(index) {
     } else if (fmt === 'x') {
       // --- Project Report: fill xlsx template preserving ALL styles/images ---
       
+
+
 
       if (item.template === 'services-profile' || item.template === 'project-report' || item.template === 'project-report-ext' || item.template === 'project-report-gb') {
         var projData2 = item.content;
