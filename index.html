@@ -5433,31 +5433,25 @@ async function downloadHistory(index) {
           var _TAB = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
           var _PP = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB + '</w:pPr>';
           var _eduXml = '';
-          var _lastInst = '';
+          var _SP = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
           _edu.forEach(function(e){
-            if (!e.institution && !e.degree) return;
-            var _sameInst = (e.institution||'').trim() === _lastInst;
-            var _SP = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
-            if (!_sameInst) {
-              if (_eduXml) _eduXml += _SP;
+            if (!e.institution && !e.degree && !(e.degrees && e.degrees.length)) return;
+            if (_eduXml) _eduXml += _SP;
+            // Institution header line — bold with location
+            _eduXml += '<w:p>' + _PP
+              + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.years||'') + ':</w:t></w:r>'
+              + '<w:r><w:tab/></w:r>'
+              + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.institution||'') + (e.location ? ', ' + _xe(e.location) : '') + '</w:t></w:r>'
+              + '</w:p>';
+            // Render degrees — handle both degrees[] array and single degree field
+            var _degs = Array.isArray(e.degrees) && e.degrees.length ? e.degrees
+              : (e.degree ? [{degree: e.degree, extra: e.extra||''}] : []);
+            _degs.forEach(function(d){
               _eduXml += '<w:p>' + _PP
-                + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.years||'') + ':</w:t></w:r>'
-                + '<w:r><w:tab/></w:r>'
-                + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.institution||'') + (e.location ? ', ' + _xe(e.location) : '') + '</w:t></w:r>'
-                + '</w:p>'
-                + '<w:p>' + _PP
-                + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(e.degree||'') + '</w:t></w:r>'
+                + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(d.degree||'') + '</w:t></w:r>'
                 + '</w:p>';
-              if (e.extra) _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(e.extra) + '</w:t></w:r></w:p>';
-              _lastInst = (e.institution||'').trim();
-            } else {
-              _eduXml += '<w:p>' + _PP
-                + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.years||'') + ':</w:t></w:r>'
-                + '<w:r><w:tab/></w:r>'
-                + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(e.degree||'') + '</w:t></w:r>'
-                + '</w:p>';
-              if (e.extra) _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(e.extra) + '</w:t></w:r></w:p>';
-            }
+              if (d.extra) _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(d.extra) + '</w:t></w:r></w:p>';
+            });
           });
           // Replace P39 start to P40 end using paraId anchors
           var _a39 = _ei2DocXml.indexOf('paraId="46209B29"');
