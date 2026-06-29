@@ -3020,7 +3020,7 @@ EDUCATION:
 - years: Combined date for the institution entry. If multiple degrees at same institution, combine as "May 2000 / Dec 2006" (earlier first) or just use the single year if one degree. Use 3-letter month abbreviations if months given.
 - institution: Full institution name only e.g. "University of Nebraska" — no location in this field.
 - location: City, State/Country as written in CV e.g. "Omaha, NE" or "London, UK". Leave "" if not stated.
-- degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = thesis title, specialisation, honours or any extra line for this specific degree — leave "" if none.
+- degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = thesis title, specialisation, honours or any extra line for this specific degree — leave "" if none. Most recent degree first within the array.
 - Most recent institution first.
 
 PROFESSIONAL_QUALS: Extract ONLY professional qualifications and certifications (CFA, FRM, CAIA, ACCA, CPA etc). Format as array of {year, qualification} e.g. [{year:"2026",qualification:"CAIA charterholder, CAIA Association"},{year:"2025",qualification:"Certified FRM, Global Association of Risk Professionals"}]. Most recent first.
@@ -5425,7 +5425,6 @@ async function downloadHistory(index) {
         // ── Education: replace P39(592671A7)+P40(0CD1C547) with all entries ──
         (function(){
           var _edu = _ei2Cv.education || [];
-          console.log('EDU DEBUG:', JSON.stringify(_edu));
           if (!_edu.length) return;
           function _xe(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
           var _B  = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
