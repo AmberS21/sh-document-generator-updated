@@ -3015,13 +3015,13 @@ Capture every single bullet and sub-heading. Do NOT flatten or skip headings.
 - Most recent company first.
 
 EDUCATION:
-- education[]: Array of {years, institution, degree, extra}. ONLY include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc. Do NOT include professional certifications, licences or chartered qualifications (CFA, FRM, CAIA, ACCA, CPA, PRINCE2 etc) — those go in PROFESSIONAL_QUALS only.
-- Create ONE entry per degree, even if from same institution.
-- years: e.g. "2007" or "2006 – 2007". Use 3-letter month abbreviations if months given.
-- institution: Full institution name e.g. "Stellenbosch University".
-- degree: Full degree name exactly as written e.g. "BSc (Hons) Financial Mathematics"
-- extra: Any additional description, ERASMUS year, honours, specialisation, or extra line given for this degree. Leave "" if none.
-- Most recent first.
+- education[]: Array of {years, institution, location, degrees[]}. ONLY include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc. Do NOT include professional certifications, licences or chartered qualifications (CFA, FRM, CAIA, ACCA, CPA, PRINCE2 etc) — those go in PROFESSIONAL_QUALS only.
+- GROUP multiple degrees from the SAME institution into ONE entry — do NOT create separate entries for the same university.
+- years: Combined date for the institution entry. If multiple degrees at same institution, combine as "May 2000 / Dec 2006" (earlier first) or just use the single year if one degree. Use 3-letter month abbreviations if months given.
+- institution: Full institution name only e.g. "University of Nebraska" — no location in this field.
+- location: City, State/Country as written in CV e.g. "Omaha, NE" or "London, UK". Leave "" if not stated.
+- degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = thesis title, specialisation, honours or any extra line for this specific degree — leave "" if none.
+- Most recent institution first.
 
 PROFESSIONAL_QUALS: Extract ONLY professional qualifications and certifications (CFA, FRM, CAIA, ACCA, CPA etc). Format as array of {year, qualification} e.g. [{year:"2026",qualification:"CAIA charterholder, CAIA Association"},{year:"2025",qualification:"Certified FRM, Global Association of Risk Professionals"}]. Most recent first.
 TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single string exactly as written in the CV. Leave "" if none.
@@ -4492,16 +4492,22 @@ async function downloadHistory(index) {
               var _BEc='<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
               var _NEc='<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
               var _PPEc='<w:pPr><w:pStyle w:val="SHText"/></w:pPr>';
-              var _eduXmlC=''; var _lastInstC='';
+              var _eduXmlC='';
               _edu.forEach(function(e){
-                if(!e.institution&&!e.degree)return;
-                var _sameC=(e.institution||'').trim()===_lastInstC;
-                if(!_sameC){
-                  _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_BEc+'<w:t xml:space="preserve">'+_xec(e.years||'')+': </w:t></w:r><w:r><w:tab/></w:r><w:r>'+_BEc+'<w:t xml:space="preserve">'+_xec(e.institution||'')+'</w:t></w:r></w:p>';
-                  _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(e.degree||'')+'</w:t></w:r></w:p>';
-                  _lastInstC=(e.institution||'').trim();
+                if(!e.institution&&!e.degree&&!(e.degrees&&e.degrees.length))return;
+                if(_eduXmlC) _eduXmlC+='<w:p>'+_PPEc+'</w:p>';
+                // Institution header line — bold with location
+                _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_BEc+'<w:t xml:space="preserve">'+_xec(e.years||'')+': </w:t></w:r><w:r><w:tab/></w:r><w:r>'+_BEc+'<w:t xml:space="preserve">'+_xec(e.institution||'')+(e.location?', '+_xec(e.location):'')+' </w:t></w:r></w:p>';
+                // New grouped structure with degrees[]
+                if(Array.isArray(e.degrees)&&e.degrees.length){
+                  e.degrees.forEach(function(d){
+                    _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(d.degree||'')+'</w:t></w:r></w:p>';
+                    if(d.extra) _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(d.extra)+'</w:t></w:r></w:p>';
+                  });
                 } else {
-                  _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_BEc+'<w:t xml:space="preserve">'+_xec(e.years||'')+': </w:t></w:r><w:r><w:tab/></w:r><w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(e.degree||'')+'</w:t></w:r></w:p>';
+                  // Legacy single degree
+                  _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(e.degree||'')+'</w:t></w:r></w:p>';
+                  if(e.extra) _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(e.extra)+'</w:t></w:r></w:p>';
                 }
               });
               var _a39C=_ei2XmlC.indexOf('paraId="46209B29"');
