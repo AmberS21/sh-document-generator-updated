@@ -4498,17 +4498,13 @@ async function downloadHistory(index) {
                 if(_eduXmlC) _eduXmlC+='<w:p>'+_PPEc+'</w:p>';
                 // Institution header line — bold with location
                 _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_BEc+'<w:t xml:space="preserve">'+_xec(e.years||'')+': </w:t></w:r><w:r><w:tab/></w:r><w:r>'+_BEc+'<w:t xml:space="preserve">'+_xec(e.institution||'')+(e.location?', '+_xec(e.location):'')+' </w:t></w:r></w:p>';
-                // New grouped structure with degrees[]
-                if(Array.isArray(e.degrees)&&e.degrees.length){
-                  e.degrees.forEach(function(d){
-                    _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(d.degree||'')+'</w:t></w:r></w:p>';
-                    if(d.extra) _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(d.extra)+'</w:t></w:r></w:p>';
-                  });
-                } else {
-                  // Legacy single degree
-                  _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(e.degree||'')+'</w:t></w:r></w:p>';
-                  if(e.extra) _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(e.extra)+'</w:t></w:r></w:p>';
-                }
+                // Render degrees — handle both degrees[] array and single degree field
+                var _degs = Array.isArray(e.degrees)&&e.degrees.length ? e.degrees
+                  : (e.degree ? [{degree:e.degree, extra:e.extra||''}] : []);
+                _degs.forEach(function(d){
+                  _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(d.degree||'')+'</w:t></w:r></w:p>';
+                  if(d.extra) _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(d.extra)+'</w:t></w:r></w:p>';
+                });
               });
               var _a39C=_ei2XmlC.indexOf('paraId="46209B29"');
               var _a40C=_ei2XmlC.indexOf('paraId="6BED408B"');
