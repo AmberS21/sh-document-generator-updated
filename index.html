@@ -2984,7 +2984,16 @@ MONTH_YEAR: "` + _ei2M2[_ei2Now2.getMonth()] + ' ' + _ei2Now2.getFullYear() + `"
 
 SUMMARY: Extract the candidate's opening prose paragraphs VERBATIM. Separate each paragraph with a newline character \n. Do NOT include bullet points or skills lists — prose only.
 
-SUMMARY_BULLETS: Extract the candidate's "Core Leadership Strengths" / "Key Skills" / "Core Competencies" section. Return as a pipe-separated string of items exactly as written e.g. "Investment Platform Strategy & Execution | Private Equity & Public Markets Technology | Deal Lifecycle & Portfolio Analytics Systems". If no such section exists, leave "".
+SUMMARY_BULLETS: Extract the candidate's main skills/competencies section (e.g. "Core Leadership Strengths", "Key Skills", "Core Competencies"). Return as a pipe-separated string of items exactly as written. If no such section exists, leave "".
+
+SUMMARY_SECTIONS: Some CVs have multiple named subsections after the prose summary, each with a heading and bullet points (e.g. "Enterprise AI Leadership", "Enterprise AI Impact", "Enterprise AI Platforms Built and Operated"). Extract each as an array of objects with "heading" and "items" (pipe-separated). Example:
+[
+  {"heading": "Enterprise AI Leadership", "items": "AI Governance & Responsible AI | GenAI & Agentic AI Strategy | Enterprise AI Operating Model Design"},
+  {"heading": "Enterprise AI Impact", "items": "Led global AI organizations exceeding 150 practitioners | Delivered 65% bookings growth"},
+  {"heading": "Enterprise AI Platforms Built and Operated", "items": "OmniAI (JP Morgan firm-wide AI/ML platform) | NVIDIA MagLev"}
+]
+If no such subsections exist, return [].
+IMPORTANT: If SUMMARY_SECTIONS is populated, leave SUMMARY_BULLETS as "" to avoid duplication.
 
 COMPANIES ARRAY:
 CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same company (even in different locations or different time periods), ALL those roles must go under ONE company entry. Judge by company name only — ignore location differences. For example, if the CV lists "Barclays Bank | London" and "Barclays Bank | London / India" and "Barclays Bank | London" as separate entries — these are ALL the same company "Barclays Bank" and must be grouped into one entry with multiple roles.
@@ -5365,7 +5374,26 @@ async function downloadHistory(index) {
             var _sp2=_si2,_sf2=_si2;
             while(_sf2>0){var _sc2=_ei2DocXml.lastIndexOf('<w:p',_sf2-1);if(_sc2<0)break;if(_ei2DocXml.charAt(_sc2+4)==='>'||_ei2DocXml.charAt(_sc2+4)===' '){_sp2=_sc2;break;}_sf2=_sc2;}
             var _se2=_ei2DocXml.indexOf('</w:p>',_si2)+6;
-            _ei2DocXml=_ei2DocXml.substring(0,_sp2)+_bulXml+_ei2DocXml.substring(_se2);
+
+            // Build SUMMARY_SECTIONS XML (multiple named subsections each with heading + bullets)
+            var _sumSections = cv.SUMMARY_SECTIONS || [];
+            var _sectionsXml = '';
+            if (Array.isArray(_sumSections) && _sumSections.length > 0) {
+              _sumSections.forEach(function(sec) {
+                var _secHeading = (sec.heading || '').trim();
+                var _secItems = (sec.items || '').split('|').map(function(s){return s.trim();}).filter(Boolean);
+                if (_secHeading) {
+                  _sectionsXml += _LABEL_SPACER + '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t>'+_x(_secHeading)+'</w:t></w:r></w:p>';
+                }
+                _sectionsXml += _secItems.map(function(b){
+                  return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr><w:r><w:t xml:space="preserve">'+_x(b)+'</w:t></w:r></w:p>';
+                }).join('');
+              });
+            }
+
+            // Use sections XML if available, otherwise fall back to bullets
+            var _finalBulXml = _sectionsXml || _bulXml;
+            _ei2DocXml=_ei2DocXml.substring(0,_sp2)+_finalBulXml+_ei2DocXml.substring(_se2);
           }
 
 
