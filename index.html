@@ -5376,7 +5376,7 @@ async function downloadHistory(index) {
             var _se2=_ei2DocXml.indexOf('</w:p>',_si2)+6;
 
             // Build SUMMARY_SECTIONS XML (multiple named subsections each with heading + bullets)
-            var _sumSections = cv.SUMMARY_SECTIONS || [];
+            var _sumSections = _ei2Cv.SUMMARY_SECTIONS || [];
             var _sectionsXml = '';
             if (Array.isArray(_sumSections) && _sumSections.length > 0) {
               _sumSections.forEach(function(sec) {
