@@ -2984,7 +2984,16 @@ MONTH_YEAR: "` + _ei2M2[_ei2Now2.getMonth()] + ' ' + _ei2Now2.getFullYear() + `"
 
 SUMMARY: Extract the candidate's opening prose paragraphs VERBATIM. Separate each paragraph with a newline character \n. Do NOT include bullet points or skills lists — prose only.
 
-SUMMARY_BULLETS: Extract the candidate's "Core Leadership Strengths" / "Key Skills" / "Core Competencies" section. Return as a pipe-separated string of items exactly as written e.g. "Investment Platform Strategy & Execution | Private Equity & Public Markets Technology | Deal Lifecycle & Portfolio Analytics Systems". If no such section exists, leave "".
+SUMMARY_BULLETS: Extract the candidate's main skills/competencies section (e.g. "Core Leadership Strengths", "Key Skills", "Core Competencies"). Return as a pipe-separated string of items exactly as written. If no such section exists, leave "".
+
+SUMMARY_SECTIONS: Some CVs have multiple named subsections after the prose summary, each with a heading and bullet points (e.g. "Enterprise AI Leadership", "Enterprise AI Impact", "Enterprise AI Platforms Built and Operated"). Extract each as an array of objects with "heading" and "items" (pipe-separated). Example:
+[
+  {"heading": "Enterprise AI Leadership", "items": "AI Governance & Responsible AI | GenAI & Agentic AI Strategy | Enterprise AI Operating Model Design"},
+  {"heading": "Enterprise AI Impact", "items": "Led global AI organizations exceeding 150 practitioners | Delivered 65% bookings growth"},
+  {"heading": "Enterprise AI Platforms Built and Operated", "items": "OmniAI (JP Morgan firm-wide AI/ML platform) | NVIDIA MagLev"}
+]
+If no such subsections exist, return [].
+IMPORTANT: If SUMMARY_SECTIONS is populated, leave SUMMARY_BULLETS as "" to avoid duplication.
 
 COMPANIES ARRAY:
 CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same company (even in different locations or different time periods), ALL those roles must go under ONE company entry. Judge by company name only — ignore location differences. For example, if the CV lists "Barclays Bank | London" and "Barclays Bank | London / India" and "Barclays Bank | London" as separate entries — these are ALL the same company "Barclays Bank" and must be grouped into one entry with multiple roles.
@@ -3006,13 +3015,13 @@ Capture every single bullet and sub-heading. Do NOT flatten or skip headings.
 - Most recent company first.
 
 EDUCATION:
-- education[]: Array of {years, institution, degree, extra}. ONLY include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc. Do NOT include professional certifications, licences or chartered qualifications (CFA, FRM, CAIA, ACCA, CPA, PRINCE2 etc) — those go in PROFESSIONAL_QUALS only.
-- Create ONE entry per degree, even if from same institution.
-- years: e.g. "2007" or "2006 – 2007". Use 3-letter month abbreviations if months given.
-- institution: Full institution name e.g. "Stellenbosch University".
-- degree: Full degree name exactly as written e.g. "BSc (Hons) Financial Mathematics"
-- extra: Any additional description, ERASMUS year, honours, specialisation, or extra line given for this degree. Leave "" if none.
-- Most recent first.
+- education[]: Array of {years, institution, location, degrees[]}. ONLY include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc. Do NOT include professional certifications, licences or chartered qualifications (CFA, FRM, CAIA, ACCA, CPA, PRINCE2 etc) — those go in PROFESSIONAL_QUALS only.
+- GROUP multiple degrees from the SAME institution into ONE entry — do NOT create separate entries for the same university.
+- years: Combined date for the institution entry. If multiple degrees at same institution, combine as "May 2000 / Dec 2006" (earlier first) or just use the single year if one degree. Use 3-letter month abbreviations if months given.
+- institution: Full institution name only e.g. "University of Nebraska" — no location in this field.
+- location: City, State/Country as written in CV e.g. "Omaha, NE" or "London, UK". Leave "" if not stated.
+- degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = thesis title, specialisation, honours or any extra line for this specific degree — leave "" if none. Most recent degree first within the array.
+- Most recent institution first.
 
 PROFESSIONAL_QUALS: Extract ONLY professional qualifications and certifications (CFA, FRM, CAIA, ACCA, CPA etc). Format as array of {year, qualification} e.g. [{year:"2026",qualification:"CAIA charterholder, CAIA Association"},{year:"2025",qualification:"Certified FRM, Global Association of Risk Professionals"}]. Most recent first.
 TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single string exactly as written in the CV. Leave "" if none.
@@ -4483,17 +4492,19 @@ async function downloadHistory(index) {
               var _BEc='<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
               var _NEc='<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
               var _PPEc='<w:pPr><w:pStyle w:val="SHText"/></w:pPr>';
-              var _eduXmlC=''; var _lastInstC='';
+              var _eduXmlC='';
               _edu.forEach(function(e){
-                if(!e.institution&&!e.degree)return;
-                var _sameC=(e.institution||'').trim()===_lastInstC;
-                if(!_sameC){
-                  _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_BEc+'<w:t xml:space="preserve">'+_xec(e.years||'')+': </w:t></w:r><w:r><w:tab/></w:r><w:r>'+_BEc+'<w:t xml:space="preserve">'+_xec(e.institution||'')+'</w:t></w:r></w:p>';
-                  _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(e.degree||'')+'</w:t></w:r></w:p>';
-                  _lastInstC=(e.institution||'').trim();
-                } else {
-                  _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_BEc+'<w:t xml:space="preserve">'+_xec(e.years||'')+': </w:t></w:r><w:r><w:tab/></w:r><w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(e.degree||'')+'</w:t></w:r></w:p>';
-                }
+                if(!e.institution&&!e.degree&&!(e.degrees&&e.degrees.length))return;
+                if(_eduXmlC) _eduXmlC+='<w:p>'+_PPEc+'</w:p>';
+                // Institution header line — bold with location
+                _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_BEc+'<w:t xml:space="preserve">'+_xec(e.years||'')+': </w:t></w:r><w:r><w:tab/></w:r><w:r>'+_BEc+'<w:t xml:space="preserve">'+_xec(e.institution||'')+(e.location?', '+_xec(e.location):'')+' </w:t></w:r></w:p>';
+                // Render degrees — handle both degrees[] array and single degree field
+                var _degs = Array.isArray(e.degrees)&&e.degrees.length ? e.degrees
+                  : (e.degree ? [{degree:e.degree, extra:e.extra||''}] : []);
+                _degs.forEach(function(d){
+                  _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(d.degree||'')+'</w:t></w:r></w:p>';
+                  if(d.extra) _eduXmlC+='<w:p>'+_PPEc+'<w:r>'+_NEc+'<w:t xml:space="preserve">'+_xec(d.extra)+'</w:t></w:r></w:p>';
+                });
               });
               var _a39C=_ei2XmlC.indexOf('paraId="46209B29"');
               var _a40C=_ei2XmlC.indexOf('paraId="6BED408B"');
@@ -5365,7 +5376,26 @@ async function downloadHistory(index) {
             var _sp2=_si2,_sf2=_si2;
             while(_sf2>0){var _sc2=_ei2DocXml.lastIndexOf('<w:p',_sf2-1);if(_sc2<0)break;if(_ei2DocXml.charAt(_sc2+4)==='>'||_ei2DocXml.charAt(_sc2+4)===' '){_sp2=_sc2;break;}_sf2=_sc2;}
             var _se2=_ei2DocXml.indexOf('</w:p>',_si2)+6;
-            _ei2DocXml=_ei2DocXml.substring(0,_sp2)+_bulXml+_ei2DocXml.substring(_se2);
+
+            // Build SUMMARY_SECTIONS XML (multiple named subsections each with heading + bullets)
+            var _sumSections = _ei2Cv.SUMMARY_SECTIONS || [];
+            var _sectionsXml = '';
+            if (Array.isArray(_sumSections) && _sumSections.length > 0) {
+              _sumSections.forEach(function(sec) {
+                var _secHeading = (sec.heading || '').trim();
+                var _secItems = (sec.items || '').split('|').map(function(s){return s.trim();}).filter(Boolean);
+                if (_secHeading) {
+                  _sectionsXml += _LABEL_SPACER + '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr><w:r><w:t>'+_x(_secHeading)+'</w:t></w:r></w:p>';
+                }
+                _sectionsXml += _secItems.map(function(b){
+                  return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr><w:r><w:t xml:space="preserve">'+_x(b)+'</w:t></w:r></w:p>';
+                }).join('');
+              });
+            }
+
+            // Use sections XML if available, otherwise fall back to bullets
+            var _finalBulXml = _sectionsXml || _bulXml;
+            _ei2DocXml=_ei2DocXml.substring(0,_sp2)+_finalBulXml+_ei2DocXml.substring(_se2);
           }
 
 
@@ -5402,31 +5432,25 @@ async function downloadHistory(index) {
           var _TAB = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
           var _PP = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB + '</w:pPr>';
           var _eduXml = '';
-          var _lastInst = '';
+          var _SP = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
           _edu.forEach(function(e){
-            if (!e.institution && !e.degree) return;
-            var _sameInst = (e.institution||'').trim() === _lastInst;
-            var _SP = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
-            if (!_sameInst) {
-              if (_eduXml) _eduXml += _SP;
+            if (!e.institution && !e.degree && !(e.degrees && e.degrees.length)) return;
+            if (_eduXml) _eduXml += _SP;
+            // Institution header line — bold with location
+            _eduXml += '<w:p>' + _PP
+              + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.years||'') + ':</w:t></w:r>'
+              + '<w:r><w:tab/></w:r>'
+              + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.institution||'') + (e.location ? ', ' + _xe(e.location) : '') + '</w:t></w:r>'
+              + '</w:p>';
+            // Render degrees — handle both degrees[] array and single degree field
+            var _degs = Array.isArray(e.degrees) && e.degrees.length ? e.degrees
+              : (e.degree ? [{degree: e.degree, extra: e.extra||''}] : []);
+            _degs.forEach(function(d){
               _eduXml += '<w:p>' + _PP
-                + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.years||'') + ':</w:t></w:r>'
-                + '<w:r><w:tab/></w:r>'
-                + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.institution||'') + (e.location ? ', ' + _xe(e.location) : '') + '</w:t></w:r>'
-                + '</w:p>'
-                + '<w:p>' + _PP
-                + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(e.degree||'') + '</w:t></w:r>'
+                + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(d.degree||'') + '</w:t></w:r>'
                 + '</w:p>';
-              if (e.extra) _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(e.extra) + '</w:t></w:r></w:p>';
-              _lastInst = (e.institution||'').trim();
-            } else {
-              _eduXml += '<w:p>' + _PP
-                + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.years||'') + ':</w:t></w:r>'
-                + '<w:r><w:tab/></w:r>'
-                + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(e.degree||'') + '</w:t></w:r>'
-                + '</w:p>';
-              if (e.extra) _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(e.extra) + '</w:t></w:r></w:p>';
-            }
+              if (d.extra) _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(d.extra) + '</w:t></w:r></w:p>';
+            });
           });
           // Replace P39 start to P40 end using paraId anchors
           var _a39 = _ei2DocXml.indexOf('paraId="46209B29"');
