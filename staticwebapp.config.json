@@ -1,6 +1,10 @@
 {
   "routes": [
     {
+      "route": "/libs/*",
+      "allowedRoles": ["anonymous"]
+    },
+    {
       "route": "/.auth/login/aad",
       "allowedRoles": ["anonymous"]
     },
@@ -13,6 +17,9 @@
       "allowedRoles": ["authenticated"]
     }
   ],
+  "mimeTypes": {
+    ".js": "application/javascript"
+  },
   "responseOverrides": {
     "401": {
       "redirect": "/.auth/login/aad",
