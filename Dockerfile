@@ -29,6 +29,8 @@ RUN chmod +x /start.sh
 # ANTHROPIC_API_KEY=sk-ant-...
 # EZEKIA_API_KEY=...
 # EZEKIA_BASE_URL=https://ezekia.com/api
+# AZURE_TENANT_ID=<tenant-guid>          (Microsoft SSO — required)
+# AZURE_CLIENT_ID=<app-registration-guid> (Microsoft SSO — required)
 
 EXPOSE 80
 
