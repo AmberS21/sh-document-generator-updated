@@ -285,6 +285,143 @@ table.usage tr:last-child td{border-bottom:none;}
 <script src="https://unpkg.com/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script></head>
 <body>
 
+<!-- ─────────────────────── AUTH GATE (Microsoft SSO) ─────────────────────── -->
+<style>
+@keyframes __spin{to{transform:rotate(360deg)}}
+@keyframes __agUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+#__authCard{animation:__agUp .4s cubic-bezier(.22,.68,0,1.15) both}
+#__authSignIn{padding:0 24px;height:48px;background:#fff;color:#1a1a1a;border:none;border-radius:10px;cursor:pointer;font-size:15px;font-weight:600;letter-spacing:.15px;box-shadow:0 2px 12px rgba(0,0,0,.18);transition:transform .15s,box-shadow .15s,background .15s;width:100%}
+#__authSignIn:hover{background:#f5f5f5;box-shadow:0 6px 22px rgba(0,0,0,.26);transform:translateY(-1px)}
+#__authSignIn:active{transform:none;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+</style>
+<div id="__authGate" style="position:fixed;inset:0;background:linear-gradient(135deg,#06101f 0%,#0c1d4a 55%,#081526 100%);display:flex;align-items:center;justify-content:center;z-index:2147483647">
+  <div id="__authCard" style="background:rgba(255,255,255,.07);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,.13);border-radius:22px;padding:48px 40px 40px;display:flex;flex-direction:column;align-items:center;width:360px;max-width:90vw;box-shadow:0 28px 72px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1);font-family:Inter,'Segoe UI',system-ui,sans-serif">
+    <div style="width:68px;height:68px;border-radius:18px;background:linear-gradient(145deg,#1591d8,#0d7cbd);display:flex;align-items:center;justify-content:center;margin-bottom:28px;box-shadow:0 10px 28px rgba(21,145,216,.4)">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="6" y="3" width="14" height="18" rx="2" fill="white" fill-opacity=".9"/>
+        <rect x="14" y="11" width="14" height="18" rx="2" fill="white" fill-opacity=".55"/>
+        <rect x="9" y="21" width="9" height="1.5" rx=".75" fill="white" fill-opacity=".75"/>
+        <rect x="9" y="24.5" width="6" height="1.5" rx=".75" fill="white" fill-opacity=".5"/>
+      </svg>
+    </div>
+    <div style="color:#fff;font-size:22px;font-weight:700;letter-spacing:-.3px;text-align:center;margin-bottom:8px">SH Document Generator</div>
+    <div style="color:rgba(255,255,255,.48);font-size:13px;text-align:center;letter-spacing:.1px;margin-bottom:36px">Sign in to access your workspace</div>
+    <div id="__authSpinner" style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.65);font-size:13px">
+      <svg style="animation:__spin 1s linear infinite;flex-shrink:0" width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <circle cx="9" cy="9" r="7" stroke="rgba(255,255,255,.2)" stroke-width="2"/>
+        <path d="M9 2a7 7 0 0 1 7 7" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      Signing you in…
+    </div>
+    <button id="__authSignIn" style="display:none">
+      <svg style="vertical-align:middle;margin-right:10px" width="20" height="20" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+        <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+        <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+        <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+      </svg>Sign in with Microsoft
+    </button>
+    <div id="__authError" style="display:none;max-width:300px;text-align:center;font-size:12px;color:#fca5a5;margin-top:18px;line-height:1.6;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.22);border-radius:10px;padding:10px 16px"></div>
+  </div>
+</div>
+<script>
+(function () {
+  var __auth = window.__auth = { token: null, account: null, msal: null, ready: false };
+  var gate = function(){return document.getElementById('__authGate');};
+  var _origFetch = window.fetch.bind(window);
+
+  // Wrap fetch: auto-attach Bearer for same-origin /api/* calls.
+  window.fetch = function (input, init) {
+    init = init || {};
+    var url = typeof input === 'string' ? input : (input && input.url) || '';
+    var isApi = url.indexOf('/api/') === 0 || url.indexOf(window.location.origin + '/api/') === 0;
+    if (isApi && __auth.token) {
+      var h = new Headers(init.headers || (typeof input !== 'string' && input.headers) || {});
+      if (!h.has('Authorization')) h.set('Authorization', 'Bearer ' + __auth.token);
+      init.headers = h;
+    }
+    return _origFetch(input, init);
+  };
+
+  function showError(msg) {
+    var el = document.getElementById('__authError');
+    document.getElementById('__authSpinner').style.display = 'none';
+    document.getElementById('__authSignIn').style.display = 'inline-block';
+    el.style.display = 'block';
+    el.textContent = msg;
+  }
+
+  function onSignedIn(result) {
+    __auth.token = result.accessToken;
+    __auth.account = result.account;
+    __auth.ready = true;
+    var _uname = result.account.name || result.account.username || '';
+    try { localStorage.setItem('sh_userName', _uname); } catch(e){}
+    var _unameEl = document.getElementById('userName');
+    if (_unameEl) _unameEl.textContent = _uname;
+    var _nameOv = document.getElementById('namePromptOverlay');
+    if (_nameOv) _nameOv.style.display = 'none';
+    gate().style.display = 'none';
+    var msUntilExpiry = (new Date(result.expiresOn).getTime() - Date.now()) - 60000;
+    if (msUntilExpiry > 0) {
+      setTimeout(function () {
+        __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: __auth.account })
+          .then(onSignedIn).catch(function(){});
+      }, msUntilExpiry);
+    }
+  }
+
+  __auth.signIn = function () {
+    __auth.msal.loginPopup({ scopes: ['User.Read'] })
+      .then(onSignedIn)
+      .catch(function (e) { showError('Sign-in failed: ' + (e.message || e)); });
+  };
+
+  __auth.signOut = function () {
+    try { localStorage.removeItem('sh_userName'); } catch(e){}
+    if (__auth.msal) __auth.msal.logoutPopup();
+  };
+
+  (async function init() {
+    try {
+      var cfg = await _origFetch('/api/msalconfig').then(function (r) {
+        if (!r.ok) throw new Error('msalconfig HTTP ' + r.status);
+        return r.json();
+      });
+      for (var i = 0; i < 100 && !(window.msal && window.msal.PublicClientApplication); i++) {
+        await new Promise(function (r) { setTimeout(r, 50); });
+      }
+      if (!(window.msal && window.msal.PublicClientApplication)) throw new Error('MSAL library failed to load');
+
+      __auth.msal = new msal.PublicClientApplication({
+        auth: {
+          clientId: cfg.clientId,
+          authority: cfg.authority,
+          redirectUri: window.location.origin
+        },
+        cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: true }
+      });
+      if (__auth.msal.initialize) { await __auth.msal.initialize(); }
+
+      var accounts = __auth.msal.getAllAccounts();
+      if (accounts.length > 0) {
+        try {
+          var silent = await __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: accounts[0] });
+          return onSignedIn(silent);
+        } catch (e) { /* fall through to interactive */ }
+      }
+      document.getElementById('__authSpinner').style.display = 'none';
+      document.getElementById('__authSignIn').style.display = 'inline-block';
+      document.getElementById('__authSignIn').onclick = __auth.signIn;
+    } catch (e) {
+      showError('Auth initialisation failed: ' + (e.message || e));
+      document.getElementById('__authSignIn').onclick = function () { location.reload(); };
+      document.getElementById('__authSignIn').textContent = 'Retry';
+    }
+  })();
+})();
+</script>
+
 <!-- ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
      TOP NAV
 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ -->
