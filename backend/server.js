@@ -26,7 +26,7 @@ app.use((req, res, next) => {
 // ── Azure AD (Microsoft SSO) — reuses the same App Registration as shportal/shapi
 // Values fall back to shapi's known dev values so local Docker runs work out of the box.
 const AZURE_TENANT_ID = process.env.AZURE_TENANT_ID || 'ae57639d-05e1-4adc-b4c9-c8013c58fb86';
-const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID || 'dea72d2a-d53d-4d06-8077-f36811551810';
+const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID || '4e2a6bc7-8218-4d31-b50b-3c9cd6471426';
 
 const _jwks = jwksClient({
   jwksUri: `https://login.microsoftonline.com/${AZURE_TENANT_ID}/discovery/v2.0/keys`,
