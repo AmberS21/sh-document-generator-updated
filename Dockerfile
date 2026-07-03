@@ -23,7 +23,7 @@ COPY --from=backend-build /app/backend/node_modules /app/backend/node_modules
 
 # Entrypoint script starts both backend and nginx
 COPY start.sh /start.sh
-RUN chmod +x /start.sh
+RUN sed -i 's/\r$//' /start.sh && chmod +x /start.sh
 
 # Environment variables — set these in Azure App Service / container settings
 # ANTHROPIC_API_KEY=sk-ant-...
