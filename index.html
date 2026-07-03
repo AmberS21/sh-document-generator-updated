@@ -56,6 +56,25 @@ button,input,select,textarea{font-family:inherit;}
 }
 .online{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 5px #22c55e;}
 .admin-badge{font-size:9px;font-weight:800;background:linear-gradient(135deg,#1591D8,#3BC9F3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+#logoutBtn{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.35);color:#fca5a5;font-size:12px;font-weight:600;padding:5px 13px;border-radius:20px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .18s,border-color .18s,color .18s,transform .15s;white-space:nowrap;line-height:1;}
+#logoutBtn:hover{background:rgba(239,68,68,.22);border-color:rgba(239,68,68,.7);color:#fff;transform:translateY(-1px);}
+#logoutBtn:active{transform:translateY(0);background:rgba(239,68,68,.3);}
+#logoutBtn svg{transition:transform .2s;}
+#logoutBtn:hover svg{transform:translateX(2px);}
+/* ── Sign-out modal ── */
+#soModal{position:fixed;inset:0;z-index:2147483646;display:none;align-items:center;justify-content:center;background:rgba(6,16,31,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+#soModal.open{display:flex;}
+#soCard{background:linear-gradient(160deg,#111c3a,#0d1f40);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:36px 32px 28px;width:340px;max-width:90vw;box-shadow:0 32px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);font-family:Inter,'Segoe UI',system-ui,sans-serif;text-align:center;animation:soIn .25s cubic-bezier(.22,.68,0,1.2) both;}
+@keyframes soIn{from{opacity:0;transform:scale(.9) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+#soIcon{width:56px;height:56px;border-radius:16px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
+#soTitle{color:#fff;font-size:18px;font-weight:700;letter-spacing:-.2px;margin-bottom:8px;}
+#soSub{color:rgba(255,255,255,.5);font-size:13px;line-height:1.55;margin-bottom:28px;}
+#soBtns{display:flex;gap:10px;}
+#soBtnCancel{flex:1;padding:11px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.75);border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;transition:background .15s,color .15s;}
+#soBtnCancel:hover{background:rgba(255,255,255,.14);color:#fff;}
+#soBtnConfirm{flex:1;padding:11px;background:rgba(239,68,68,.18);border:1px solid rgba(239,68,68,.4);color:#fca5a5;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;transition:background .15s,border-color .15s,color .15s,transform .12s;}
+#soBtnConfirm:hover{background:rgba(239,68,68,.32);border-color:rgba(239,68,68,.7);color:#fff;transform:translateY(-1px);}
+#soBtnConfirm:active{transform:translateY(0);}
 
 /* ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ
    TABS
@@ -324,6 +343,25 @@ table.usage tr:last-child td{border-bottom:none;}
     <div id="__authError" style="display:none;max-width:300px;text-align:center;font-size:12px;color:#fca5a5;margin-top:18px;line-height:1.6;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.22);border-radius:10px;padding:10px 16px"></div>
   </div>
 </div>
+
+<!-- ── Sign-out confirmation modal ── -->
+<div id="soModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div id="soCard">
+    <div id="soIcon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </div>
+    <div id="soTitle">Sign out?</div>
+    <div id="soSub">You'll be signed out of <strong style="color:rgba(255,255,255,.8)">SH Document Generator</strong>.<br>You can sign back in any time.</div>
+    <div id="soBtns">
+      <button id="soBtnCancel" onclick="document.getElementById('soModal').classList.remove('open')">Cancel</button>
+      <button id="soBtnConfirm" onclick="_doSignOut()">Sign out</button>
+    </div>
+  </div>
+</div>
 <script>
 (function () {
   var __auth = window.__auth = { token: null, account: null, msal: null, ready: false };
@@ -443,6 +481,10 @@ table.usage tr:last-child td{border-bottom:none;}
       <span id="userName">—</span>
       <span class="admin-badge hidden" id="adminBadge">ADMIN</span>
     </div>
+    <button id="logoutBtn" onclick="signOutUser()" title="Sign out">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign out
+    </button>
   </div>
   
 </div>
@@ -6677,6 +6719,26 @@ function initUserName() {
   }
 }
 function saveUserName(){var inp=document.getElementById('namePromptInput');var name=inp.value.trim();if(!name||name.length<2){inp.style.border='1.5px solid #e74c3c';inp.placeholder='Please enter your name to continue';return;}localStorage.setItem('sh_userName',name);document.getElementById('userName').textContent=name;document.getElementById('namePromptOverlay').style.display='none';notify('Welcome, '+name+'!');}
+
+function _doSignOut(){
+  document.getElementById('soModal').classList.remove('open');
+  try { localStorage.removeItem('sh_userName'); } catch(e){}
+  try { localStorage.removeItem('sh_admin_state'); } catch(e){}
+  if (window.__auth && window.__auth.msal) {
+    var account = window.__auth.account || (window.__auth.msal.getAllAccounts()[0]);
+    window.__auth.msal.logoutPopup({
+      account: account,
+      mainWindowRedirectUri: window.location.origin
+    }).catch(function(e){ console.warn('logoutPopup failed:', e); location.reload(); });
+  } else {
+    location.reload();
+  }
+}
+function signOutUser(){
+  var modal = document.getElementById('soModal');
+  if (!modal) { if (confirm('Sign out?')) _doSignOut(); return; }
+  modal.classList.add('open');
+}
 function logUsage(template,inputMethod,status){
   try {
     var name = localStorage.getItem('sh_userName')||'';
