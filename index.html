@@ -409,11 +409,81 @@ table.usage tr:last-child td{border-bottom:none;}
     }
   }
 
+  function wipeStorage(store, aggressive) {
+    try {
+      for (var i = store.length - 1; i >= 0; i--) {
+        var key = store.key(i);
+        if (!key) continue;
+        var isMsal = key.indexOf('msal.') === 0 || key.indexOf('msal.') !== -1;
+        var isInteraction = key.indexOf('interaction') !== -1;
+        // MSAL v2 uses keys like 'msal.<clientId>.interaction.status', plain
+        // 'msal.interaction.status', and various '{...}-login.microsoftonline.com-...' shapes.
+        if (isInteraction || (aggressive && isMsal)) store.removeItem(key);
+      }
+    } catch (e) {}
+  }
+
+  function wipeMsalCookies() {
+    // storeAuthStateInCookie writes 'msal.*' cookies (state/nonce). If the redirect
+    // never returned they persist and MSAL keeps thinking an interaction is live.
+    try {
+      document.cookie.split(';').forEach(function (c) {
+        var name = c.split('=')[0].trim();
+        if (name.indexOf('msal.') === 0) {
+          document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+          document.cookie = name + '=; Path=/; Domain=' + location.hostname + '; Expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        }
+      });
+    } catch (e) {}
+  }
+
+  function clearStaleInteraction(aggressive) {
+    // MSAL stores an interaction lock; if a previous popup/redirect never completed
+    // (common in Edge with tracking prevention) this key blocks all future logins.
+    wipeStorage(sessionStorage, aggressive);
+    wipeStorage(localStorage, aggressive);
+    if (aggressive) wipeMsalCookies();
+  }
+
+  function hardReset() {
+    clearStaleInteraction(true);
+    // Some MSAL builds also key by BroadcastChannel; a full reload guarantees a
+    // fresh PublicClientApplication instance with no in-memory interaction state.
+    location.reload();
+  }
+
+  function doLoginPopup() {
+    return __auth.msal.loginPopup({ scopes: ['User.Read'], prompt: 'select_account' });
+  }
+
   __auth.signIn = function () {
-    __auth.msal.loginPopup({ scopes: ['User.Read'] })
+    doLoginPopup()
       .then(onSignedIn)
-      .catch(function (e) { showError('Sign-in failed: ' + (e.message || e)); });
+      .catch(function (e) {
+        var code = (e && (e.errorCode || e.name)) || '';
+        var msg  = (e && e.message) || String(e);
+        if (code === 'interaction_in_progress' || /interaction_in_progress/i.test(msg)) {
+          // Aggressive purge (both storages + cookies) and one retry.
+          clearStaleInteraction(true);
+          return doLoginPopup().then(onSignedIn).catch(function () {
+            // Still stuck \u2014 MSAL's in-memory state is dirty. Only a reload fixes it.
+            showResetError();
+          });
+        }
+        showError('Sign-in failed: ' + msg);
+      });
   };
+
+  function showResetError() {
+    var el = document.getElementById('__authError');
+    document.getElementById('__authSpinner').style.display = 'none';
+    var btn = document.getElementById('__authSignIn');
+    btn.style.display = 'inline-block';
+    btn.textContent = 'Reset & Retry';
+    btn.onclick = hardReset;
+    el.style.display = 'block';
+    el.innerHTML = 'Sign-in is stuck from a previous attempt.<br>Click <strong>Reset &amp; Retry</strong> to clear state and try again.';
+  }
 
   __auth.signOut = function () {
     try { localStorage.removeItem('sh_userName'); } catch(e){}
@@ -431,6 +501,23 @@ table.usage tr:last-child td{border-bottom:none;}
       }
       if (!(window.msal && window.msal.PublicClientApplication)) throw new Error('MSAL library failed to load');
 
+      // Proactively clear any stale interaction lock left behind by a prior page load
+      // (Edge tracking prevention / popup closed mid-flow). We do this BEFORE creating
+      // the PCA so its constructor doesn't inherit the stuck state.
+      var hasStuckLock = false;
+      try {
+        ['sessionStorage','localStorage'].forEach(function (s) {
+          var store = window[s];
+          for (var i = 0; i < store.length; i++) {
+            var k = store.key(i);
+            if (k && k.indexOf('interaction') !== -1 && (store.getItem(k) || '').indexOf('in_progress') !== -1) {
+              hasStuckLock = true; break;
+            }
+          }
+        });
+      } catch (e) {}
+      if (hasStuckLock) clearStaleInteraction(true);
+
       __auth.msal = new msal.PublicClientApplication({
         auth: {
           clientId: cfg.clientId,
@@ -440,6 +527,18 @@ table.usage tr:last-child td{border-bottom:none;}
         cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: true }
       });
       if (__auth.msal.initialize) { await __auth.msal.initialize(); }
+
+      // Always drain any in-flight redirect response before doing anything else.
+      // If this is skipped, MSAL leaves 'interaction_in_progress' set and every
+      // subsequent login attempt throws (very common on Edge).
+      try {
+        var redirectResult = await __auth.msal.handleRedirectPromise();
+        if (redirectResult && redirectResult.account) {
+          return onSignedIn(redirectResult);
+        }
+      } catch (e) {
+        clearStaleInteraction();
+      }
 
       var accounts = __auth.msal.getAllAccounts();
       if (accounts.length > 0) {
