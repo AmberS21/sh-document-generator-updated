@@ -2553,7 +2553,12 @@ async function generate() {
         var p = personData.data || personData;
         var prof = p.profile || {};
         var lines = [];
-        lines.push('NAME: ' + (p.firstName||'') + ' ' + (p.lastName||''));
+        var _personName = (
+          p.fullName ||
+          p.name ||
+          (((p.firstName || '') + ' ' + (p.lastName || '')).trim())
+        ) || '';
+        lines.push('NAME: ' + _personName);
         // Current employer from first primary position
         var positions = (posData.data || []);
         var primary = positions.find(function(x){ return x.primary; }) || positions[0];
@@ -4098,8 +4103,9 @@ try {
         }
         _resolvedName = String(_resolvedName || '').trim();
 
+        var _nameFromInput = String((inputText.match(/(?:^|\n)\s*NAME\s*:\s*([^\n\r]+)/i) || [,''])[1] || '').trim();
         var item = {
-          name: _resolvedName || 'Unknown Candidate',
+          name: _resolvedName || _nameFromInput || 'Unknown Candidate',
           date: new Date().toLocaleString(),
           template: tpl,
           fmt: fmt,
