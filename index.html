@@ -456,7 +456,7 @@ table.usage tr:last-child td{border-bottom:none;}
   }
 
   function onSignedIn(result) {
-    __auth.token = result.accessToken;
+    __auth.token = result.idToken || result.accessToken;
     __auth.account = result.account;
     __auth.ready = true;
     var _uname = result.account.name || result.account.username || '';
@@ -467,7 +467,8 @@ table.usage tr:last-child td{border-bottom:none;}
     if (_nameOv) _nameOv.style.display = 'none';
     gate().style.display = 'none';
     // Proactive silent refresh a minute before expiry.
-    var msUntilExpiry = (new Date(result.expiresOn).getTime() - Date.now()) - 60000;
+    var _exp = result.idTokenExpiresOn || result.expiresOn;
+    var msUntilExpiry = (new Date(_exp).getTime() - Date.now()) - 60000;
     if (msUntilExpiry > 0) {
       setTimeout(function () {
         __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: __auth.account })
@@ -2459,6 +2460,7 @@ async function generate() {
   if (!tpl) { notify('Please select a template first'); return; }
 
   var inputText = '';
+  var sourceCandidateName = '';
   var activeTab = document.querySelector('.itab.on');
   var activeType = activeTab ? activeTab.getAttribute('data-type') : 'text';
 
@@ -2553,7 +2555,12 @@ async function generate() {
         var p = personData.data || personData;
         var prof = p.profile || {};
         var lines = [];
-        lines.push('NAME: ' + (p.firstName||'') + ' ' + (p.lastName||''));
+        sourceCandidateName = (
+          p.fullName ||
+          p.name ||
+          (((p.firstName||'') + ' ' + (p.lastName||'')).trim())
+        ) || '';
+        lines.push('NAME: ' + sourceCandidateName);
         // Current employer from first primary position
         var positions = (posData.data || []);
         var primary = positions.find(function(x){ return x.primary; }) || positions[0];
@@ -3062,10 +3069,10 @@ async function generate() {
             btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + '...';
             showProgress(fi+1, _totalFiles);
             if (_isCombined) {
-              var _cvOutput = await processOneCV(inputText, tpl, btn, true);
+              var _cvOutput = await processOneCV(inputText, tpl, btn, true, sourceCandidateName, activeType);
               if (_cvOutput) _combinedOutputs.push(_cvOutput);
             } else {
-              await processOneCV(inputText,tpl,btn);
+              await processOneCV(inputText,tpl,btn,false, sourceCandidateName, activeType);
             }
           } else {
             notify('Could not extract text from: ' + file.name);
@@ -3097,7 +3104,7 @@ async function generate() {
   }
 
 
-if (activeType === 'file') return;   showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn);
+if (activeType === 'file') return;   showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn, false, sourceCandidateName, activeType);
   logUsage(tpl, activeType, 'success');
   hideProgress('Done! Your profile is ready ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ check My History');
 }
@@ -3224,7 +3231,9 @@ async function convertPdfToWord() {
   }
 }
 
-async function processOneCV(inputText, tpl, btn, returnOnly) {
+async function processOneCV(inputText, tpl, btn, returnOnly, sourceCandidateName, activeType) {
+  sourceCandidateName = String(sourceCandidateName || '').trim();
+  activeType = activeType || ((document.querySelector('.itab.on') && document.querySelector('.itab.on').getAttribute('data-type')) || 'text');
   var selChip = document.querySelector('.fmt-chip.on-d,.fmt-chip.on-p,.fmt-chip.on-x,.fmt-chip.on-f');
   var fmt = selChip ? (selChip.className.match(/on-([dpxf])/) ? selChip.className.match(/on-([dpxf])/)[1] : 'd') : 'd';
   var claudeKey = (localStorage.getItem('sh_claudeKey') || '').trim();
@@ -4098,8 +4107,11 @@ try {
         }
         _resolvedName = String(_resolvedName || '').trim();
 
+        var _nameFromInput = String((inputText.match(/(?:^|\n)\s*NAME\s*:\s*([^\n\r]+)/i) || [,''])[1] || '').trim();
         var item = {
-          name: _resolvedName || 'Unknown Candidate',
+          name: (output && output.CANDIDATE_NAME)
+            ? String(output.CANDIDATE_NAME).trim()
+            : (sourceCandidateName || _nameFromInput || _resolvedName || 'Unknown Candidate'),
           date: new Date().toLocaleString(),
           template: tpl,
           fmt: fmt,
