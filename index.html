@@ -456,7 +456,7 @@ table.usage tr:last-child td{border-bottom:none;}
   }
 
   function onSignedIn(result) {
-    __auth.token = result.idToken || result.accessToken;
+    __auth.token = result.accessToken || result.idToken;
     __auth.account = result.account;
     __auth.ready = true;
     var _uname = result.account.name || result.account.username || '';
@@ -467,7 +467,7 @@ table.usage tr:last-child td{border-bottom:none;}
     if (_nameOv) _nameOv.style.display = 'none';
     gate().style.display = 'none';
     // Proactive silent refresh a minute before expiry.
-    var _exp = result.idTokenExpiresOn || result.expiresOn;
+    var _exp = result.expiresOn || result.idTokenExpiresOn;
     var msUntilExpiry = (new Date(_exp).getTime() - Date.now()) - 60000;
     if (msUntilExpiry > 0) {
       setTimeout(function () {
