@@ -4086,8 +4086,20 @@ try {
           }
         }
         if (returnOnly) { return output; }
+        var _resolvedName = '';
+        if (output && typeof output === 'object' && !Array.isArray(output)) {
+          _resolvedName = (
+            output.CANDIDATE_NAME ||
+            output.fullName ||
+            output.fullname ||
+            output.name ||
+            (((output.firstName || '') + ' ' + (output.lastName || '')).trim())
+          ) || '';
+        }
+        _resolvedName = String(_resolvedName || '').trim();
+
         var item = {
-          name: (output && output.CANDIDATE_NAME) ? output.CANDIDATE_NAME : 'Unknown Candidate',
+          name: _resolvedName || 'Unknown Candidate',
           date: new Date().toLocaleString(),
           template: tpl,
           fmt: fmt,
@@ -4139,11 +4151,23 @@ function hideProgress(msg) {
   }
 
   list.innerHTML = history.map(function(item, index) {
+    var _histName = (item && item.name) || '';
+    if ((!_histName || _histName === 'Unknown Candidate') && item && item.content && typeof item.content === 'object' && !Array.isArray(item.content)) {
+      _histName = (
+        item.content.CANDIDATE_NAME ||
+        item.content.fullName ||
+        item.content.fullname ||
+        item.content.name ||
+        (((item.content.firstName || '') + ' ' + (item.content.lastName || '')).trim())
+      ) || '';
+    }
+    _histName = String(_histName || '').trim() || 'Unknown Candidate';
+
     return `
     <div class="hist-row">
       <div class="hist-ico" style="background:${item.type==='combined'?'rgba(245,158,11,.15)':item.fmt==='x'?'rgba(33,115,70,.15)':item.fmt==='p'?'rgba(210,71,38,.15)':item.fmt==='f'?'rgba(210,0,0,.12)':'rgba(43,124,211,.12)'};">${item.type==='combined'?'M':item.fmt==='x'?'E':item.fmt==='p'?'P':item.fmt==='f'?'F':'W'}</div>
       <div style="flex:1;">
-        <div class="hist-name">${item.name}</div>
+        <div class="hist-name">${_histName}</div>
         <div class="hist-meta">${item.date} &middot; ${item.type==='combined'?('Combined ('+item.content.length+' profiles)'):(item.fmt==='x'?'Excel':item.fmt==='p'?'PowerPoint':item.fmt==='f'?'PDF':'Word')}</div>
       </div>
       <span class="badge" style="background:#dcfce7;color:#166534;">Done</span>
@@ -4474,13 +4498,29 @@ async function downloadHistory(index) {
   var history = JSON.parse(localStorage.getItem('sh_history')||'[]');
   var item = history[index];
   if (!item) return;
+
+  function _safeFileName(name, fallback) {
+    var n = String(name || '').trim();
+    // Remove characters that break downloads on Windows/macOS browsers.
+    n = n.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+    return n || (fallback || 'download');
+  }
+
   var fmt = item.fmt || 'd';
   // Override: project-report always downloads as xlsx
   if (item.template === 'project-report' || item.template === 'project-report-ext' || item.template === 'project-report-gb') fmt = 'x';
   var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'global-career-summary-wam-us' ? 'with Career Summary WAM US' : item.template === 'project-report-gb' ? 'GB' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile-v2' ? 'EA India v2' : item.template === 'ea-india-profile' ? 'EA India' : item.template === 'change-consulting-profile' ? 'Change Consulting' : item.template === 'apac-profile-deal-list' ? 'APAC Deal List' : item.template === 'apac-profile-v2' ? 'APAC v2' : item.template === 'apac-ey-profile' ? 'EY Shortlisted' : 'No Scorecard';
   var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : item.template === 'ea-india-profile' ? 'Global' : 'Global';
-  var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
-  var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
+  var _candidateLabel = item.type === 'combined'
+    ? 'Multiple Profiles'
+    : ((item.content && !Array.isArray(item.content) && (
+        item.content.CANDIDATE_NAME ||
+        item.content.fullName ||
+        item.content.fullname ||
+        item.content.name ||
+        (((item.content.firstName || '') + ' ' + (item.content.lastName || '')).trim())
+      )) || item.name || 'Candidate');
+  var baseName = _safeFileName(_profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel, 'Document');
   try {
       // ── PPT Candidate Update Report ─────────────────────────────
             // ── GM Global Profile Basic ──────────────────────────────────────────
@@ -4536,7 +4576,7 @@ async function downloadHistory(index) {
         var _gmUrl = URL.createObjectURL(_gmOut);
         var _gmA = document.createElement('a');
         _gmA.href = _gmUrl;
-        _gmA.download = (_gmCv.CANDIDATE_NAME || item.name || 'GM Profile') + '.docx';
+        _gmA.download = _safeFileName((_gmCv.CANDIDATE_NAME || item.name || 'GM Profile'), 'GM Profile') + '.docx';
         _gmA.click();
         setTimeout(function(){ URL.revokeObjectURL(_gmUrl); }, 2000);
         return;
@@ -4717,7 +4757,7 @@ async function downloadHistory(index) {
         var _out = await _pptZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
         var _url = URL.createObjectURL(_out);
         var _a = document.createElement('a');
-        _a.href=_url; _a.download=(_cl?_cl+' - ':'')+(item.name||'Candidate Update Report')+'.pptx';
+        _a.href=_url; _a.download=_safeFileName(((_cl?_cl+' - ':'') + (item.name||'Candidate Update Report')), 'Candidate Update Report')+'.pptx';
         _a.click(); setTimeout(function(){URL.revokeObjectURL(_url);},2000);
         return;
       }
