@@ -3991,27 +3991,50 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
   if (_proxyUrl.length === 0) {
     _hdrs['anthropic-dangerous-direct-browser-access'] = 'true';
   }
+  var _modelCandidates = ['claude-sonnet-4-6', 'claude-3-7-sonnet-latest', 'claude-3-5-sonnet-20241022'];
   var _callApi = async function() {
-    for (var _ar = 0; _ar < 3; _ar++) {
-      var _r = await fetch(_apiUrl, {
-        method: 'POST',
-        headers: _hdrs,
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 12000,
-          messages: [{ role: 'user', content: prompt }],
-          system: (isGbProfile || isServicesProfile ? 'Return ONLY raw JSON. CRITICAL RULES: (1) Each role at same company = SEPARATE COMPANY_N entry. (2) If a company has NO explicit role title (only bullets/description), use empty string for COMPANY_N_ROLE and put ALL bullets under COMPANY_N_BULLET_1 etc. (3) ALWAYS capture COMPANY_N_DATES from the CV. (4) Capture ALL companies and ALL bullets - do not skip any. No markdown.' : 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.')
-        })
-      });
-      if (_r.status === 429) {
-        var _wait = (parseInt((_r.headers && _r.headers.get('retry-after')) || '10') || 10) * 1000;
-        notify('Claude API busy — retrying in ' + Math.round(_wait/1000) + 's (' + (_ar+1) + '/3)...');
-        await new Promise(function(res){ setTimeout(res, _wait); });
-        continue;
+    var _lastErr = null;
+    for (var _mi = 0; _mi < _modelCandidates.length; _mi++) {
+      var _model = _modelCandidates[_mi];
+      for (var _ar = 0; _ar < 3; _ar++) {
+        var _r = await fetch(_apiUrl, {
+          method: 'POST',
+          headers: _hdrs,
+          body: JSON.stringify({
+            model: _model,
+            max_tokens: 12000,
+            messages: [{ role: 'user', content: prompt }],
+            system: (isGbProfile || isServicesProfile ? 'Return ONLY raw JSON. CRITICAL RULES: (1) Each role at same company = SEPARATE COMPANY_N entry. (2) If a company has NO explicit role title (only bullets/description), use empty string for COMPANY_N_ROLE and put ALL bullets under COMPANY_N_BULLET_1 etc. (3) ALWAYS capture COMPANY_N_DATES from the CV. (4) Capture ALL companies and ALL bullets - do not skip any. No markdown.' : 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.')
+          })
+        });
+        if (_r.status === 429) {
+          var _wait = (parseInt((_r.headers && _r.headers.get('retry-after')) || '10') || 10) * 1000;
+          notify('Claude API busy — retrying in ' + Math.round(_wait/1000) + 's (' + (_ar+1) + '/3)...');
+          await new Promise(function(res){ setTimeout(res, _wait); });
+          continue;
+        }
+        if (_r.ok) return _r.json();
+
+        var _errBody = null;
+        var _errText = '';
+        try {
+          _errBody = await _r.json();
+          _errText = (_errBody && (_errBody.error && (_errBody.error.message || _errBody.error.type) || _errBody.detail || _errBody.message)) || '';
+        } catch(_) {
+          try { _errText = await _r.text(); } catch(__) { _errText = ''; }
+        }
+        _errText = String(_errText || '').trim();
+
+        var _deny = /model|permission|forbidden|access|not\s+found|unavailable/i.test(_errText);
+        _lastErr = new Error('Claude API HTTP ' + _r.status + (_errText ? (': ' + _errText) : ''));
+        if ((_r.status === 403 || _r.status === 404) && _deny && _mi < _modelCandidates.length - 1) {
+          notify('Model ' + _model + ' unavailable for this key. Trying fallback...');
+          break;
+        }
+        throw _lastErr;
       }
-      return _r.json();
     }
-    throw new Error('API rate limit exceeded. Please wait 30 seconds and try again.');
+    throw _lastErr || new Error('API call failed. Please verify ANTHROPIC_API_KEY and model access.');
   };
   return _callApi().then(function(data) { return data; })
   .then(function(data) {
