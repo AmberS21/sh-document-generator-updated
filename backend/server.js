@@ -78,7 +78,11 @@ function requireAuth(req, res, next) {
 // NOTE: because this middleware is mounted at '/api', req.path is the sub-path (e.g. '/msalconfig').
 const _openApiPaths = new Set(['/health', '/config', '/msalconfig']);
 app.use('/api', (req, res, next) => {
-  if (_openApiPaths.has(req.path)) return next();
+  const pathOnly = req.path || '';
+  const fromOriginal = (req.originalUrl || '').replace(/^\/api/, '');
+  if (_openApiPaths.has(pathOnly)) return next();
+  if (pathOnly === '/ezekia' || pathOnly.startsWith('/ezekia/')) return next();
+  if (fromOriginal === '/ezekia' || fromOriginal.startsWith('/ezekia/')) return next();
   return requireAuth(req, res, next);
 });
 
