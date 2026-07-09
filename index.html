@@ -369,7 +369,7 @@ table.usage tr:last-child td{border-bottom:none;}
 </div>
 <script>
 (function () {
-  var __auth = window.__auth = { token: null, account: null, msal: null, ready: false };
+  var __auth = window.__auth = { token: null, accessToken: null, idToken: null, account: null, msal: null, ready: false };
   var gate = function(){return document.getElementById('__authGate');};
   var _origFetch = window.fetch.bind(window);
 
@@ -456,7 +456,9 @@ table.usage tr:last-child td{border-bottom:none;}
   }
 
   function onSignedIn(result) {
-    __auth.token = result.accessToken || result.idToken;
+    __auth.accessToken = result.accessToken || __auth.accessToken || null;
+    __auth.idToken = result.idToken || __auth.idToken || null;
+    __auth.token = __auth.accessToken || __auth.idToken;
     __auth.account = result.account;
     __auth.ready = true;
     var _uname = result.account.name || result.account.username || '';
@@ -6903,13 +6905,37 @@ function logUsage(template,inputMethod,status){
   } catch(e){}
   fetch(SH_LOGGER+'/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userName:localStorage.getItem('sh_userName')||'Unknown',template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()})}).catch(function(){});
 }
-function loadUsageLogs(){
+async function loadUsageLogs(){
   var tbody=document.getElementById('usageLogBody');
   var summary=document.getElementById('usageSummary');
   if(!tbody)return;
   tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>';
+
+  // Ensure token exists for protected /api/proxy/logs* endpoints.
+  async function ensureApiToken(){
+    try {
+      // Logs/status endpoints are app-protected; idToken works reliably for this backend check.
+      if (window.__auth && window.__auth.idToken) return window.__auth.idToken;
+      if (window.__auth && window.__auth.token) return window.__auth.token;
+      if (window.__auth && window.__auth.msal) {
+        var acc = window.__auth.account || (window.__auth.msal.getAllAccounts && window.__auth.msal.getAllAccounts()[0]);
+        if (acc) {
+          var silent = await window.__auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: acc });
+          window.__auth.accessToken = (silent && silent.accessToken) || window.__auth.accessToken || null;
+          window.__auth.idToken = (silent && silent.idToken) || window.__auth.idToken || null;
+          window.__auth.token = window.__auth.accessToken || window.__auth.idToken || window.__auth.token;
+          return window.__auth.idToken || window.__auth.token || '';
+        }
+      }
+    } catch(e) {}
+    return '';
+  }
+
+  var _tok = await ensureApiToken();
+  var _authHdr = _tok ? { 'Authorization': 'Bearer ' + _tok } : {};
+
   // Check storage backend status
-  fetch('/api/proxy/logs/status').then(function(r){return r.json();}).then(function(s){
+  fetch('/api/proxy/logs/status',{headers:_authHdr}).then(function(r){return r.json();}).then(function(s){
     var statusEl=document.getElementById('logStorageStatus');
     if(statusEl){
       if(s.backend==='azure-table'){
@@ -6919,7 +6945,7 @@ function loadUsageLogs(){
       }
     }
   }).catch(function(){});
-  fetch('/api/proxy/logs?nocache='+Date.now()+'&r='+Math.random(),{cache:'no-store',headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}}).then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
+  fetch('/api/proxy/logs?nocache='+Date.now()+'&r='+Math.random(),{cache:'no-store',headers:Object.assign({'Cache-Control':'no-cache','Pragma':'no-cache'},_authHdr)}).then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
   .then(function(logs){renderLogs(logs,tbody,summary);})
   .catch(function(){
     try{var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');renderLogs(logs,tbody,summary);}
