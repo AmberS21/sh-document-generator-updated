@@ -456,9 +456,7 @@ table.usage tr:last-child td{border-bottom:none;}
   }
 
   function onSignedIn(result) {
-    // Backend verifies aud == AZURE_CLIENT_ID, so send the ID token (aud=clientId),
-    // not the Graph access token (aud=Microsoft Graph).
-    __auth.token = result.idToken || result.accessToken;
+    __auth.token = result.accessToken;
     __auth.account = result.account;
     __auth.ready = true;
     var _uname = result.account.name || result.account.username || '';
@@ -468,10 +466,8 @@ table.usage tr:last-child td{border-bottom:none;}
     var _nameOv = document.getElementById('namePromptOverlay');
     if (_nameOv) _nameOv.style.display = 'none';
     gate().style.display = 'none';
-    // Proactive silent refresh a minute before expiry. ID token lifetime tracks
-    // idTokenExpiresOn when present; fall back to expiresOn otherwise.
-    var _exp = result.idTokenExpiresOn || result.expiresOn;
-    var msUntilExpiry = (new Date(_exp).getTime() - Date.now()) - 60000;
+    // Proactive silent refresh a minute before expiry.
+    var msUntilExpiry = (new Date(result.expiresOn).getTime() - Date.now()) - 60000;
     if (msUntilExpiry > 0) {
       setTimeout(function () {
         __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: __auth.account })
