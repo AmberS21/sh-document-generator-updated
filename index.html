@@ -2540,7 +2540,14 @@ async function generate() {
         var personId = ezMatch[1];
         var ezekiaBase = getEzekiaBaseUrl();
         var apiResp = await fetch(ezekiaBase + '/v4/people/' + personId);
-        if (!apiResp.ok) throw new Error('Ezekia API error: ' + apiResp.status);
+        if (!apiResp.ok) {
+          var _ezMsg = '';
+          try {
+            var _ezErr = await apiResp.json();
+            _ezMsg = (_ezErr && (_ezErr.detail || _ezErr.message || _ezErr.error)) || '';
+          } catch(_) {}
+          throw new Error('Ezekia API error: ' + apiResp.status + (_ezMsg ? (' - ' + _ezMsg) : ''));
+        }
         var personData = await apiResp.json();
         var posResp = await fetch(ezekiaBase + '/v4/people/' + personId + '/positions');
         var posData = posResp.ok ? await posResp.json() : {data:[]};

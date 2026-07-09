@@ -192,7 +192,22 @@ app.all(['/api/ezekia', '/api/ezekia/*'], (req, res) => {
   };
 
   const proxyReq = lib.request(options, (proxyRes) => {
-    res.status(proxyRes.statusCode);
+    const status = proxyRes.statusCode || 500;
+    if (status >= 400) {
+      let raw = '';
+      proxyRes.on('data', (chunk) => { raw += chunk.toString('utf8'); });
+      proxyRes.on('end', () => {
+        let detail = raw;
+        try {
+          const parsed = JSON.parse(raw || '{}');
+          detail = parsed.message || parsed.error_description || parsed.error || parsed.detail || raw;
+        } catch (_) {}
+        console.warn('[EZEKIA] Upstream error', status, detail ? String(detail).slice(0, 400) : '');
+        res.status(status).json({ error: 'Ezekia API error', status, detail: String(detail || '').slice(0, 2000) });
+      });
+      return;
+    }
+    res.status(status);
     Object.entries(proxyRes.headers).forEach(([k, v]) => {
       if (!['transfer-encoding', 'connection'].includes(k)) res.setHeader(k, v);
     });
