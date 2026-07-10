@@ -27,6 +27,7 @@ app.use((req, res, next) => {
 // Values fall back to shapi's known dev values so local Docker runs work out of the box.
 const AZURE_TENANT_ID = process.env.AZURE_TENANT_ID || 'ae57639d-05e1-4adc-b4c9-c8013c58fb86';
 const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID || '4e2a6bc7-8218-4d31-b50b-3c9cd6471426';
+const AZURE_API_SCOPE = process.env.AZURE_API_SCOPE || `api://${AZURE_CLIENT_ID}/access_as_user`;
 
 const _jwks = jwksClient({
   jwksUri: `https://login.microsoftonline.com/${AZURE_TENANT_ID}/discovery/v2.0/keys`,
@@ -91,7 +92,8 @@ app.get('/api/msalconfig', (req, res) => {
   res.json({
     clientId: AZURE_CLIENT_ID,
     tenant: AZURE_TENANT_ID,
-    authority: `https://login.microsoftonline.com/${AZURE_TENANT_ID}`
+    authority: `https://login.microsoftonline.com/${AZURE_TENANT_ID}`,
+    apiScope: AZURE_API_SCOPE
   });
 });
 
