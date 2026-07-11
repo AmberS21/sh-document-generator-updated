@@ -473,14 +473,14 @@ table.usage tr:last-child td{border-bottom:none;}
     var msUntilExpiry = (new Date(_exp).getTime() - Date.now()) - 60000;
     if (msUntilExpiry > 0) {
       setTimeout(function () {
-        __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: __auth.account })
+        __auth.msal.acquireTokenSilent({ scopes: ['api://4e2a6bc7-8218-4d31-b50b-3c9cd6471426/.default'], account: __auth.account })
           .then(onSignedIn).catch(function(){});
       }, msUntilExpiry);
     }
   }
 
   function _doLoginPopup() {
-    return __auth.msal.loginPopup({ scopes: ['User.Read'], prompt: 'select_account' });
+    return __auth.msal.loginPopup({ scopes: ['api://4e2a6bc7-8218-4d31-b50b-3c9cd6471426/.default'], prompt: 'select_account' });
   }
 
   __auth.signIn = function () {
@@ -546,7 +546,7 @@ table.usage tr:last-child td{border-bottom:none;}
       var accounts = __auth.msal.getAllAccounts();
       if (accounts.length > 0) {
         try {
-          var silent = await __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: accounts[0] });
+          var silent = await __auth.msal.acquireTokenSilent({ scopes: ['api://4e2a6bc7-8218-4d31-b50b-3c9cd6471426/.default'], account: accounts[0] });
           return onSignedIn(silent);
         } catch (e) { /* fall through to interactive */ }
       }
@@ -6920,7 +6920,7 @@ async function loadUsageLogs(){
       if (window.__auth && window.__auth.msal) {
         var acc = window.__auth.account || (window.__auth.msal.getAllAccounts && window.__auth.msal.getAllAccounts()[0]);
         if (acc) {
-          var silent = await window.__auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: acc });
+          var silent = await window.__auth.msal.acquireTokenSilent({ scopes: ['api://4e2a6bc7-8218-4d31-b50b-3c9cd6471426/.default'], account: acc });
           window.__auth.accessToken = (silent && silent.accessToken) || window.__auth.accessToken || null;
           window.__auth.idToken = (silent && silent.idToken) || window.__auth.idToken || null;
           window.__auth.token = window.__auth.accessToken || window.__auth.idToken || window.__auth.token;
