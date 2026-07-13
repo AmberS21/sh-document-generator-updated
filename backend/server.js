@@ -8,6 +8,8 @@ const express = require('express');
 const https = require('https');
 const http = require('http');
 const { URL } = require('url');
+const jwt = require('jsonwebtoken');
+const jwksClient = require('jwks-rsa');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -19,6 +21,78 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
+});
+
+// ── Azure AD (Microsoft SSO) — reuses the same App Registration as shportal/shapi
+// Values fall back to shapi's known dev values so local Docker runs work out of the box.
+const AZURE_TENANT_ID = process.env.AZURE_TENANT_ID || 'ae57639d-05e1-4adc-b4c9-c8013c58fb86';
+const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID || '4e2a6bc7-8218-4d31-b50b-3c9cd6471426';
+
+const _jwks = jwksClient({
+  jwksUri: `https://login.microsoftonline.com/${AZURE_TENANT_ID}/discovery/v2.0/keys`,
+  cache: true,
+  rateLimit: true,
+  jwksRequestsPerMinute: 10
+});
+
+function _getSigningKey(header, cb) {
+  _jwks.getSigningKey(header.kid, (err, key) => {
+    if (err) return cb(err);
+    cb(null, key.getPublicKey());
+  });
+}
+
+// Middleware: verify Microsoft-issued access token on every protected /api/* request.
+function requireAuth(req, res, next) {
+  const auth = req.headers['authorization'] || '';
+  if (!auth.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing token' });
+  }
+  const token = auth.slice(7).trim();
+  // Peek at the header for kid; jwt.verify will re-parse.
+  const decodedHeader = (() => {
+    try { return jwt.decode(token, { complete: true }); } catch { return null; }
+  })();
+  if (!decodedHeader || !decodedHeader.header || !decodedHeader.header.kid) {
+    return res.status(401).json({ error: 'Malformed token' });
+  }
+  jwt.verify(token, _getSigningKey, {
+    algorithms: ['RS256'],
+    audience: [AZURE_CLIENT_ID, `api://${AZURE_CLIENT_ID}`],
+    issuer: [
+      `https://login.microsoftonline.com/${AZURE_TENANT_ID}/v2.0`,
+      `https://sts.windows.net/${AZURE_TENANT_ID}/`
+    ],
+    clockTolerance: 5
+  }, (err, decoded) => {
+    if (err) {
+      console.warn('[AUTH] Token rejected:', err.name, err.message);
+      return res.status(401).json({ error: 'Invalid token', detail: err.message });
+    }
+    req.user = decoded;
+    next();
+  });
+}
+
+// Gate /api/* — open list stays unauthenticated for bootstrap/health.
+// NOTE: because this middleware is mounted at '/api', req.path is the sub-path (e.g. '/msalconfig').
+const _openApiPaths = new Set(['/health', '/config', '/msalconfig']);
+app.use('/api', (req, res, next) => {
+  const pathOnly = req.path || '';
+  const fromOriginal = (req.originalUrl || '').replace(/^\/api/, '');
+  if (_openApiPaths.has(pathOnly)) return next();
+  if (pathOnly === '/ezekia' || pathOnly.startsWith('/ezekia/')) return next();
+  if (fromOriginal === '/ezekia' || fromOriginal.startsWith('/ezekia/')) return next();
+  return requireAuth(req, res, next);
+});
+
+// ── MSAL config for the frontend (same shape as shapi's MasterData/adconfig) ──
+app.get('/api/msalconfig', (req, res) => {
+  res.json({
+    clientId: AZURE_CLIENT_ID,
+    tenant: AZURE_TENANT_ID,
+    authority: `https://login.microsoftonline.com/${AZURE_TENANT_ID}`
+  });
 });
 
 // ── Health check ─────────────────────────────────────────────────────────────
@@ -202,9 +276,11 @@ initTable();
 // POST /api/proxy/log — save a usage entry
 app.post('/api/proxy/log', async (req, res) => {
   try {
-    const { userName, template, inputMethod, status, timestamp } = req.body;
+    const { template, inputMethod, status, timestamp } = req.body;
     const ts = timestamp || new Date().toISOString();
     const id = Date.now().toString();
+    // Trust the signed-in identity from the verified token, not the request body.
+    const userName = (req.user && (req.user.preferred_username || req.user.upn || req.user.name)) || 'Unknown';
 
     if (_tableClient) {
       // Azure Table Storage — persists forever
