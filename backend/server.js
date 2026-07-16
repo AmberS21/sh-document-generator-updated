@@ -76,7 +76,7 @@ function requireAuth(req, res, next) {
 
 // Gate /api/* — open list stays unauthenticated for bootstrap/health.
 // NOTE: because this middleware is mounted at '/api', req.path is the sub-path (e.g. '/msalconfig').
-const _openApiPaths = new Set(['/health', '/config', '/msalconfig']);
+const _openApiPaths = new Set(['/health', '/config', '/msalconfig', '/proxy/log']);
 app.use('/api', (req, res, next) => {
   const pathOnly = req.path || '';
   const fromOriginal = (req.originalUrl || '').replace(/^\/api/, '');

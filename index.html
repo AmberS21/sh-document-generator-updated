@@ -383,7 +383,22 @@ table.usage tr:last-child td{border-bottom:none;}
       if (!h.has('Authorization')) h.set('Authorization', 'Bearer ' + __auth.token);
       init.headers = h;
     }
-    return _origFetch(input, init);
+    return _origFetch(input, init).then(function (resp) {
+      // On 401, attempt one silent token refresh then retry the request once.
+      if (resp.status === 401 && isApi && __auth.msal && __auth.account) {
+        return __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: __auth.account })
+          .then(function (result) {
+            onSignedIn(result);
+            var retryInit = Object.assign({}, init);
+            var rh = new Headers(retryInit.headers || {});
+            rh.set('Authorization', 'Bearer ' + __auth.token);
+            retryInit.headers = rh;
+            return _origFetch(input, retryInit);
+          })
+          .catch(function () { return resp; }); // refresh failed, surface original 401
+      }
+      return resp;
+    });
   };
 
   function showError(msg) {
