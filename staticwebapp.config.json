@@ -13,10 +13,6 @@
       "allowedRoles": ["anonymous"]
     },
     {
-      "route": "/api/*",
-      "allowedRoles": ["anonymous"]
-    },
-    {
       "route": "/*",
       "allowedRoles": ["authenticated"]
     }
@@ -26,5 +22,11 @@
       "redirect": "/.auth/login/aad",
       "statusCode": 302
     }
+  },
+  "globalHeaders": {
+    "cache-control": "no-cache, no-store, must-revalidate"
+  },
+  "mimeTypes": {
+    ".json": "application/json"
   }
 }
