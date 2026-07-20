@@ -49,6 +49,7 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Missing token' });
   }
   const token = auth.slice(7).trim();
+  // Peek at the header for kid; jwt.verify will re-parse.
   const decodedHeader = (() => {
     try { return jwt.decode(token, { complete: true }); } catch { return null; }
   })();
@@ -75,13 +76,17 @@ function requireAuth(req, res, next) {
 
 // Gate /api/* — open list stays unauthenticated for bootstrap/health.
 // NOTE: because this middleware is mounted at '/api', req.path is the sub-path (e.g. '/msalconfig').
-const _openApiPaths = new Set(['/health', '/config', '/msalconfig']);
+const _openApiPaths = new Set(['/health', '/config', '/msalconfig', '/proxy/log']);
 app.use('/api', (req, res, next) => {
-  if (_openApiPaths.has(req.path)) return next();
+  const pathOnly = req.path || '';
+  const fromOriginal = (req.originalUrl || '').replace(/^\/api/, '');
+  if (_openApiPaths.has(pathOnly)) return next();
+  if (pathOnly === '/ezekia' || pathOnly.startsWith('/ezekia/')) return next();
+  if (fromOriginal === '/ezekia' || fromOriginal.startsWith('/ezekia/')) return next();
   return requireAuth(req, res, next);
 });
 
-// ── MSAL config for the frontend ─────────────────────────────────────────────
+// ── MSAL config for the frontend (same shape as shapi's MasterData/adconfig) ──
 app.get('/api/msalconfig', (req, res) => {
   res.json({
     clientId: AZURE_CLIENT_ID,
@@ -238,82 +243,121 @@ app.get('/api/proxy', (req, res) => {
 });
 
 
-// ── Usage Logging ─────────────────────────────────────────────────────────────
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+// ── Usage Logging — Azure Table Storage ──────────────────────────────────────
+// Persists across deployments and restarts — no data loss on commit
+const { TableClient, AzureNamedKeyCredential } = (() => {
+  try { return require('@azure/data-tables'); }
+  catch(e) { console.warn('Azure data-tables not installed, using fallback'); return {}; }
+})();
 
-// Use in-memory store (survives restarts via file backup)
-// Try multiple write locations for Azure compatibility
-const LOG_PATHS = [
-  path.join(__dirname, 'usage_logs.json'),
-  path.join(os.tmpdir(), 'sh_docgen_usage_logs.json'),
-  '/tmp/sh_docgen_usage_logs.json'
-];
+const CONN_STR = process.env.AZURE_STORAGE_CONNECTION_STRING;
+const TABLE_NAME = 'docgenlogs';
+let _tableClient = null;
+let _fallbackLogs = []; // in-memory fallback if Azure not available
 
-let _inMemoryLogs = [];
-let _logFile = null;
-
-// Find a writable path
-for (const p of LOG_PATHS) {
+// Init Azure Table client
+async function initTable() {
+  if (!CONN_STR) { console.warn('[LOGS] No AZURE_STORAGE_CONNECTION_STRING — using in-memory fallback'); return; }
   try {
-    fs.writeFileSync(p, fs.existsSync(p) ? fs.readFileSync(p) : '[]');
-    _logFile = p;
-    _inMemoryLogs = JSON.parse(fs.readFileSync(p, 'utf8') || '[]');
-    console.log('Log file:', p, '- loaded', _inMemoryLogs.length, 'entries');
-    break;
-  } catch(e) { console.log('Cannot use log path:', p, e.message); }
-}
-
-function readLogs() { return _inMemoryLogs; }
-
-function writeLogs(logs) {
-  _inMemoryLogs = logs;
-  if (_logFile) {
-    try { fs.writeFileSync(_logFile, JSON.stringify(logs)); } catch(e) {
-      console.log('Log write failed:', e.message);
+    _tableClient = TableClient.fromConnectionString(CONN_STR, TABLE_NAME);
+    await _tableClient.createTable();
+    console.log('[LOGS] Azure Table Storage ready:', TABLE_NAME);
+  } catch(e) {
+    if (e.statusCode === 409) {
+      console.log('[LOGS] Azure Table Storage connected:', TABLE_NAME);
+    } else {
+      console.error('[LOGS] Azure Table init failed:', e.message);
+      _tableClient = null;
     }
   }
 }
+initTable();
 
 // POST /api/proxy/log — save a usage entry
-app.post('/api/proxy/log', (req, res) => {
+app.post('/api/proxy/log', async (req, res) => {
   try {
-    const { userName, template, inputMethod, status, timestamp } = req.body;
-    const logs = readLogs();
-    logs.push({
-      id: Date.now(),
-      user: userName || 'Unknown',
-      template: template || '',
-      inputMethod: inputMethod || '',
-      status: status || '',
-      timestamp: timestamp || new Date().toISOString()
-    });
-    if (logs.length > 10000) logs.splice(0, logs.length - 10000);
-    writeLogs(logs);
-    console.log('Log saved:', userName, template, '- total:', logs.length);
-    res.json({ ok: true, total: logs.length });
-  } catch (e) {
-    console.error('Log error:', e.message);
+    const { template, inputMethod, status, timestamp } = req.body;
+    const ts = timestamp || new Date().toISOString();
+    const id = Date.now().toString();
+    // Trust the signed-in identity from the verified token, not the request body.
+    const userName = (req.user && (req.user.preferred_username || req.user.upn || req.user.name)) || 'Unknown';
+
+    if (_tableClient) {
+      // Azure Table Storage — persists forever
+      await _tableClient.createEntity({
+        partitionKey: ts.slice(0, 7), // YYYY-MM for easy monthly queries
+        rowKey: id,
+        user: userName || 'Unknown',
+        template: template || '',
+        inputMethod: inputMethod || '',
+        status: status || '',
+        timestamp: ts
+      });
+    } else {
+      // Fallback in-memory
+      _fallbackLogs.push({ id, user: userName||'Unknown', template: template||'', inputMethod: inputMethod||'', status: status||'', timestamp: ts });
+      if (_fallbackLogs.length > 10000) _fallbackLogs.shift();
+    }
+    console.log('[LOGS] Saved:', userName, template);
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('[LOGS] Save error:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
+// GET /api/proxy/logs/status — show storage backend status
+app.get('/api/proxy/logs/status', (req, res) => {
+  res.json({
+    backend: _tableClient ? 'azure-table' : 'in-memory-fallback',
+    azureConfigured: !!CONN_STR,
+    fallbackCount: _fallbackLogs.length,
+    warning: !_tableClient ? 'Azure Table Storage not connected — logs will be lost on restart. Ask Michika to set AZURE_STORAGE_CONNECTION_STRING.' : null
+  });
+});
+
 // GET /api/proxy/logs — return all logs as JSON
-app.get('/api/proxy/logs', (req, res) => {
-  res.json(readLogs());
+app.get('/api/proxy/logs', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  try {
+    if (!_tableClient) return res.json(_fallbackLogs);
+    const logs = [];
+    const entities = _tableClient.listEntities();
+    for await (const e of entities) {
+      logs.push({ id: e.rowKey, user: e.user, template: e.template, inputMethod: e.inputMethod, status: e.status, timestamp: e.timestamp });
+    }
+    logs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    res.json(logs);
+  } catch(e) {
+    console.error('[LOGS] Read error:', e.message);
+    res.json(_fallbackLogs);
+  }
 });
 
 // GET /api/proxy/logs/csv — download all logs as CSV
-app.get('/api/proxy/logs/csv', (req, res) => {
-  const logs = readLogs();
-  const headers = ['ID','User','Template','Input Method','Status','Timestamp'];
-  const rows = logs.map(r => [r.id, r.user, r.template, r.inputMethod, r.status, r.timestamp]
-    .map(v => '"' + String(v||'').replace(/"/g, '""') + '"').join(','));
-  const csv = [headers.join(','), ...rows].join('\n');
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="SH_DocGen_Usage_' + new Date().toISOString().slice(0,10) + '.csv"');
-  res.send(csv);
+app.get('/api/proxy/logs/csv', async (req, res) => {
+  try {
+    let logs = [];
+    if (_tableClient) {
+      const entities = _tableClient.listEntities();
+      for await (const e of entities) {
+        logs.push({ id: e.rowKey, user: e.user, template: e.template, inputMethod: e.inputMethod, status: e.status, timestamp: e.timestamp });
+      }
+      logs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    } else {
+      logs = _fallbackLogs;
+    }
+    const headers = ['ID','User','Template','Input Method','Status','Timestamp'];
+    const rows = logs.map(r => [r.id, r.user||'', r.template||'', r.inputMethod||'', r.status||'', r.timestamp||'']
+      .map(v => '"' + String(v).replace(/"/g, '""') + '"').join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="SH_DocGen_Usage_' + new Date().toISOString().slice(0,10) + '.csv"');
+    res.send(csv);
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // In the container, nginx owns public port 80 and proxies to Node on 3000.
