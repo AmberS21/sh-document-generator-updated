@@ -384,7 +384,7 @@ table.usage tr:last-child td{border-bottom:none;}
       init.headers = h;
     }
     return _origFetch(input, init).then(function (resp) {
-      // On 401, attempt one silent token refresh then retry the request once.
+      // On 401, attempt one silent token refresh then retry the request oncee.
       if (resp.status === 401 && isApi && __auth.msal && __auth.account) {
         return __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: __auth.account })
           .then(function (result) {
