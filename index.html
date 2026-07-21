@@ -6904,21 +6904,22 @@ function signOutUser(){
   modal.classList.add('open');
 }
 function logUsage(template,inputMethod,status){
+  var name = localStorage.getItem('sh_userName')||'';
+  if (!name && window.__auth && window.__auth.account) {
+    name = (window.__auth.account.name || window.__auth.account.username || window.__auth.account.preferred_username || '').trim();
+    if (name) { try { localStorage.setItem('sh_userName', name); } catch(e){} }
+  }
   try {
-    var name = localStorage.getItem('sh_userName')||'';
-    if (!name || name === 'Unknown') {
-      // Force name capture before logging
-      document.getElementById('namePromptOverlay').style.display = 'flex';
-      document.getElementById('namePromptInput').focus();
-      name = 'Unknown';
-    }
     var logs = JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');
-    var entry = {id:Date.now(),user:name,template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()};
+    var entry = {id:Date.now(),user:name||'Unknown',template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()};
     logs.push(entry);
     if (logs.length > 2000) logs = logs.slice(-2000);
     localStorage.setItem('sh_usage_logs', JSON.stringify(logs));
   } catch(e){}
-  fetch(SH_LOGGER+'/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userName:localStorage.getItem('sh_userName')||'Unknown',template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()})}).catch(function(){});
+  var _logHeaders = {'Content-Type':'application/json'};
+  var _tok = window.__auth && (window.__auth.accessToken || window.__auth.idToken || window.__auth.token);
+  if (_tok) _logHeaders['Authorization'] = 'Bearer ' + _tok;
+  fetch(SH_LOGGER+'/log',{method:'POST',headers:_logHeaders,body:JSON.stringify({userName:name||'Unknown',template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()})}).catch(function(){});
 }
 async function loadUsageLogs(){
   var tbody=document.getElementById('usageLogBody');

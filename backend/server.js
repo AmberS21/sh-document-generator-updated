@@ -276,11 +276,13 @@ initTable();
 // POST /api/proxy/log — save a usage entry
 app.post('/api/proxy/log', async (req, res) => {
   try {
-    const { template, inputMethod, status, timestamp } = req.body;
+    const { userName: bodyUserName, template, inputMethod, status, timestamp } = req.body;
     const ts = timestamp || new Date().toISOString();
     const id = Date.now().toString();
-    // Trust the signed-in identity from the verified token, not the request body.
-    const userName = (req.user && (req.user.preferred_username || req.user.upn || req.user.name)) || 'Unknown';
+    // Prefer verified token identity; fall back to client-supplied name (route is open, req.user may be null).
+    const userName = (req.user && (req.user.preferred_username || req.user.upn || req.user.name))
+      || (bodyUserName && bodyUserName !== 'Unknown' ? bodyUserName : null)
+      || 'Unknown';
 
     if (_tableClient) {
       // Azure Table Storage — persists forever
