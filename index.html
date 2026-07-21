@@ -301,7 +301,24 @@ table.usage tr:last-child td{border-bottom:none;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script></head>
+<script>
+(function() {
+  var MSAL_CDNS = [
+    'https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js',
+    'https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js',
+    'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js'
+  ];
+  function tryLoad(i) {
+    if (i >= MSAL_CDNS.length) return;
+    var s = document.createElement('script');
+    s.src = MSAL_CDNS[i];
+    s.onload = function() { window.__msalLoaded = true; };
+    s.onerror = function() { tryLoad(i + 1); };
+    document.head.appendChild(s);
+  }
+  tryLoad(0);
+})();
+</script></head>
 <body>
 
 <!-- ─────────────────────── AUTH GATE (Microsoft SSO) ─────────────────────── -->
