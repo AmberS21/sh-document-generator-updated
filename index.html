@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- DocGen v2.1 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -295,14 +294,14 @@ table.usage tr:last-child td{border-bottom:none;}
 #adminErrMsg{color:#dc2626;font-size:0.85rem;text-align:center;margin-top:10px;min-height:18px;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://unpkg.com/pizzip@3.1.7/dist/pizzip.min.js"></script>
-<script src="https://unpkg.com/docxtemplater@3.47.4/build/docxtemplater.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.47.4/build/docxtemplater.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<script src="https://unpkg.com/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script></head>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script></head>
 <body>
 
 <!-- ─────────────────────── AUTH GATE (Microsoft SSO) ─────────────────────── -->
@@ -316,6 +315,7 @@ table.usage tr:last-child td{border-bottom:none;}
 </style>
 <div id="__authGate" style="position:fixed;inset:0;background:linear-gradient(135deg,#06101f 0%,#0c1d4a 55%,#081526 100%);display:flex;align-items:center;justify-content:center;z-index:2147483647">
   <div id="__authCard" style="background:rgba(255,255,255,.07);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,.13);border-radius:22px;padding:48px 40px 40px;display:flex;flex-direction:column;align-items:center;width:360px;max-width:90vw;box-shadow:0 28px 72px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1);font-family:Inter,'Segoe UI',system-ui,sans-serif">
+    <!-- icon -->
     <div style="width:68px;height:68px;border-radius:18px;background:linear-gradient(145deg,#1591d8,#0d7cbd);display:flex;align-items:center;justify-content:center;margin-bottom:28px;box-shadow:0 10px 28px rgba(21,145,216,.4)">
       <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="6" y="3" width="14" height="18" rx="2" fill="white" fill-opacity=".9"/>
@@ -324,8 +324,10 @@ table.usage tr:last-child td{border-bottom:none;}
         <rect x="9" y="24.5" width="6" height="1.5" rx=".75" fill="white" fill-opacity=".5"/>
       </svg>
     </div>
+    <!-- title -->
     <div style="color:#fff;font-size:22px;font-weight:700;letter-spacing:-.3px;text-align:center;margin-bottom:8px">SH Document Generator</div>
     <div style="color:rgba(255,255,255,.48);font-size:13px;text-align:center;letter-spacing:.1px;margin-bottom:36px">Sign in to access your workspace</div>
+    <!-- spinner -->
     <div id="__authSpinner" style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.65);font-size:13px">
       <svg style="animation:__spin 1s linear infinite;flex-shrink:0" width="18" height="18" viewBox="0 0 18 18" fill="none">
         <circle cx="9" cy="9" r="7" stroke="rgba(255,255,255,.2)" stroke-width="2"/>
@@ -333,6 +335,7 @@ table.usage tr:last-child td{border-bottom:none;}
       </svg>
       Signing you in…
     </div>
+    <!-- sign-in button -->
     <button id="__authSignIn" style="display:none">
       <svg style="vertical-align:middle;margin-right:10px" width="20" height="20" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
         <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
@@ -341,6 +344,7 @@ table.usage tr:last-child td{border-bottom:none;}
         <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
       </svg>Sign in with Microsoft
     </button>
+    <!-- error -->
     <div id="__authError" style="display:none;max-width:300px;text-align:center;font-size:12px;color:#fca5a5;margin-top:18px;line-height:1.6;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.22);border-radius:10px;padding:10px 16px"></div>
   </div>
 </div>
@@ -365,7 +369,7 @@ table.usage tr:last-child td{border-bottom:none;}
 </div>
 <script>
 (function () {
-  var __auth = window.__auth = { token: null, account: null, msal: null, ready: false };
+  var __auth = window.__auth = { token: null, accessToken: null, idToken: null, account: null, msal: null, ready: false };
   var gate = function(){return document.getElementById('__authGate');};
   var _origFetch = window.fetch.bind(window);
 
@@ -379,7 +383,22 @@ table.usage tr:last-child td{border-bottom:none;}
       if (!h.has('Authorization')) h.set('Authorization', 'Bearer ' + __auth.token);
       init.headers = h;
     }
-    return _origFetch(input, init);
+    return _origFetch(input, init).then(function (resp) {
+      // On 401, attempt one silent token refresh then retry the request once.
+      if (resp.status === 401 && isApi && __auth.msal && __auth.account) {
+        return __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: __auth.account })
+          .then(function (result) {
+            onSignedIn(result);
+            var retryInit = Object.assign({}, init);
+            var rh = new Headers(retryInit.headers || {});
+            rh.set('Authorization', 'Bearer ' + __auth.token);
+            retryInit.headers = rh;
+            return _origFetch(input, retryInit);
+          })
+          .catch(function () { return resp; }); // refresh failed, surface original 401
+      }
+      return resp;
+    });
   };
 
   function showError(msg) {
@@ -390,43 +409,24 @@ table.usage tr:last-child td{border-bottom:none;}
     el.textContent = msg;
   }
 
-  function onSignedIn(result) {
-    __auth.token = result.accessToken;
-    __auth.account = result.account;
-    __auth.ready = true;
-    var _uname = result.account.name || result.account.username || '';
-    try { localStorage.setItem('sh_userName', _uname); } catch(e){}
-    var _unameEl = document.getElementById('userName');
-    if (_unameEl) _unameEl.textContent = _uname;
-    var _nameOv = document.getElementById('namePromptOverlay');
-    if (_nameOv) _nameOv.style.display = 'none';
-    gate().style.display = 'none';
-    var msUntilExpiry = (new Date(result.expiresOn).getTime() - Date.now()) - 60000;
-    if (msUntilExpiry > 0) {
-      setTimeout(function () {
-        __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: __auth.account })
-          .then(onSignedIn).catch(function(){});
-      }, msUntilExpiry);
-    }
-  }
-
-  function wipeStorage(store, aggressive) {
+  // --- MSAL interaction-lock recovery ---------------------------------------
+  // MSAL v2 stores 'msal.interaction.status' in sessionStorage / localStorage
+  // (and cookies when storeAuthStateInCookie is true). If a prior popup was
+  // closed before completing (very common in Edge with tracking prevention or
+  // popup blocking) the lock persists and every subsequent login throws
+  // 'interaction_in_progress'.
+  function _wipeStorage(store, aggressive) {
     try {
       for (var i = store.length - 1; i >= 0; i--) {
         var key = store.key(i);
         if (!key) continue;
-        var isMsal = key.indexOf('msal.') === 0 || key.indexOf('msal.') !== -1;
+        var isMsal = key.indexOf('msal.') !== -1;
         var isInteraction = key.indexOf('interaction') !== -1;
-        // MSAL v2 uses keys like 'msal.<clientId>.interaction.status', plain
-        // 'msal.interaction.status', and various '{...}-login.microsoftonline.com-...' shapes.
         if (isInteraction || (aggressive && isMsal)) store.removeItem(key);
       }
     } catch (e) {}
   }
-
-  function wipeMsalCookies() {
-    // storeAuthStateInCookie writes 'msal.*' cookies (state/nonce). If the redirect
-    // never returned they persist and MSAL keeps thinking an interaction is live.
+  function _wipeMsalCookies() {
     try {
       document.cookie.split(';').forEach(function (c) {
         var name = c.split('=')[0].trim();
@@ -437,28 +437,69 @@ table.usage tr:last-child td{border-bottom:none;}
       });
     } catch (e) {}
   }
-
   function clearStaleInteraction(aggressive) {
-    // MSAL stores an interaction lock; if a previous popup/redirect never completed
-    // (common in Edge with tracking prevention) this key blocks all future logins.
-    wipeStorage(sessionStorage, aggressive);
-    wipeStorage(localStorage, aggressive);
-    if (aggressive) wipeMsalCookies();
+    _wipeStorage(sessionStorage, aggressive);
+    _wipeStorage(localStorage, aggressive);
+    if (aggressive) _wipeMsalCookies();
+  }
+  function hasStuckLock() {
+    try {
+      var stores = [sessionStorage, localStorage];
+      for (var s = 0; s < stores.length; s++) {
+        var st = stores[s];
+        for (var i = 0; i < st.length; i++) {
+          var k = st.key(i);
+          if (k && k.indexOf('interaction') !== -1 &&
+              (st.getItem(k) || '').indexOf('in_progress') !== -1) return true;
+        }
+      }
+    } catch (e) {}
+    return false;
+  }
+  function showResetButton() {
+    var el = document.getElementById('__authError');
+    document.getElementById('__authSpinner').style.display = 'none';
+    var btn = document.getElementById('__authSignIn');
+    btn.style.display = 'inline-block';
+    btn.textContent = 'Reset & Retry';
+    btn.onclick = function () {
+      clearStaleInteraction(true);
+      location.reload();
+    };
+    el.style.display = 'block';
+    el.innerHTML = 'Sign-in is stuck from a previous attempt.<br>Click <strong>Reset &amp; Retry</strong> to clear state and try again.';
   }
 
-  function hardReset() {
-    clearStaleInteraction(true);
-    // Some MSAL builds also key by BroadcastChannel; a full reload guarantees a
-    // fresh PublicClientApplication instance with no in-memory interaction state.
-    location.reload();
+  function onSignedIn(result) {
+    __auth.accessToken = result.accessToken || __auth.accessToken || null;
+    __auth.idToken = result.idToken || __auth.idToken || null;
+    __auth.token = __auth.idToken || __auth.accessToken;
+    __auth.account = result.account;
+    __auth.ready = true;
+    var _uname = result.account.name || result.account.username || '';
+    try { localStorage.setItem('sh_userName', _uname); } catch(e){}
+    var _unameEl = document.getElementById('userName');
+    if (_unameEl) _unameEl.textContent = _uname;
+    var _nameOv = document.getElementById('namePromptOverlay');
+    if (_nameOv) _nameOv.style.display = 'none';
+    gate().style.display = 'none';
+    // Proactive silent refresh a minute before expiry.
+    var _exp = result.expiresOn || result.idTokenExpiresOn;
+    var msUntilExpiry = (new Date(_exp).getTime() - Date.now()) - 60000;
+    if (msUntilExpiry > 0) {
+      setTimeout(function () {
+        __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: __auth.account })
+          .then(onSignedIn).catch(function(){});
+      }, msUntilExpiry);
+    }
   }
 
-  function doLoginPopup() {
+  function _doLoginPopup() {
     return __auth.msal.loginPopup({ scopes: ['User.Read'], prompt: 'select_account' });
   }
 
   __auth.signIn = function () {
-    doLoginPopup()
+    _doLoginPopup()
       .then(onSignedIn)
       .catch(function (e) {
         var code = (e && (e.errorCode || e.name)) || '';
@@ -466,25 +507,14 @@ table.usage tr:last-child td{border-bottom:none;}
         if (code === 'interaction_in_progress' || /interaction_in_progress/i.test(msg)) {
           // Aggressive purge (both storages + cookies) and one retry.
           clearStaleInteraction(true);
-          return doLoginPopup().then(onSignedIn).catch(function () {
-            // Still stuck \u2014 MSAL's in-memory state is dirty. Only a reload fixes it.
-            showResetError();
+          return _doLoginPopup().then(onSignedIn).catch(function () {
+            // MSAL's in-memory PCA state is dirty; only a reload fixes it.
+            showResetButton();
           });
         }
         showError('Sign-in failed: ' + msg);
       });
   };
-
-  function showResetError() {
-    var el = document.getElementById('__authError');
-    document.getElementById('__authSpinner').style.display = 'none';
-    var btn = document.getElementById('__authSignIn');
-    btn.style.display = 'inline-block';
-    btn.textContent = 'Reset & Retry';
-    btn.onclick = hardReset;
-    el.style.display = 'block';
-    el.innerHTML = 'Sign-in is stuck from a previous attempt.<br>Click <strong>Reset &amp; Retry</strong> to clear state and try again.';
-  }
 
   __auth.signOut = function () {
     try { localStorage.removeItem('sh_userName'); } catch(e){}
@@ -497,27 +527,15 @@ table.usage tr:last-child td{border-bottom:none;}
         if (!r.ok) throw new Error('msalconfig HTTP ' + r.status);
         return r.json();
       });
+      // Wait for msal-browser to be present.
       for (var i = 0; i < 100 && !(window.msal && window.msal.PublicClientApplication); i++) {
         await new Promise(function (r) { setTimeout(r, 50); });
       }
       if (!(window.msal && window.msal.PublicClientApplication)) throw new Error('MSAL library failed to load');
 
-      // Proactively clear any stale interaction lock left behind by a prior page load
-      // (Edge tracking prevention / popup closed mid-flow). We do this BEFORE creating
-      // the PCA so its constructor doesn't inherit the stuck state.
-      var hasStuckLock = false;
-      try {
-        ['sessionStorage','localStorage'].forEach(function (s) {
-          var store = window[s];
-          for (var i = 0; i < store.length; i++) {
-            var k = store.key(i);
-            if (k && k.indexOf('interaction') !== -1 && (store.getItem(k) || '').indexOf('in_progress') !== -1) {
-              hasStuckLock = true; break;
-            }
-          }
-        });
-      } catch (e) {}
-      if (hasStuckLock) clearStaleInteraction(true);
+      // Proactively clear any stale lock BEFORE creating the PCA so the fresh
+      // instance doesn't inherit stuck state from a prior page load.
+      if (hasStuckLock()) clearStaleInteraction(true);
 
       __auth.msal = new msal.PublicClientApplication({
         auth: {
@@ -529,16 +547,15 @@ table.usage tr:last-child td{border-bottom:none;}
       });
       if (__auth.msal.initialize) { await __auth.msal.initialize(); }
 
-      // Always drain any in-flight redirect response before doing anything else.
-      // If this is skipped, MSAL leaves 'interaction_in_progress' set and every
-      // subsequent login attempt throws (very common on Edge).
+      // Must drain any in-flight redirect response before any other interactive
+      // call, otherwise MSAL leaves 'interaction_in_progress' set permanently.
       try {
         var redirectResult = await __auth.msal.handleRedirectPromise();
         if (redirectResult && redirectResult.account) {
           return onSignedIn(redirectResult);
         }
       } catch (e) {
-        clearStaleInteraction();
+        clearStaleInteraction(true);
       }
 
       var accounts = __auth.msal.getAllAccounts();
@@ -1001,13 +1018,6 @@ function switchInp(type, el) {
 // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ TEMPLATES REGISTRY ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 const TEMPLATES = {
 
-  'candidate-briefing-pack': {
-    label: 'Candidate Briefing Pack',
-    file: 'templates/SH_Candidate_Briefing_Pack_TEMPLATE_v2.docx',
-    promptType: 'briefing-pack',
-    isBriefingPack: true
-  },
-
   'gm-global-profile-basic': {
     label: 'GM Global Candidate Profile (Basic)',
     file: 'templates/SH_GM_Candidate_Profile_Basic.docx',
@@ -1239,7 +1249,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
 (function() {
   var sel = document.getElementById('tplSel');
   if (!sel) return;
-  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','candidate-briefing-pack','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile'];
+  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile'];
   var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update'];
 
   var grp1 = document.createElement('optgroup');
@@ -2561,7 +2571,12 @@ async function generate() {
         var p = personData.data || personData;
         var prof = p.profile || {};
         var lines = [];
-        lines.push('NAME: ' + (p.firstName||'') + ' ' + (p.lastName||''));
+        var _personName = (
+          p.fullName ||
+          p.name ||
+          (((p.firstName || '') + ' ' + (p.lastName || '')).trim())
+        ) || '';
+        lines.push('NAME: ' + _personName);
         // Current employer from first primary position
         var positions = (posData.data || []);
         var primary = positions.find(function(x){ return x.primary; }) || positions[0];
@@ -3247,7 +3262,6 @@ var isApacUpdated = (tpl === 'apac-profile');
 var isChineseApac = false;
 var isGbProfile = (tpl === 'gb-profile');
 var isGmBasic = (tpl === 'gm-global-profile-basic');
-var isBriefingPack = (tpl === 'candidate-briefing-pack');
 var isServicesProfile = (tpl === 'services-profile');
 var isEaIndia = (tpl === 'ea-india-profile');
 var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
@@ -3569,69 +3583,7 @@ CANDIDATE SOURCE:
 
 ` + inputText;
 
-var briefingPackPrompt = `You are extracting structured data from a Job Description (JD) document to populate a Sheffield Haworth Candidate Briefing Pack.
-
-Extract the following and return ONLY valid JSON, no markdown:
-
-{
-  "COMPANY_NAME": "Company or organisation name",
-  "ROLE_TITLE": "Short role title e.g. Business Head - EMS",
-  "LOCATION": "Short location e.g. New Delhi - India",
-  "YEAR": "Current year as 4-digit string",
-  "OVERVIEW_HEADING": "Heading for company overview section e.g. JK Group Overview — leave empty string if no overview",
-  "OVERVIEW_PARAS": [
-    {"text": "First paragraph of company overview"},
-    {"text": "Second paragraph if any"}
-  ],
-  "ROLE_FULL": "Full role title exactly as written",
-  "ROLE_LOCATION": "Full location e.g. New Delhi, India",
-  "REPORTING_TO": "Reporting line e.g. Managing Director — leave empty string if not stated",
-  "OBJECTIVE_PARAS": [
-    {"text": "First paragraph of role objective"}
-  ],
-  "RESP_HEADING": "Heading for responsibilities section e.g. Responsibilities",
-  "RESP_GROUPS": [
-    {
-      "heading": "Sub-heading if responsibilities are grouped e.g. Client Leadership — leave empty string if no sub-heading",
-      "items": [
-        {"text": "First responsibility bullet"},
-        {"text": "Second responsibility bullet"}
-      ]
-    }
-  ],
-  "PROFILE_HEADING": "Heading for candidate profile section e.g. Candidate Profile",
-  "CANDIDATE_PROFILE": [
-    {"text": "First candidate profile bullet"}
-  ],
-  "QUAL_HEADING": "Heading for qualifications section e.g. Required Qualifications — leave empty string if no qualifications section",
-  "QUALIFICATIONS": [
-    {"text": "First qualification bullet"}
-  ],
-  "CONTACTS": [
-    {
-      "name": "Consultant full name",
-      "title": "Consultant title",
-      "mobile": "+XX XX XXXX XXXX",
-      "email": "email@sheffieldhaworth.com"
-    }
-  ]
-}
-
-Rules:
-- OVERVIEW_PARAS: array of paragraph objects — one object per paragraph. Leave [] if no company overview.
-- OBJECTIVE_PARAS: array of paragraph objects. Leave [] if no objective section.
-- RESP_GROUPS: group responsibilities by sub-heading if the JD has sub-headings (e.g. Client Leadership, Audit Delivery). If no sub-headings, use one group with empty heading string.
-- CANDIDATE_PROFILE: bullet points from the candidate profile / experience / skills section.
-- QUALIFICATIONS: bullet points from qualifications / requirements section. Leave [] if none.
-- CONTACTS: only include if consultant contact details are explicitly given in the source. Leave [] if not present.
-- All array fields should be [] if the section does not exist in the source document.
-- Return only the JSON object, nothing else
-
-SOURCE DOCUMENT:
-
-` + inputText;
-
-  gmBasicPrompt = `You are extracting structured data from a CV/resume to populate a GM Global Candidate Profile (Basic format).
+var gmBasicPrompt = `You are extracting structured data from a CV/resume to populate a GM Global Candidate Profile (Basic format).
 
 Extract the following and return ONLY valid JSON, no markdown:
 
@@ -4024,8 +3976,6 @@ FORMATTING RULES:
 Use this exact JSON structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ extract ALL information from this text:\n\n' + inputText
   : isGmBasic
   ? gmBasicPrompt
-  : isBriefingPack
-  ? briefingPackPrompt
   : isServicesProfile
   ? svcPrompt
   : `You are a Sheffield Haworth executive search document assistant.
@@ -4159,8 +4109,21 @@ try {
           }
         }
         if (returnOnly) { return output; }
+        var _resolvedName = '';
+        if (output && typeof output === 'object' && !Array.isArray(output)) {
+          _resolvedName = (
+            output.CANDIDATE_NAME ||
+            output.fullName ||
+            output.fullname ||
+            output.name ||
+            (((output.firstName || '') + ' ' + (output.lastName || '')).trim())
+          ) || '';
+        }
+        _resolvedName = String(_resolvedName || '').trim();
+
+        var _nameFromInput = String((inputText.match(/(?:^|\n)\s*NAME\s*:\s*([^\n\r]+)/i) || [,''])[1] || '').trim();
         var item = {
-          name: (output && output.CANDIDATE_NAME) ? output.CANDIDATE_NAME : 'Unknown Candidate',
+          name: _resolvedName || _nameFromInput || 'Unknown Candidate',
           date: new Date().toLocaleString(),
           template: tpl,
           fmt: fmt,
@@ -4212,11 +4175,23 @@ function hideProgress(msg) {
   }
 
   list.innerHTML = history.map(function(item, index) {
+    var _histName = (item && item.name) || '';
+    if ((!_histName || _histName === 'Unknown Candidate') && item && item.content && typeof item.content === 'object' && !Array.isArray(item.content)) {
+      _histName = (
+        item.content.CANDIDATE_NAME ||
+        item.content.fullName ||
+        item.content.fullname ||
+        item.content.name ||
+        (((item.content.firstName || '') + ' ' + (item.content.lastName || '')).trim())
+      ) || '';
+    }
+    _histName = String(_histName || '').trim() || 'Unknown Candidate';
+
     return `
     <div class="hist-row">
       <div class="hist-ico" style="background:${item.type==='combined'?'rgba(245,158,11,.15)':item.fmt==='x'?'rgba(33,115,70,.15)':item.fmt==='p'?'rgba(210,71,38,.15)':item.fmt==='f'?'rgba(210,0,0,.12)':'rgba(43,124,211,.12)'};">${item.type==='combined'?'M':item.fmt==='x'?'E':item.fmt==='p'?'P':item.fmt==='f'?'F':'W'}</div>
       <div style="flex:1;">
-        <div class="hist-name">${item.name}</div>
+        <div class="hist-name">${_histName}</div>
         <div class="hist-meta">${item.date} &middot; ${item.type==='combined'?('Combined ('+item.content.length+' profiles)'):(item.fmt==='x'?'Excel':item.fmt==='p'?'PowerPoint':item.fmt==='f'?'PDF':'Word')}</div>
       </div>
       <span class="badge" style="background:#dcfce7;color:#166534;">Done</span>
@@ -4547,88 +4522,32 @@ async function downloadHistory(index) {
   var history = JSON.parse(localStorage.getItem('sh_history')||'[]');
   var item = history[index];
   if (!item) return;
+
+  function _safeFileName(name, fallback) {
+    var n = String(name || '').trim();
+    // Remove characters that break downloads on Windows/macOS browsers.
+    n = n.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+    return n || (fallback || 'download');
+  }
+
   var fmt = item.fmt || 'd';
   // Override: project-report always downloads as xlsx
   if (item.template === 'project-report' || item.template === 'project-report-ext' || item.template === 'project-report-gb') fmt = 'x';
   var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'global-career-summary-wam-us' ? 'with Career Summary WAM US' : item.template === 'project-report-gb' ? 'GB' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile-v2' ? 'EA India v2' : item.template === 'ea-india-profile' ? 'EA India' : item.template === 'change-consulting-profile' ? 'Change Consulting' : item.template === 'apac-profile-deal-list' ? 'APAC Deal List' : item.template === 'apac-profile-v2' ? 'APAC v2' : item.template === 'apac-ey-profile' ? 'EY Shortlisted' : 'No Scorecard';
   var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : item.template === 'ea-india-profile' ? 'Global' : 'Global';
-  var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
-  var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
+  var _candidateLabel = item.type === 'combined'
+    ? 'Multiple Profiles'
+    : ((item.content && !Array.isArray(item.content) && (
+        item.content.CANDIDATE_NAME ||
+        item.content.fullName ||
+        item.content.fullname ||
+        item.content.name ||
+        (((item.content.firstName || '') + ' ' + (item.content.lastName || '')).trim())
+      )) || item.name || 'Candidate');
+  var baseName = _safeFileName(_profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel, 'Document');
   try {
       // ── PPT Candidate Update Report ─────────────────────────────
-            // ── Candidate Briefing Pack ──────────────────────────────────────────
-      if (item.template === 'candidate-briefing-pack') {
-        var _bpCv = item.content;
-        var _bpRaw = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
-        var _bpTplResp = await fetch(_bpRaw + 'templates/SH_Candidate_Briefing_Pack_TEMPLATE_v2.docx?v=' + Date.now());
-        if (!_bpTplResp.ok) throw new Error('Failed to fetch Briefing Pack template');
-        var _bpZip = new PizZip(await _bpTplResp.arrayBuffer());
-        var _bpDoc = new docxtemplater(_bpZip, {
-          paragraphLoop: true,
-          linebreaks: true,
-          delimiters: { start: '{{', end: '}}' },
-          nullGetter: function() { return ''; }
-        });
-
-        var _bpOverviewParas = Array.isArray(_bpCv.OVERVIEW_PARAS) ? _bpCv.OVERVIEW_PARAS : [];
-        var _bpObjParas      = Array.isArray(_bpCv.OBJECTIVE_PARAS) ? _bpCv.OBJECTIVE_PARAS : [];
-        var _bpRespGroups    = Array.isArray(_bpCv.RESP_GROUPS) ? _bpCv.RESP_GROUPS : [];
-        var _bpProfile       = Array.isArray(_bpCv.CANDIDATE_PROFILE) ? _bpCv.CANDIDATE_PROFILE : [];
-        var _bpQuals         = Array.isArray(_bpCv.QUALIFICATIONS) ? _bpCv.QUALIFICATIONS : [];
-        var _bpContacts      = Array.isArray(_bpCv.CONTACTS) ? _bpCv.CONTACTS : [];
-
-        _bpDoc.render({
-          COMPANY_NAME:     _bpCv.COMPANY_NAME   || '',
-          ROLE_TITLE:       _bpCv.ROLE_TITLE     || '',
-          LOCATION:         _bpCv.LOCATION       || '',
-          YEAR:             _bpCv.YEAR           || String(new Date().getFullYear()),
-          HAS_OVERVIEW:     _bpOverviewParas.length > 0,
-          OVERVIEW_HEADING: _bpCv.OVERVIEW_HEADING || '',
-          OVERVIEW_PARAS:   _bpOverviewParas,
-          ROLE_FULL:        _bpCv.ROLE_FULL      || _bpCv.ROLE_TITLE || '',
-          ROLE_LOCATION:    _bpCv.ROLE_LOCATION  || _bpCv.LOCATION   || '',
-          REPORTING_TO:     _bpCv.REPORTING_TO   || '',
-          HAS_OBJECTIVE:    _bpObjParas.length > 0,
-          OBJECTIVE_PARAS:  _bpObjParas,
-          HAS_RESP:         _bpRespGroups.length > 0,
-          RESP_HEADING:     _bpCv.RESP_HEADING   || 'Responsibilities',
-          RESP_GROUPS:      _bpRespGroups.map(function(g) {
-            return {
-              heading: g.heading || '',
-              items: Array.isArray(g.items) ? g.items : []
-            };
-          }),
-          HAS_PROFILE:      _bpProfile.length > 0,
-          PROFILE_HEADING:  _bpCv.PROFILE_HEADING || 'Candidate Profile',
-          CANDIDATE_PROFILE: _bpProfile,
-          HAS_QUAL:         _bpQuals.length > 0,
-          QUAL_HEADING:     _bpCv.QUAL_HEADING   || 'Required Qualifications',
-          QUALIFICATIONS:   _bpQuals,
-          HAS_CONTACTS:     _bpContacts.length > 0,
-          CONTACTS:         _bpContacts.map(function(c) {
-            return {
-              name:   c.name   || '',
-              title:  c.title  || '',
-              mobile: c.mobile || '',
-              email:  c.email  || ''
-            };
-          })
-        });
-
-        var _bpOut = _bpDoc.getZip().generate({
-          type: 'blob',
-          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        });
-        var _bpUrl = URL.createObjectURL(_bpOut);
-        var _bpA = document.createElement('a');
-        _bpA.href = _bpUrl;
-        _bpA.download = (_bpCv.COMPANY_NAME ? _bpCv.COMPANY_NAME + ' - ' : '') + (_bpCv.ROLE_TITLE || 'Briefing Pack') + '.docx';
-        _bpA.click();
-        setTimeout(function(){ URL.revokeObjectURL(_bpUrl); }, 2000);
-        return;
-      }
-
-      // ── GM Global Profile Basic ──────────────────────────────────────────
+            // ── GM Global Profile Basic ──────────────────────────────────────────
       if (item.template === 'gm-global-profile-basic') {
         var _gmCv = item.content;
         var _gmRaw = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
@@ -4681,7 +4600,7 @@ async function downloadHistory(index) {
         var _gmUrl = URL.createObjectURL(_gmOut);
         var _gmA = document.createElement('a');
         _gmA.href = _gmUrl;
-        _gmA.download = (_gmCv.CANDIDATE_NAME || item.name || 'GM Profile') + '.docx';
+        _gmA.download = _safeFileName((_gmCv.CANDIDATE_NAME || item.name || 'GM Profile'), 'GM Profile') + '.docx';
         _gmA.click();
         setTimeout(function(){ URL.revokeObjectURL(_gmUrl); }, 2000);
         return;
@@ -4862,7 +4781,7 @@ async function downloadHistory(index) {
         var _out = await _pptZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
         var _url = URL.createObjectURL(_out);
         var _a = document.createElement('a');
-        _a.href=_url; _a.download=(_cl?_cl+' - ':'')+(item.name||'Candidate Update Report')+'.pptx';
+        _a.href=_url; _a.download=_safeFileName(((_cl?_cl+' - ':'') + (item.name||'Candidate Update Report')), 'Candidate Update Report')+'.pptx';
         _a.click(); setTimeout(function(){URL.revokeObjectURL(_url);},2000);
         return;
       }
@@ -6705,7 +6624,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Admin auth
 (function(){
-  var ADMIN_HASH = '70602cf6904842c76c32c160c093df0b5239818f6f696e36cf062b964043bdab';
+  var ADMIN_HASH = 'df376b36b9753b00a56678db390c2118cbf251fb5e9899c46d2f695b526c9413';
   var ADMIN_EMAILS = [
     'a.shamim@sheffieldhaworth.com',
     'support@fyxo.global'
@@ -6961,6 +6880,7 @@ function initUserName() {
     var ov = document.getElementById('namePromptOverlay');
     if (ov) ov.style.display = 'none';
   }
+  // If not yet set, the __authGate onSignedIn callback will update #userName on completion.
 }
 function saveUserName(){var inp=document.getElementById('namePromptInput');var name=inp.value.trim();if(!name||name.length<2){inp.style.border='1.5px solid #e74c3c';inp.placeholder='Please enter your name to continue';return;}localStorage.setItem('sh_userName',name);document.getElementById('userName').textContent=name;document.getElementById('namePromptOverlay').style.display='none';notify('Welcome, '+name+'!');}
 
@@ -7000,13 +6920,37 @@ function logUsage(template,inputMethod,status){
   } catch(e){}
   fetch(SH_LOGGER+'/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userName:localStorage.getItem('sh_userName')||'Unknown',template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()})}).catch(function(){});
 }
-function loadUsageLogs(){
+async function loadUsageLogs(){
   var tbody=document.getElementById('usageLogBody');
   var summary=document.getElementById('usageSummary');
   if(!tbody)return;
   tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>';
+
+  // Ensure token exists for protected /api/proxy/logs* endpoints.
+  async function ensureApiToken(){
+    try {
+      // Logs/status endpoints are app-protected; idToken works reliably for this backend check.
+      if (window.__auth && window.__auth.idToken) return window.__auth.idToken;
+      if (window.__auth && window.__auth.token) return window.__auth.token;
+      if (window.__auth && window.__auth.msal) {
+        var acc = window.__auth.account || (window.__auth.msal.getAllAccounts && window.__auth.msal.getAllAccounts()[0]);
+        if (acc) {
+          var silent = await window.__auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: acc });
+          window.__auth.accessToken = (silent && silent.accessToken) || window.__auth.accessToken || null;
+          window.__auth.idToken = (silent && silent.idToken) || window.__auth.idToken || null;
+          window.__auth.token = window.__auth.accessToken || window.__auth.idToken || window.__auth.token;
+          return window.__auth.idToken || window.__auth.token || '';
+        }
+      }
+    } catch(e) {}
+    return '';
+  }
+
+  var _tok = await ensureApiToken();
+  var _authHdr = _tok ? { 'Authorization': 'Bearer ' + _tok } : {};
+
   // Check storage backend status
-  fetch('/api/proxy/logs/status').then(function(r){return r.json();}).then(function(s){
+  fetch('/api/proxy/logs/status',{headers:_authHdr}).then(function(r){return r.json();}).then(function(s){
     var statusEl=document.getElementById('logStorageStatus');
     if(statusEl){
       if(s.backend==='azure-table'){
@@ -7016,7 +6960,7 @@ function loadUsageLogs(){
       }
     }
   }).catch(function(){});
-  fetch('/api/proxy/logs?nocache='+Date.now()+'&r='+Math.random(),{cache:'no-store',headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}}).then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
+  fetch('/api/proxy/logs?nocache='+Date.now()+'&r='+Math.random(),{cache:'no-store',headers:Object.assign({'Cache-Control':'no-cache','Pragma':'no-cache'},_authHdr)}).then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
   .then(function(logs){renderLogs(logs,tbody,summary);})
   .catch(function(){
     try{var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');renderLogs(logs,tbody,summary);}
