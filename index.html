@@ -4627,6 +4627,7 @@ async function downloadHistory(index) {
         var _bpContacts      = Array.isArray(_bpCv.CONTACTS) ? _bpCv.CONTACTS : [];
         _bpDoc.render({
           COMPANY_NAME:     _bpCv.COMPANY_NAME   || '',
+          HEADER_TITLE:     _bpCv.ROLE_TITLE     || '',
           ROLE_TITLE:       _bpCv.ROLE_TITLE     || '',
           LOCATION:         _bpCv.LOCATION       || '',
           YEAR:             _bpCv.YEAR           || String(new Date().getFullYear()),
