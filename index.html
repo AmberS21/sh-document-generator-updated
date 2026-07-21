@@ -301,7 +301,7 @@ table.usage tr:last-child td{border-bottom:none;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script></head>
+<script src="https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script></head>
 <body>
 
 <!-- ─────────────────────── AUTH GATE (Microsoft SSO) ─────────────────────── -->
@@ -1018,6 +1018,13 @@ function switchInp(type, el) {
 // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ TEMPLATES REGISTRY ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 const TEMPLATES = {
 
+  'candidate-briefing-pack': {
+    label: 'Candidate Briefing Pack',
+    file: 'templates/SH_Candidate_Briefing_Pack_TEMPLATE_v2.docx',
+    promptType: 'briefing-pack',
+    isBriefingPack: true
+  },
+
   'gm-global-profile-basic': {
     label: 'GM Global Candidate Profile (Basic)',
     file: 'templates/SH_GM_Candidate_Profile_Basic.docx',
@@ -1249,7 +1256,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
 (function() {
   var sel = document.getElementById('tplSel');
   if (!sel) return;
-  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile'];
+  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','candidate-briefing-pack','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile'];
   var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update'];
 
   var grp1 = document.createElement('optgroup');
@@ -3262,6 +3269,7 @@ var isApacUpdated = (tpl === 'apac-profile');
 var isChineseApac = false;
 var isGbProfile = (tpl === 'gb-profile');
 var isGmBasic = (tpl === 'gm-global-profile-basic');
+var isBriefingPack = (tpl === 'candidate-briefing-pack');
 var isServicesProfile = (tpl === 'services-profile');
 var isEaIndia = (tpl === 'ea-india-profile');
 var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
@@ -3583,7 +3591,57 @@ CANDIDATE SOURCE:
 
 ` + inputText;
 
-var gmBasicPrompt = `You are extracting structured data from a CV/resume to populate a GM Global Candidate Profile (Basic format).
+var briefingPackPrompt = `You are extracting structured data from a Job Description (JD) document to populate a Sheffield Haworth Candidate Briefing Pack.
+
+Extract the following and return ONLY valid JSON, no markdown:
+
+{
+  "COMPANY_NAME": "Company or organisation name",
+  "ROLE_TITLE": "Short role title e.g. Business Head - EMS",
+  "LOCATION": "Short location e.g. New Delhi - India",
+  "YEAR": "Current year as 4-digit string",
+  "OVERVIEW_HEADING": "Heading for company overview section — leave empty string if no overview",
+  "OVERVIEW_PARAS": [{"text": "First paragraph of company overview"}],
+  "ROLE_FULL": "Full role title exactly as written",
+  "ROLE_LOCATION": "Full location e.g. New Delhi, India",
+  "REPORTING_TO": "Reporting line — leave empty string if not stated",
+  "OBJECTIVE_PARAS": [{"text": "First paragraph of role objective"}],
+  "RESP_HEADING": "Heading for responsibilities section e.g. Responsibilities",
+  "RESP_GROUPS": [
+    {
+      "heading": "Sub-heading if grouped — leave empty string if no sub-heading",
+      "items": [{"text": "First responsibility bullet"}]
+    }
+  ],
+  "PROFILE_HEADING": "Heading for candidate profile section e.g. Candidate Profile",
+  "CANDIDATE_PROFILE": [{"text": "First candidate profile bullet"}],
+  "QUAL_HEADING": "Heading for qualifications section — leave empty string if none",
+  "QUALIFICATIONS": [{"text": "First qualification bullet"}],
+  "CONTACTS": [
+    {
+      "name": "Consultant full name",
+      "title": "Consultant title",
+      "mobile": "+XX XX XXXX XXXX",
+      "email": "email@sheffieldhaworth.com"
+    }
+  ]
+}
+
+Rules:
+- OVERVIEW_PARAS: one object per paragraph. Leave [] if no company overview.
+- OBJECTIVE_PARAS: one object per paragraph. Leave [] if no objective section.
+- RESP_GROUPS: group by sub-heading if present. If no sub-headings, use one group with empty heading.
+- CANDIDATE_PROFILE: bullets from candidate profile/experience/skills section.
+- QUALIFICATIONS: bullets from qualifications/requirements. Leave [] if none.
+- CONTACTS: only include if consultant details explicitly given. Leave [] if not present.
+- All array fields should be [] if section does not exist.
+- Return only the JSON object, nothing else
+
+SOURCE DOCUMENT:
+
+` + inputText;
+
+  gmBasicPrompt = `You are extracting structured data from a CV/resume to populate a GM Global Candidate Profile (Basic format).
 
 Extract the following and return ONLY valid JSON, no markdown:
 
@@ -3976,6 +4034,8 @@ FORMATTING RULES:
 Use this exact JSON structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ extract ALL information from this text:\n\n' + inputText
   : isGmBasic
   ? gmBasicPrompt
+  : isBriefingPack
+  ? briefingPackPrompt
   : isServicesProfile
   ? svcPrompt
   : `You are a Sheffield Haworth executive search document assistant.
@@ -4547,7 +4607,64 @@ async function downloadHistory(index) {
   var baseName = _safeFileName(_profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel, 'Document');
   try {
       // ── PPT Candidate Update Report ─────────────────────────────
-            // ── GM Global Profile Basic ──────────────────────────────────────────
+            // ── Candidate Briefing Pack ──────────────────────────────────────────
+      if (item.template === 'candidate-briefing-pack') {
+        var _bpCv = item.content;
+        var _bpRaw = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+        var _bpTplResp = await fetch(_bpRaw + 'templates/SH_Candidate_Briefing_Pack_TEMPLATE_v2.docx?v=' + Date.now());
+        if (!_bpTplResp.ok) throw new Error('Failed to fetch Briefing Pack template');
+        var _bpZip = new PizZip(await _bpTplResp.arrayBuffer());
+        var _bpDoc = new docxtemplater(_bpZip, {
+          paragraphLoop: true, linebreaks: true,
+          delimiters: { start: '{{', end: '}}' },
+          nullGetter: function() { return ''; }
+        });
+        var _bpOverviewParas = Array.isArray(_bpCv.OVERVIEW_PARAS) ? _bpCv.OVERVIEW_PARAS : [];
+        var _bpObjParas      = Array.isArray(_bpCv.OBJECTIVE_PARAS) ? _bpCv.OBJECTIVE_PARAS : [];
+        var _bpRespGroups    = Array.isArray(_bpCv.RESP_GROUPS) ? _bpCv.RESP_GROUPS : [];
+        var _bpProfile       = Array.isArray(_bpCv.CANDIDATE_PROFILE) ? _bpCv.CANDIDATE_PROFILE : [];
+        var _bpQuals         = Array.isArray(_bpCv.QUALIFICATIONS) ? _bpCv.QUALIFICATIONS : [];
+        var _bpContacts      = Array.isArray(_bpCv.CONTACTS) ? _bpCv.CONTACTS : [];
+        _bpDoc.render({
+          COMPANY_NAME:     _bpCv.COMPANY_NAME   || '',
+          ROLE_TITLE:       _bpCv.ROLE_TITLE     || '',
+          LOCATION:         _bpCv.LOCATION       || '',
+          YEAR:             _bpCv.YEAR           || String(new Date().getFullYear()),
+          HAS_OVERVIEW:     _bpOverviewParas.length > 0,
+          OVERVIEW_HEADING: _bpCv.OVERVIEW_HEADING || '',
+          OVERVIEW_PARAS:   _bpOverviewParas,
+          ROLE_FULL:        _bpCv.ROLE_FULL      || _bpCv.ROLE_TITLE || '',
+          ROLE_LOCATION:    _bpCv.ROLE_LOCATION  || _bpCv.LOCATION   || '',
+          REPORTING_TO:     _bpCv.REPORTING_TO   || '',
+          HAS_OBJECTIVE:    _bpObjParas.length > 0,
+          OBJECTIVE_PARAS:  _bpObjParas,
+          HAS_RESP:         _bpRespGroups.length > 0,
+          RESP_HEADING:     _bpCv.RESP_HEADING   || 'Responsibilities',
+          RESP_GROUPS:      _bpRespGroups.map(function(g) {
+            return { heading: g.heading || '', items: Array.isArray(g.items) ? g.items : [] };
+          }),
+          HAS_PROFILE:      _bpProfile.length > 0,
+          PROFILE_HEADING:  _bpCv.PROFILE_HEADING || 'Candidate Profile',
+          CANDIDATE_PROFILE: _bpProfile,
+          HAS_QUAL:         _bpQuals.length > 0,
+          QUAL_HEADING:     _bpCv.QUAL_HEADING   || 'Required Qualifications',
+          QUALIFICATIONS:   _bpQuals,
+          HAS_CONTACTS:     _bpContacts.length > 0,
+          CONTACTS:         _bpContacts.map(function(c) {
+            return { name: c.name||'', title: c.title||'', mobile: c.mobile||'', email: c.email||'' };
+          })
+        });
+        var _bpOut = _bpDoc.getZip().generate({ type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        var _bpUrl = URL.createObjectURL(_bpOut);
+        var _bpA = document.createElement('a');
+        _bpA.href = _bpUrl;
+        _bpA.download = (_bpCv.COMPANY_NAME ? _bpCv.COMPANY_NAME + ' - ' : '') + (_bpCv.ROLE_TITLE || 'Briefing Pack') + '.docx';
+        _bpA.click();
+        setTimeout(function(){ URL.revokeObjectURL(_bpUrl); }, 2000);
+        return;
+      }
+
+      // ── GM Global Profile Basic ──────────────────────────────────────────
       if (item.template === 'gm-global-profile-basic') {
         var _gmCv = item.content;
         var _gmRaw = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
