@@ -3647,10 +3647,22 @@ Extract the following and return ONLY valid JSON, no markdown:
       "items": [{"text": "First responsibility bullet"}]
     }
   ],
-  "PROFILE_HEADING": "Heading for candidate profile section e.g. Candidate Profile",
-  "CANDIDATE_PROFILE": [{"text": "First candidate profile bullet"}],
-  "QUAL_HEADING": "Heading for qualifications section — leave empty string if none",
-  "QUALIFICATIONS": [{"text": "First qualification bullet"}],
+  "HAS_FACILITIES": "true or false — true only if the source describes the company's physical facilities/plants/assets in detail",
+  "FACILITIES_HEADING": "Heading for facilities section e.g. Facilities — leave empty string if not present",
+  "FACILITIES_INTRO_PARAS": [{"text": "Optional intro paragraph before the individual facility descriptions — leave [] if none"}],
+  "FACILITIES_GROUPS": [
+    {
+      "heading": "Name of this facility/asset e.g. 'Direct Reduced Iron (DRI) Plant:'",
+      "paras": [{"text": "Narrative paragraph(s) describing this facility"}],
+      "items": [{"text": "Bullet point if the facility description includes a list, e.g. equipment/process steps — leave [] if the facility is described in prose only"}]
+    }
+  ],
+  "PROFILE_GROUPS": [
+    {
+      "heading": "Section heading exactly as written, e.g. 'Key Requisites for the Incumbent', 'Key Skills and Competencies: Technical', 'Key Skills and Competencies — Behavioural'. Create ONE group per distinctly-headed candidate requirement/skill section found in the source — do NOT merge separately-headed sections into one.",
+      "items": [{"text": "First bullet in this section"}]
+    }
+  ],
   "NEWS_HEADING": "Heading for latest news section e.g. Latest News Coverage — leave empty string if no news content was pasted",
   "NEWS_ITEMS": [
     {
@@ -3674,8 +3686,8 @@ Rules:
 - OVERVIEW_PARAS: one object per paragraph. Leave [] if no company overview.
 - OBJECTIVE_PARAS: one object per paragraph. Leave [] if no objective section.
 - RESP_GROUPS: group by sub-heading if present. If no sub-headings, use one group with empty heading.
-- CANDIDATE_PROFILE: bullets from candidate profile/experience/skills section.
-- QUALIFICATIONS: bullets from qualifications/requirements. Leave [] if none.
+- FACILITIES_GROUPS: only populate if the source describes distinct physical facilities/plants/assets (common in company overview documents for industrial/manufacturing roles). Each distinctly-named facility becomes its own group. Preserve narrative paragraphs in "paras" and any itemized lists (equipment, process steps) in "items". Leave HAS_FACILITIES false and both arrays [] if the source has no facilities content.
+- PROFILE_GROUPS: create ONE group per distinctly-headed section covering candidate requirements, qualifications, or skills (e.g. a JD may have separate headed sections like "Key Requisites", "Technical Skills", "Behavioural Skills" — these must become THREE separate groups with their original headings preserved, never merged into one list). If the source has only one such section, return a single group.
 - NEWS_ITEMS: only populate if news articles, headlines, or links were pasted alongside the JD in the source material. Summarize each article in your own words — do not copy long verbatim text. Never invent or look up news that wasn't provided. Leave [] if no news content is present in the source.
 - CONTACTS: only include if consultant details explicitly given. Leave [] if not present.
 - All array fields should be [] if section does not exist.
@@ -4709,8 +4721,9 @@ async function downloadHistory(index) {
         var _bpOverviewParas = Array.isArray(_bpCv.OVERVIEW_PARAS) ? _bpCv.OVERVIEW_PARAS : [];
         var _bpObjParas      = Array.isArray(_bpCv.OBJECTIVE_PARAS) ? _bpCv.OBJECTIVE_PARAS : [];
         var _bpRespGroups    = Array.isArray(_bpCv.RESP_GROUPS) ? _bpCv.RESP_GROUPS : [];
-        var _bpProfile       = Array.isArray(_bpCv.CANDIDATE_PROFILE) ? _bpCv.CANDIDATE_PROFILE : [];
-        var _bpQuals         = Array.isArray(_bpCv.QUALIFICATIONS) ? _bpCv.QUALIFICATIONS : [];
+        var _bpFacIntro      = Array.isArray(_bpCv.FACILITIES_INTRO_PARAS) ? _bpCv.FACILITIES_INTRO_PARAS : [];
+        var _bpFacGroups     = Array.isArray(_bpCv.FACILITIES_GROUPS) ? _bpCv.FACILITIES_GROUPS : [];
+        var _bpProfileGroups = Array.isArray(_bpCv.PROFILE_GROUPS) ? _bpCv.PROFILE_GROUPS : [];
         var _bpNewsItems     = Array.isArray(_bpCv.NEWS_ITEMS) ? _bpCv.NEWS_ITEMS : [];
         var _bpContacts      = Array.isArray(_bpCv.CONTACTS) ? _bpCv.CONTACTS : [];
         _bpDoc.render({
@@ -4732,12 +4745,20 @@ async function downloadHistory(index) {
           RESP_GROUPS:      _bpRespGroups.map(function(g) {
             return { heading: g.heading || '', items: Array.isArray(g.items) ? g.items : [] };
           }),
-          HAS_PROFILE:      _bpProfile.length > 0,
-          PROFILE_HEADING:  _bpCv.PROFILE_HEADING || 'Candidate Profile',
-          CANDIDATE_PROFILE: _bpProfile,
-          HAS_QUAL:         _bpQuals.length > 0,
-          QUAL_HEADING:     _bpCv.QUAL_HEADING   || 'Required Qualifications',
-          QUALIFICATIONS:   _bpQuals,
+          HAS_PROFILE_GROUPS: _bpProfileGroups.length > 0,
+          PROFILE_GROUPS:   _bpProfileGroups.map(function(g) {
+            return { heading: g.heading || '', items: Array.isArray(g.items) ? g.items : [] };
+          }),
+          HAS_FACILITIES:   _bpFacGroups.length > 0,
+          FACILITIES_HEADING: _bpCv.FACILITIES_HEADING || 'Facilities',
+          FACILITIES_INTRO_PARAS: _bpFacIntro,
+          FACILITIES_GROUPS: _bpFacGroups.map(function(g) {
+            return {
+              heading: g.heading || '',
+              paras: Array.isArray(g.paras) ? g.paras : [],
+              items: Array.isArray(g.items) ? g.items : []
+            };
+          }),
           HAS_NEWS:         _bpNewsItems.length > 0,
           NEWS_HEADING:     _bpCv.NEWS_HEADING   || 'Latest News Coverage',
           NEWS_ITEMS:       _bpNewsItems.map(function(n) {
