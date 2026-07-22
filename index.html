@@ -3920,26 +3920,40 @@ CANDIDATE SOURCE — extract ALL information from this text:
 
 ` + inputText;
 
-var advisorProfilePrompt = `You are extracting and synthesizing information from a candidate's CV and/or LinkedIn profile into a ONE-PAGE "Advisor Profile" summary.
+var advisorProfilePrompt = `You are producing an executive Advisor Profile suitable for a Sheffield Haworth consulting bench or proposal document — NOT a CV, NOT a LinkedIn summary, and NOT a chronological employment history.
 
-This is NOT a full chronological CV. Follow this exact analytical approach:
+OBJECTIVE
+Position the individual as a senior subject-matter expert whose experience is immediately relevant to client transformation engagements. Emphasize: what they help clients achieve, sectors worked in, strategic programmes led, outcomes delivered, and executive credibility — never a list of job duties.
 
-1. FULL_NAME: The candidate's full name as it should appear on the profile.
+TAILORING — before writing, identify the individual's domain and emphasize accordingly:
+- Insurance transformation leaders → operating models, entity establishment, underwriting, claims, finance, MGAs, reinsurance.
+- Compliance executives → regulatory transformation, governance, control frameworks, regulatory engagement, compliance technology.
+- Board-level executives → governance, strategy, independent oversight, executive leadership.
+- Strategy leaders → business planning, transformation portfolios, M&A, organisational design, executive advisory.
 
-2. EMAIL and PHONE: Extract if present in the source material. If not found, return an empty string "" for that field — do not invent or guess.
+FIELDS TO PRODUCE:
 
-3. SUMMARY: ONE blended narrative paragraph (4-6 sentences), third person, covering: years of experience, core specialisms, notable prior employers, and what the candidate does today. Write it as flowing prose, not a list.
+1. FULL_NAME: the candidate's full name.
 
-4. ENGAGEMENT_1/2/3 (exactly 3, no more): Each has a COMPANY and a DETAIL.
-   - Prioritize the most recent and most relevant roles as their own individual entries.
-   - If there are multiple older or less-relevant roles, MERGE them into a single combined entry (e.g. "Company A, Company B and Company C" as the company field, with a DETAIL describing the shared theme of those roles — do not list dates).
-   - DETAIL should be 1-3 sentences describing scope, seniority, and impact. NEVER include employment dates anywhere in this template.
+2. EMAIL and PHONE: extract only if present in the source. Return "" if not found — never invent.
 
-5. EXPERIENCE_PARA_1/2/3 (exactly 3 short paragraphs, 1-3 sentences each): A closing narrative for the right-hand "Experience" column — trust/reputation statement, notable board/advisory affiliations, and broader impact themes. Do not repeat the SUMMARY or ENGAGEMENT content verbatim.
+3. SUMMARY (one paragraph, this is their professional positioning statement): who they are, their specialism, years of experience, and what they help organisations achieve. This is about identity and credibility — e.g. "Emre is a specialist in insurance operational transformation, helping organisations design simpler, more effective ways of working across complex and regulated environments." Third person, executive tone.
 
-6. SKILL_1/2/3 (exactly 3): Synthesized skill categories (not raw keyword lists), e.g. "Enterprise Risk Management & Governance" — not "risk, governance".
+4. EXPERIENCE_PARA_1/2/3 (exactly 3 short paragraphs, 1-3 sentences each — together these form the "why clients engage them" narrative, and must NOT restate or heavily duplicate the SUMMARY):
+   - PARA_1: what has made them distinctive and what value they add — the types of problems they solve and who they advise. Frame notable roles as evidence of influence, not just job titles (e.g. a committee founding membership is evidence of influence, not a line item).
+   - PARA_2: supporting credibility evidence — board/advisory affiliations, recognition, or a notable engagement that broadens their range (e.g. showing expertise extends into adjacent or emerging areas).
+   - PARA_3: broader impact themes — the kinds of transformation/outcomes they're known for across their career.
 
-7. QUAL_1/2 (exactly 2): The two most relevant certifications or qualifications. Do not include full academic history if more than 2 credentials exist — pick the most senior/relevant two.
+5. ENGAGEMENT_1/2/3 (exactly 3 — the "Relevant Experience" section, the most important part of the profile, NOT employment history):
+   - Each is an engagement summary, not a role listing. COMPANY = organisation name only. DETAIL must begin with the role, then a concise paragraph covering: why they were engaged, what they delivered, and the business outcome — never a list of responsibilities. Example DETAIL: "Business Consultant. Led the design and implementation of the operating model for Brit Re's Bermuda reinsurance entity, developing end-to-end operational processes, governance frameworks and onboarding strategies to support regulatory approval and operational readiness."
+   - Prioritize the most recent and most relevant engagements as their own entries. If there are multiple older or less-relevant roles, merge them into one combined entry (COMPANY = "Company A, Company B and Company C", DETAIL describing the shared theme).
+   - Never include employment dates anywhere.
+
+6. SKILL_1/2/3 (exactly 3 — pick the 3 strongest consulting capabilities, not raw keywords): consulting-capability phrases such as Operating Model Design, Regulatory Change, Programme Leadership, Business Transformation, Governance, M&A Integration, Enterprise Risk, Change Management, Target Operating Models, Process Optimisation, Compliance, Strategic Planning. Avoid listing every technology or regulation unless it is central to their profile.
+
+7. QUAL_1/2 (exactly 2): only professional qualifications (e.g. ACA, CIMA, CFA, ICAEW, Lean Six Sigma Black Belt, PRINCE2) or relevant academic degrees — never school education. Pick the two most senior/relevant.
+
+WRITING STYLE (apply throughout): executive-level, third person, consulting language, proposal-ready, British English, outcome-focused. Avoid repetition and remove duplicated information across fields. Group similar experience together rather than listing it separately. Avoid CV language such as "responsible for...". Prioritize transformation, governance, operating model, regulatory and strategic work over administrative responsibilities.
 
 Return ONLY valid JSON, no markdown fences, no preamble, in this exact shape:
 {
