@@ -3651,6 +3651,15 @@ Extract the following and return ONLY valid JSON, no markdown:
   "CANDIDATE_PROFILE": [{"text": "First candidate profile bullet"}],
   "QUAL_HEADING": "Heading for qualifications section — leave empty string if none",
   "QUALIFICATIONS": [{"text": "First qualification bullet"}],
+  "NEWS_HEADING": "Heading for latest news section e.g. Latest News Coverage — leave empty string if no news content was pasted",
+  "NEWS_ITEMS": [
+    {
+      "headline": "Article headline exactly as given",
+      "source": "Publication name e.g. Bloomberg",
+      "date": "Date as written e.g. 4th December 2022",
+      "summary": "2-4 sentence factual summary of the article, third person, professional tone"
+    }
+  ],
   "CONTACTS": [
     {
       "name": "Consultant full name",
@@ -3667,6 +3676,7 @@ Rules:
 - RESP_GROUPS: group by sub-heading if present. If no sub-headings, use one group with empty heading.
 - CANDIDATE_PROFILE: bullets from candidate profile/experience/skills section.
 - QUALIFICATIONS: bullets from qualifications/requirements. Leave [] if none.
+- NEWS_ITEMS: only populate if news articles, headlines, or links were pasted alongside the JD in the source material. Summarize each article in your own words — do not copy long verbatim text. Never invent or look up news that wasn't provided. Leave [] if no news content is present in the source.
 - CONTACTS: only include if consultant details explicitly given. Leave [] if not present.
 - All array fields should be [] if section does not exist.
 - Return only the JSON object, nothing else
@@ -4701,6 +4711,7 @@ async function downloadHistory(index) {
         var _bpRespGroups    = Array.isArray(_bpCv.RESP_GROUPS) ? _bpCv.RESP_GROUPS : [];
         var _bpProfile       = Array.isArray(_bpCv.CANDIDATE_PROFILE) ? _bpCv.CANDIDATE_PROFILE : [];
         var _bpQuals         = Array.isArray(_bpCv.QUALIFICATIONS) ? _bpCv.QUALIFICATIONS : [];
+        var _bpNewsItems     = Array.isArray(_bpCv.NEWS_ITEMS) ? _bpCv.NEWS_ITEMS : [];
         var _bpContacts      = Array.isArray(_bpCv.CONTACTS) ? _bpCv.CONTACTS : [];
         _bpDoc.render({
           COMPANY_NAME:     _bpCv.COMPANY_NAME   || '',
@@ -4727,6 +4738,11 @@ async function downloadHistory(index) {
           HAS_QUAL:         _bpQuals.length > 0,
           QUAL_HEADING:     _bpCv.QUAL_HEADING   || 'Required Qualifications',
           QUALIFICATIONS:   _bpQuals,
+          HAS_NEWS:         _bpNewsItems.length > 0,
+          NEWS_HEADING:     _bpCv.NEWS_HEADING   || 'Latest News Coverage',
+          NEWS_ITEMS:       _bpNewsItems.map(function(n) {
+            return { headline: n.headline||'', source: n.source||'', date: n.date||'', summary: n.summary||'' };
+          }),
           HAS_CONTACTS:     _bpContacts.length > 0,
           CONTACTS:         _bpContacts.map(function(c) {
             return { name: c.name||'', title: c.title||'', mobile: c.mobile||'', email: c.email||'' };
