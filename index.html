@@ -3944,9 +3944,9 @@ FIELDS TO PRODUCE:
    - PARA_2: supporting credibility evidence — board/advisory affiliations, recognition, or a notable engagement that broadens their range (e.g. showing expertise extends into adjacent or emerging areas). If the source names a specific board, advisory role, or affiliation, name it explicitly here — do not generalize it away into a vaguer statement.
    - PARA_3: broader impact themes — the kinds of transformation/outcomes they're known for across their career.
 
-5. ENGAGEMENT_1/2/3 (exactly 3 — the "Relevant Experience" section, the most important part of the profile, NOT employment history. HARD LIMIT for DETAIL: 260 characters including spaces EACH):
+5. ENGAGEMENT_1/2/3/4 (exactly 4 — the "Relevant Experience" section, the most important part of the profile, NOT employment history. HARD LIMIT for DETAIL: 260 characters including spaces EACH):
    - Each is an engagement summary, not a role listing. COMPANY = organisation name only. DETAIL must begin with the role, then a concise clause covering: why they were engaged, what they delivered, and the business outcome — never a list of responsibilities. Example DETAIL (this length is the target, do not exceed it): "Business Consultant. Led the operating model design for Brit Re's Bermuda reinsurance entity, building governance frameworks to support regulatory approval and operational readiness."
-   - SELECTION PRIORITY (apply in this order when choosing which 3 to feature): (1) the candidate's CURRENT or most recent role — this must always get its own entry and must never be dropped in favor of an older one; (2) any single role that is uniquely prestigious or credibility-defining (e.g. a globally recognized employer, a regulator, or a notable committee/board founding membership) even if it isn't recent; (3) fill remaining slots with the next most relevant roles. Only after applying this priority should you merge whatever older/lower-priority roles remain into a combined entry (COMPANY = "Company A, Company B and Company C", DETAIL describing the shared theme) — never merge away a prestigious, globally-recognized employer name to make room for smaller or less recognizable ones.
+   - SELECTION PRIORITY (apply in this order when choosing which 4 to feature): (1) the candidate's CURRENT role(s) — if they hold multiple concurrent current roles, combine them into one entry; this must always get its own entry and must never be dropped in favor of an older one; (2) any single role that is uniquely prestigious or credibility-defining on its own (e.g. a regulator, or a notable committee/board founding membership); (3) a mid-career role showing distinct sector or transformation expertise (e.g. a recognized consulting/advisory firm); (4) a dedicated entry merging early-career roles at globally-recognized employers (e.g. major banks) — this merged entry must name those employers explicitly and must NEVER be dropped or absorbed into a different, less-prestigious merge just because it's older. Prestigious legacy employer names are a feature, not something to be pruned for recency.
    - Never include employment dates anywhere.
 
 HARD CHARACTER LIMITS ARE NON-NEGOTIABLE. These fields sit in fixed-size boxes on a single PowerPoint slide with no room to grow — if a field runs over its limit, the text shrinks to an illegible size or overlaps neighbouring content. Before finalizing each field, count its length and cut it down if it exceeds the limit. Prioritize the single most important fact over completeness — a shorter, punchier sentence is always better than a longer, more complete one here.
@@ -3966,6 +3966,7 @@ Return ONLY valid JSON, no markdown fences, no preamble, in this exact shape:
   "ENGAGEMENT_1_COMPANY": "", "ENGAGEMENT_1_DETAIL": "",
   "ENGAGEMENT_2_COMPANY": "", "ENGAGEMENT_2_DETAIL": "",
   "ENGAGEMENT_3_COMPANY": "", "ENGAGEMENT_3_DETAIL": "",
+  "ENGAGEMENT_4_COMPANY": "", "ENGAGEMENT_4_DETAIL": "",
   "EXPERIENCE_PARA_1": "", "EXPERIENCE_PARA_2": "", "EXPERIENCE_PARA_3": "",
   "SKILL_1": "", "SKILL_2": "", "SKILL_3": "",
   "QUAL_1": "", "QUAL_2": ""
@@ -4879,6 +4880,8 @@ async function downloadHistory(index) {
           '{{ENGAGEMENT_2_DETAIL}}': _apCv.ENGAGEMENT_2_DETAIL,
           '{{ENGAGEMENT_3_COMPANY}}': _apCv.ENGAGEMENT_3_COMPANY,
           '{{ENGAGEMENT_3_DETAIL}}': _apCv.ENGAGEMENT_3_DETAIL,
+          '{{ENGAGEMENT_4_COMPANY}}': _apCv.ENGAGEMENT_4_COMPANY,
+          '{{ENGAGEMENT_4_DETAIL}}': _apCv.ENGAGEMENT_4_DETAIL,
           '{{EXPERIENCE_PARA_1}}': _apCv.EXPERIENCE_PARA_1,
           '{{EXPERIENCE_PARA_2}}': _apCv.EXPERIENCE_PARA_2,
           '{{EXPERIENCE_PARA_3}}': _apCv.EXPERIENCE_PARA_3,
