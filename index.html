@@ -4294,6 +4294,12 @@ try {
             output.name ||
             (((output.firstName || '') + ' ' + (output.lastName || '')).trim())
           ) || '';
+          if (!_resolvedName && isBriefingPack && (output.COMPANY_NAME || output.ROLE_TITLE)) {
+            _resolvedName = 'Candidate Briefing Pack_' +
+              (output.COMPANY_NAME || '') +
+              (output.ROLE_TITLE ? '_' + output.ROLE_TITLE : '') +
+              (output.YEAR ? '_' + output.YEAR : '');
+          }
         }
         _resolvedName = String(_resolvedName || '').trim();
 
@@ -4361,6 +4367,12 @@ function hideProgress(msg) {
         item.content.name ||
         (((item.content.firstName || '') + ' ' + (item.content.lastName || '')).trim())
       ) || '';
+      if (!_histName && item.template === 'candidate-briefing-pack' && (item.content.COMPANY_NAME || item.content.ROLE_TITLE)) {
+        _histName = 'Candidate Briefing Pack_' +
+          (item.content.COMPANY_NAME || '') +
+          (item.content.ROLE_TITLE ? '_' + item.content.ROLE_TITLE : '') +
+          (item.content.YEAR ? '_' + item.content.YEAR : '');
+      }
     }
     _histName = String(_histName || '').trim() || 'Unknown Candidate';
 
