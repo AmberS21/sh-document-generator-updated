@@ -3309,7 +3309,7 @@ var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var isAdvisorProfile = (tpl === 'advisor-profile');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","ADDITIONAL_INFO":"","INTERESTS":""}';
+var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE":[""],"TRANSACTION_EXPERIENCE_NOTE":""}';
 var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
@@ -3354,8 +3354,11 @@ CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same co
 Then bullets array should be: [">> Key Achievements & Responsibilities", "Bullet one", "Bullet two", ">> Business Continuity", "Bullet three"]
 If the role has an italic overview/intro line before the bullets, include it as the first item with ">>" prefix too.
 Capture every single bullet and sub-heading. Do NOT flatten or skip headings.
-- IMPORTANT: If the CV has sections like "Summary of Key Responsibilities" or "Select Deal Experience" or similar summary sections that appear AFTER ALL work histories (i.e. not under a specific role), attach them to the MOST RECENT role as additional bullets using ">>" prefix for the section heading.
+- IMPORTANT: If the CV has a short "Summary of Key Responsibilities" recap that appears immediately after a specific role's own bullets and clearly continues describing that same role, attach it to that role's bullets using ">>" prefix for the heading. 
+- CRITICAL EXCEPTION — DO NOT apply the rule above to a standalone deal list. If the CV has a separate, clearly delineated section such as "Transaction Experience", "Select Deal Experience", "Selected Transactions", or similar — typically a long flat list of deals/transactions each with a client/target name, deal type, value and year, NOT written as prose bullets under a specific job — this is NOT part of any role's bullets. Never attach it to any company or role. Extract it ONLY into the separate TRANSACTION_EXPERIENCE field described below.
 - Most recent company first.
+
+TRANSACTION_EXPERIENCE: If the CV has a standalone deal/transaction list section (see CRITICAL EXCEPTION above), extract every line as a flat array of strings, copied VERBATIM in the exact order given, one array item per deal (e.g. ["Teamviewer, sell-down €181m (2023)", "wefox, RCF facility (2023)", ...]). Do not group by employer, do not reorder, do not summarize. If the CV has an intro note for this section (e.g. "references can be provided upon request"), put it in TRANSACTION_EXPERIENCE_NOTE exactly as written. Leave both "" / [] if no such section exists.
 
 EDUCATION:
 - education[]: Array of {years, institution, location, degrees[]}. ONLY include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc. Do NOT include professional certifications, licences or chartered qualifications (CFA, FRM, CAIA, ACCA, CPA, PRINCE2 etc) — those go in PROFESSIONAL_QUALS only.
@@ -6085,7 +6088,7 @@ async function downloadHistory(index) {
           var _B  = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _N  = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _TAB = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
-          var _PP = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB + '</w:pPr>';
+          var _PP = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB + '<w:jc w:val="both"/></w:pPr>';
           var _eduXml = '';
           var _SP = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
           _edu.forEach(function(e){
@@ -6162,6 +6165,43 @@ async function downloadHistory(index) {
             var _qpe = _ei2DocXml.indexOf('</w:p>', _a46) + 6;
             _ei2DocXml = _ei2DocXml.substring(0, _qps) + _qualXml + _ei2DocXml.substring(_qpe);
           }
+        })();
+
+        // ── Transaction Experience: replace {{TRANSACTION_EXPERIENCE_BLOCK}} ──
+        (function(){
+          var _tx = _ei2Cv.TRANSACTION_EXPERIENCE || [];
+          var _txIdx = _ei2DocXml.indexOf('{{TRANSACTION_EXPERIENCE_BLOCK}}');
+          if (_txIdx === -1) return;
+          function _xt(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+          var _txPStart = _txIdx, _txSearch = _txIdx;
+          while (_txSearch > 0) {
+            var _txC = _ei2DocXml.lastIndexOf('<w:p', _txSearch - 1);
+            if (_txC < 0) break;
+            var _txN = _ei2DocXml.charAt(_txC + 4);
+            if (_txN === '>' || _txN === ' ') { _txPStart = _txC; break; }
+            _txSearch = _txC;
+          }
+          var _txPEnd = _ei2DocXml.indexOf('</w:p>', _txIdx) + 6;
+          if (!Array.isArray(_tx) || _tx.length === 0) {
+            // No transaction data — remove the placeholder paragraph entirely
+            _ei2DocXml = _ei2DocXml.substring(0, _txPStart) + _ei2DocXml.substring(_txPEnd);
+            return;
+          }
+          var _HEAD_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:pageBreakBefore/><w:spacing w:after="120"/></w:pPr>';
+          var _HEAD_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr>';
+          var _NOTE_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="160"/></w:pPr>';
+          var _NOTE_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>';
+          var _txXml = '<w:p>' + _HEAD_PPR + '<w:r>' + _HEAD_RPR + '<w:t>Transaction Experience</w:t></w:r></w:p>';
+          var _txNote = (_ei2Cv.TRANSACTION_EXPERIENCE_NOTE || '').trim();
+          if (_txNote) {
+            _txXml += '<w:p>' + _NOTE_PPR + '<w:r>' + _NOTE_RPR + '<w:t xml:space="preserve">(' + _xt(_txNote) + ')</w:t></w:r></w:p>';
+          }
+          _txXml += _tx.map(function(t){
+            t = (t || '').trim();
+            if (!t) return '';
+            return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr><w:r><w:t xml:space="preserve">' + _xt(t) + '</w:t></w:r></w:p>';
+          }).join('');
+          _ei2DocXml = _ei2DocXml.substring(0, _txPStart) + _txXml + _ei2DocXml.substring(_txPEnd);
         })();
 
         try {
