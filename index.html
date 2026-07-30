@@ -2148,6 +2148,29 @@ function buildEaIndiaRegBizExp(companies) {
       xml += '<w:p>' + DESC_PPR + '<w:r>' + DESC_RPR + '<w:t xml:space="preserve">' + xe(co.description) + '</w:t></w:r></w:p>';
     }
     xml += SPACER;
+    var overviewBullets = co.overview_bullets || [];
+    if (overviewBullets.length > 0) {
+      // Company-level bullets: print ALL role/date lines together first, then the shared bullets once
+      for (var ri0 = 0; ri0 < roles.length; ri0++) {
+        var role0 = roles[ri0];
+        if (!role0 || !role0.role) continue;
+        var roleDates0 = multiRole ? normDateRange(role0.role_dates || '') : '';
+        if (roleDates0) {
+          xml += '<w:p>' + ROL_PPR_D
+              +  '<w:r>' + ROL_RPR + '<w:t xml:space="preserve">' + xe(role0.role) + '</w:t></w:r>'
+              +  '<w:r>' + ROL_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(roleDates0) + '</w:t></w:r>'
+              +  '</w:p>';
+        } else {
+          xml += '<w:p>' + ROL_PPR_P + '<w:r>' + ROL_RPR + '<w:t>' + xe(role0.role) + '</w:t></w:r></w:p>';
+        }
+      }
+      xml += SPACER;
+      for (var oi = 0; oi < overviewBullets.length; oi++) {
+        var ob = (overviewBullets[oi] || '').trim();
+        if (!ob) continue;
+        xml += '<w:p><w:pPr>' + BUL_PPR + '</w:pPr><w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(ob) + '</w:t></w:r></w:p>';
+      }
+    } else {
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
       if (!role || !role.role) continue;
@@ -2175,6 +2198,7 @@ function buildEaIndiaRegBizExp(companies) {
         }
       }
       if (ri < roles.length - 1) { xml += SPACER; }
+    }
     }
   }
   return xml;
@@ -3309,7 +3333,7 @@ var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var isAdvisorProfile = (tpl === 'advisor-profile');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE":[""],"TRANSACTION_EXPERIENCE_NOTE":""}';
+var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","overview_bullets":[""],"roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE":[""],"TRANSACTION_EXPERIENCE_NOTE":"","AFFILIATIONS_HEADING":"","AFFILIATIONS":[{"organization":"","role":"","dates":""}]}';
 var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
@@ -3339,13 +3363,22 @@ If no such subsections exist, return [].
 IMPORTANT: If SUMMARY_SECTIONS is populated, leave SUMMARY_BULLETS as "" to avoid duplication.
 
 COMPANIES ARRAY:
-CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same company (even in different locations or different time periods), ALL those roles must go under ONE company entry. Judge by company name only — ignore location differences. For example, if the CV lists "Barclays Bank | London" and "Barclays Bank | London / India" and "Barclays Bank | London" as separate entries — these are ALL the same company "Barclays Bank" and must be grouped into one entry with multiple roles.
+CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same company back-to-back with NO other employer in between, ALL those roles must go under ONE company entry. Judge by company name only — ignore location differences. For example, if the CV lists "Barclays Bank | London" and "Barclays Bank | London / India" and "Barclays Bank | London" as consecutive, back-to-back entries — these are the same company "Barclays Bank" and must be grouped into one entry with multiple roles.
+CRITICAL EXCEPTION — REJOINING: If the candidate worked at a company, then left to work somewhere ELSE, then LATER rejoined the SAME company — this is TWO SEPARATE company entries at their correct chronological positions, NOT one merged entry. Never merge across a gap where a different employer appears in between, even if the company name is identical. Preserve the CV's original chronological order — the earlier stint and the later stint must each appear in their own correct position relative to the employer(s) in between, exactly as the CV lists them.
 - company.name: Company name only — no location, no punctuation added.
 - company.dates: The OVERALL tenure across ALL roles at this company — earliest start date to latest end date. ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Dec 2005 – Oct 2025". Never use full month names or "Sept".
 - company.location: City/Country of the company headquarters or primary location. Leave "" if not stated.
 - role.role: Exact job title. If that specific role was in a different location, append it after a comma e.g. "Programme Manager — Group Risk, London / India".
 - role.role_dates: Dates for this role only. REQUIRED when company has 2 or more roles. Leave "" only if company has exactly ONE role.
-- role.bullets: Capture ALL content under the role VERBATIM and in order. CRITICAL — if the CV has sub-headings within a role (e.g. "Key Achievements & Responsibilities", "Operational Risk Management", "Business Continuity & Operational Resilience" etc.), include them as bullet items with ">>" prefix so they are identifiable as headings. E.g. if CV has:
+- company.overview_bullets: Use this INSTEAD of role.bullets when the CV lists multiple job titles/promotions at ONE company together as a group of title+date lines, followed by paragraph(s) describing responsibilities across that WHOLE progression as a single narrative — not broken out separately under each specific title. In that case: list every role/title with its own role_dates (leave each role's bullets as []), and put the narrative paragraph(s) in company.overview_bullets instead (one array item per paragraph, verbatim). Example — if the CV shows:
+  Vice President, Global Privacy    2025 – Present
+  Chief Privacy Officer             2022 – 2025
+  Senior Director                  2021 – 2022
+  [paragraph describing overall scope across all three roles]
+  [second paragraph, still about the overall role, not any one title]
+Then: roles = [{role:"Vice President, Global Privacy", role_dates:"2025 – Present", bullets:[]}, {role:"Chief Privacy Officer", role_dates:"2022 – 2025", bullets:[]}, {role:"Senior Director", role_dates:"2021 – 2022", bullets:[]}], and company.overview_bullets = ["[paragraph 1 verbatim]", "[paragraph 2 verbatim]"].
+- If instead each specific title/role has its OWN distinct bullets that clearly only describe that one role, use role.bullets per role as normal and leave company.overview_bullets as [].
+- role.bullets: Capture ALL content under the role VERBATIM and in order (only when NOT using company.overview_bullets — see above). CRITICAL — if the CV has sub-headings within a role (e.g. "Key Achievements & Responsibilities", "Operational Risk Management", "Business Continuity & Operational Resilience" etc.), include them as bullet items with ">>" prefix so they are identifiable as headings. E.g. if CV has:
   Key Achievements & Responsibilities
     • Bullet one
     • Bullet two
@@ -3361,13 +3394,18 @@ Capture every single bullet and sub-heading. Do NOT flatten or skip headings.
 TRANSACTION_EXPERIENCE: If the CV has a standalone deal/transaction list section (see CRITICAL EXCEPTION above), extract every line as a flat array of strings, copied VERBATIM in the exact order given, one array item per deal (e.g. ["Teamviewer, sell-down €181m (2023)", "wefox, RCF facility (2023)", ...]). Do not group by employer, do not reorder, do not summarize. If the CV has an intro note for this section (e.g. "references can be provided upon request"), put it in TRANSACTION_EXPERIENCE_NOTE exactly as written. Leave both "" / [] if no such section exists.
 
 EDUCATION:
-- education[]: Array of {years, institution, location, degrees[]}. ONLY include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc. Do NOT include professional certifications, licences or chartered qualifications (CFA, FRM, CAIA, ACCA, CPA, PRINCE2 etc) — those go in PROFESSIONAL_QUALS only.
+- education[]: Array of {years, institution, location, degrees[]}. Include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc.
+- CRITICAL — if the CV's own section heading combines academic degrees together with bar admissions, "Call to the Bar," or similar entry-to-practice legal/professional designations under ONE heading (e.g. "Education & Designations", "Education & Credentials"), include ALL of those entries in education[] together, in the CV's own order — do NOT split bar admissions or designations out into PROFESSIONAL_QUALS just because they involve licensure. Only use PROFESSIONAL_QUALS for items the CV lists under a genuinely SEPARATE "Professional Qualifications" / "Certifications" heading of their own (e.g. CFA, FRM, CAIA, ACCA, CPA, PRINCE2).
 - GROUP multiple degrees from the SAME institution into ONE entry — do NOT create separate entries for the same university.
 - years: Combined date for the institution entry. If multiple degrees at same institution, combine as "May 2000 / Dec 2006" (earlier first) or just use the single year if one degree. Use 3-letter month abbreviations if months given.
 - institution: Full institution name ONLY e.g. "European Business School" — do NOT include location, city, or a dash-separated location here. Location goes only in the location field below, never duplicated into institution.
 - location: City as written in CV e.g. "Oestrich-Winkel" or "Omaha, NE". Leave "" if not stated.
 - degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = additional lines for this degree (majors, thesis title, specialisation, honours, semester-abroad notes, etc.) — if the CV lists these as multiple separate lines, PRESERVE them as separate lines by joining with a newline character \n between each one (do NOT merge them into a single run-on sentence with added periods). Leave "" if no extra lines. Most recent degree first within the array.
 - Most recent institution first.
+
+AFFILIATIONS: Some CVs have a section for board seats, non-profit involvement, or professional body memberships — under headings that vary a lot, e.g. "Board Experience & Non-Profit Roles", "Professional Affiliations", "Board Memberships", "Volunteering", "Committees", etc. Recognize this by MEANING (governance/advisory/volunteer roles at organisations, distinct from paid employment history) rather than by matching one exact heading name.
+- AFFILIATIONS_HEADING: The CV's own heading text for this section, copied as written (e.g. "Board Experience & Non-Profit Roles"). Leave "" if no such section exists.
+- AFFILIATIONS: array of {organization, role, dates}. organization = the body/company name. role = the position held there (e.g. "Board Member", "Chair, Risk Committee", "Canadian Advisory Board Member") — if a candidate holds multiple roles at the same organisation (e.g. Board Member AND Chair of a committee), create one array entry per role, repeating the organization name for each, in the CV's own order. dates = as written (e.g. "2023 – Present", "2020 – 2023"). Leave [] if no such section exists — do not invent this section if the CV doesn't have one.
 
 TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single comma-separated string, e.g. "Microsoft Office, FactSet, CapitalIQ, Bloomberg, Pitchbook" — regardless of what separator the CV itself uses (commas, pipes, or line breaks), always join with ", " in your output. Leave "" if none.
 LANGUAGES: Extract as an array of objects [{"language":"German","level":"Native"},{"language":"English","level":"Fluent"}, ...], one object per language, in the order listed in the CV. Capitalize the level (Native, Fluent, Conversational, Beginner, Basic etc. — use Title Case). Leave [] if not found.
@@ -6234,6 +6272,58 @@ async function downloadHistory(index) {
             return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr><w:r><w:t xml:space="preserve">' + _xt(t) + '</w:t></w:r></w:p>';
           }).join('');
           _ei2DocXml = _ei2DocXml.substring(0, _txPStart) + _txXml + _ei2DocXml.substring(_txPEnd);
+        })();
+
+        // ── Affiliations / Board Experience: replace {{AFFILIATIONS_BLOCK}} ──
+        (function(){
+          var _aff = _ei2Cv.AFFILIATIONS || [];
+          var _afIdx = _ei2DocXml.indexOf('{{AFFILIATIONS_BLOCK}}');
+          if (_afIdx === -1) return;
+          function _xa(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+          var _afPStart = _afIdx, _afSearch = _afIdx;
+          while (_afSearch > 0) {
+            var _afC = _ei2DocXml.lastIndexOf('<w:p', _afSearch - 1);
+            if (_afC < 0) break;
+            var _afN = _ei2DocXml.charAt(_afC + 4);
+            if (_afN === '>' || _afN === ' ') { _afPStart = _afC; break; }
+            _afSearch = _afC;
+          }
+          var _afPEnd = _ei2DocXml.indexOf('</w:p>', _afIdx) + 6;
+          if (!Array.isArray(_aff) || _aff.length === 0) {
+            _ei2DocXml = _ei2DocXml.substring(0, _afPStart) + _ei2DocXml.substring(_afPEnd);
+            return;
+          }
+          // Group consecutive entries by organization, preserving order
+          var _groups = [];
+          _aff.forEach(function(a){
+            var last = _groups[_groups.length - 1];
+            if (last && last.organization === (a.organization || '')) {
+              last.items.push(a);
+            } else {
+              _groups.push({ organization: a.organization || '', items: [a] });
+            }
+          });
+          var _AF_HEAD_PPR = '<w:pPr><w:pStyle w:val="SHSubHeading"/><w:spacing w:before="200" w:after="120"/></w:pPr>';
+          var _AF_ORG_PPR  = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
+          var _AF_ORG_RPR  = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          var _AF_ROLE_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="2127"/><w:tabs><w:tab w:val="right" w:pos="9900"/></w:tabs></w:pPr>';
+          var _AF_ROLE_RPR = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          var _AF_SP = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
+          var _affHeading = (_ei2Cv.AFFILIATIONS_HEADING || '').trim() || 'Professional Affiliations';
+          var _afXml = '<w:p>' + _AF_HEAD_PPR + '<w:r><w:t>' + _xa(_affHeading) + '</w:t></w:r></w:p>';
+          _groups.forEach(function(g, gi){
+            if (gi > 0) _afXml += _AF_SP;
+            _afXml += '<w:p>' + _AF_ORG_PPR + '<w:r>' + _AF_ORG_RPR + '<w:t xml:space="preserve">' + _xa(g.organization) + '</w:t></w:r></w:p>';
+            g.items.forEach(function(it){
+              var _role = _xa(it.role || '');
+              var _dates = _xa(it.dates || '');
+              _afXml += '<w:p>' + _AF_ROLE_PPR
+                + '<w:r>' + _AF_ROLE_RPR + '<w:t xml:space="preserve">' + _role + '</w:t></w:r>'
+                + (_dates ? '<w:r>' + _AF_ROLE_RPR + '<w:tab/><w:t xml:space="preserve">' + _dates + '</w:t></w:r>' : '')
+                + '</w:p>';
+            });
+          });
+          _ei2DocXml = _ei2DocXml.substring(0, _afPStart) + _afXml + _ei2DocXml.substring(_afPEnd);
         })();
 
         try {
