@@ -3369,6 +3369,7 @@ EDUCATION:
 - degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = additional lines for this degree (majors, thesis title, specialisation, honours, semester-abroad notes, etc.) — if the CV lists these as multiple separate lines, PRESERVE them as separate lines by joining with a newline character \n between each one (do NOT merge them into a single run-on sentence with added periods). Leave "" if no extra lines. Most recent degree first within the array.
 - Most recent institution first.
 
+TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single comma-separated string, e.g. "Microsoft Office, FactSet, CapitalIQ, Bloomberg, Pitchbook" — regardless of what separator the CV itself uses (commas, pipes, or line breaks), always join with ", " in your output. Leave "" if none.
 LANGUAGES: Extract as an array of objects [{"language":"German","level":"Native"},{"language":"English","level":"Fluent"}, ...], one object per language, in the order listed in the CV. Capitalize the level (Native, Fluent, Conversational, Beginner, Basic etc. — use Title Case). Leave [] if not found.
 ADDITIONAL_INFO: Extract the candidate's leadership character, values, cultural approach, and working style — typically found in a section labelled "Leadership Character" or similar. This is prose about HOW the candidate leads and works (e.g. "Known for collaborative, resilient leadership that builds trust. Committed to developing others..."). Leave "" if not found.
 INTERESTS: Extract ONLY outside-work hobbies, sports, personal interests — found after phrases like "Outside work:" or "Hobbies:" (e.g. "family, sports and ad-hoc challenges - New York Marathon..."). Do NOT put leadership character text here. Leave "" if not found.
@@ -6182,21 +6183,13 @@ async function downloadHistory(index) {
           });
           if (_ts) {
             _qualXml += '<w:p>' + _PP2 + '</w:p>';
-            var _tsLines = _ts.split('|').map(function(s){ return s.trim(); }).filter(Boolean);
-            _tsLines.forEach(function(tl, ti) {
-              if (ti === 0) {
-                _qualXml += '<w:p>' + _PP2
-                  + '<w:r>' + _B2 + '<w:t xml:space="preserve">Technical Skills:</w:t></w:r>'
-                  + '<w:r><w:tab/></w:r>'
-                  + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(tl) + '</w:t></w:r>'
-                  + '</w:p>';
-              } else {
-                _qualXml += '<w:p>' + _PP2
-                  + '<w:r><w:tab/></w:r>'
-                  + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(tl) + '</w:t></w:r>'
-                  + '</w:p>';
-              }
-            });
+            var _tsItems = _ts.split(/[|,]/).map(function(s){ return s.trim(); }).filter(Boolean);
+            var _tsJoined = _tsItems.join(', ');
+            _qualXml += '<w:p>' + _PP2
+              + '<w:r>' + _B2 + '<w:t xml:space="preserve">Technical Skills:</w:t></w:r>'
+              + '<w:r><w:tab/></w:r>'
+              + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(_tsJoined) + '</w:t></w:r>'
+              + '</w:p>';
           }
           var _a46 = _ei2DocXml.indexOf('paraId="26D4D308"');
           if (_a46 !== -1) {
