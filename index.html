@@ -301,7 +301,24 @@ table.usage tr:last-child td{border-bottom:none;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script></head>
+<script>
+(function() {
+  var MSAL_CDNS = [
+    'https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js',
+    'https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js',
+    'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js'
+  ];
+  function tryLoad(i) {
+    if (i >= MSAL_CDNS.length) return;
+    var s = document.createElement('script');
+    s.src = MSAL_CDNS[i];
+    s.onload = function() { window.__msalLoaded = true; };
+    s.onerror = function() { tryLoad(i + 1); };
+    document.head.appendChild(s);
+  }
+  tryLoad(0);
+})();
+</script></head>
 <body>
 
 <!-- ─────────────────────── AUTH GATE (Microsoft SSO) ─────────────────────── -->
@@ -1018,6 +1035,13 @@ function switchInp(type, el) {
 // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ TEMPLATES REGISTRY ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 const TEMPLATES = {
 
+  'candidate-briefing-pack': {
+    label: 'Candidate Briefing Pack',
+    file: 'templates/SH_Candidate_Briefing_Pack_TEMPLATE_v2.docx',
+    promptType: 'briefing-pack',
+    isBriefingPack: true
+  },
+
   'gm-global-profile-basic': {
     label: 'GM Global Candidate Profile (Basic)',
     file: 'templates/SH_GM_Candidate_Profile_Basic.docx',
@@ -1222,6 +1246,13 @@ const TEMPLATES = {
 
     promptType: 'apac-ey'
 
+  },
+
+  'advisor-profile': {
+    label: 'Advisor Profile (PowerPoint)',
+    file: 'templates/Advisor_Profile_Template_DocGen.pptx',
+    isAdvisorProfile: true,
+    promptType: 'advisor-profile'
   }
 
 };
@@ -1249,7 +1280,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
 (function() {
   var sel = document.getElementById('tplSel');
   if (!sel) return;
-  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile'];
+  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','candidate-briefing-pack','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile','advisor-profile'];
   var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update'];
 
   var grp1 = document.createElement('optgroup');
@@ -1374,6 +1405,15 @@ var TPL = {
     fmt: 'd',
     reg: 'APAC',
     flds: ['Candidate Name','Current Title','Current Employer','Profile Date','Business Experience','Education','Professional Qualifications','Nationality','Languages','Interests','SH Summary (manual)','Assignment Name (manual)','Prepared By (manual)']
+  },
+  'advisor-profile': {
+    name: 'Advisor Profile',
+    sub: 'One-Page PowerPoint',
+    ico: 'ppt',
+    bg: 'rgba(210,71,38,.12)',
+    fmt: 'p',
+    reg: 'Global',
+    flds: ['Full Name','Email','Phone','Summary','Relevant Engagements (3)','Experience Narrative','Technical Skills (3)','Qualifications (2)']
   }
 };
 
@@ -2108,6 +2148,29 @@ function buildEaIndiaRegBizExp(companies) {
       xml += '<w:p>' + DESC_PPR + '<w:r>' + DESC_RPR + '<w:t xml:space="preserve">' + xe(co.description) + '</w:t></w:r></w:p>';
     }
     xml += SPACER;
+    var overviewBullets = co.overview_bullets || [];
+    if (overviewBullets.length > 0) {
+      // Company-level bullets: print ALL role/date lines together first, then the shared bullets once
+      for (var ri0 = 0; ri0 < roles.length; ri0++) {
+        var role0 = roles[ri0];
+        if (!role0 || !role0.role) continue;
+        var roleDates0 = multiRole ? normDateRange(role0.role_dates || '') : '';
+        if (roleDates0) {
+          xml += '<w:p>' + ROL_PPR_D
+              +  '<w:r>' + ROL_RPR + '<w:t xml:space="preserve">' + xe(role0.role) + '</w:t></w:r>'
+              +  '<w:r>' + ROL_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(roleDates0) + '</w:t></w:r>'
+              +  '</w:p>';
+        } else {
+          xml += '<w:p>' + ROL_PPR_P + '<w:r>' + ROL_RPR + '<w:t>' + xe(role0.role) + '</w:t></w:r></w:p>';
+        }
+      }
+      xml += SPACER;
+      for (var oi = 0; oi < overviewBullets.length; oi++) {
+        var ob = (overviewBullets[oi] || '').trim();
+        if (!ob) continue;
+        xml += '<w:p><w:pPr>' + BUL_PPR + '</w:pPr><w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(ob) + '</w:t></w:r></w:p>';
+      }
+    } else {
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
       if (!role || !role.role) continue;
@@ -2135,6 +2198,7 @@ function buildEaIndiaRegBizExp(companies) {
         }
       }
       if (ri < roles.length - 1) { xml += SPACER; }
+    }
     }
   }
   return xml;
@@ -3262,12 +3326,14 @@ var isApacUpdated = (tpl === 'apac-profile');
 var isChineseApac = false;
 var isGbProfile = (tpl === 'gb-profile');
 var isGmBasic = (tpl === 'gm-global-profile-basic');
+var isBriefingPack = (tpl === 'candidate-briefing-pack');
 var isServicesProfile = (tpl === 'services-profile');
 var isEaIndia = (tpl === 'ea-india-profile');
 var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
+var isAdvisorProfile = (tpl === 'advisor-profile');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","ADDITIONAL_INFO":"","INTERESTS":""}';
+var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","overview_bullets":[""],"roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE":[""],"TRANSACTION_EXPERIENCE_NOTE":"","AFFILIATIONS":[{"organization":"","role":"","dates":""}]}';
 var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
@@ -3297,13 +3363,29 @@ If no such subsections exist, return [].
 IMPORTANT: If SUMMARY_SECTIONS is populated, leave SUMMARY_BULLETS as "" to avoid duplication.
 
 COMPANIES ARRAY:
-CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same company (even in different locations or different time periods), ALL those roles must go under ONE company entry. Judge by company name only — ignore location differences. For example, if the CV lists "Barclays Bank | London" and "Barclays Bank | London / India" and "Barclays Bank | London" as separate entries — these are ALL the same company "Barclays Bank" and must be grouped into one entry with multiple roles.
+CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same company back-to-back with NO other employer in between, ALL those roles must go under ONE company entry. Judge by company name only — ignore location differences. For example, if the CV lists "Barclays Bank | London" and "Barclays Bank | London / India" and "Barclays Bank | London" as consecutive, back-to-back entries — these are the same company "Barclays Bank" and must be grouped into one entry with multiple roles.
+CRITICAL EXCEPTION — REJOINING: If the candidate worked at a company, then left to work somewhere ELSE, then LATER rejoined the SAME company — this is TWO SEPARATE company entries at their correct chronological positions, NOT one merged entry. Never merge across a gap where a different employer appears in between, even if the company name is identical.
+HOW TO CHECK THIS: process the CV's work history in strict chronological order, one entry at a time, exactly as the CV lists it. Before grouping a role into an existing company entry, check whether a DIFFERENT employer appears anywhere between this role and that company's most recent previously-seen role. If yes, this is a NEW, separate company entry — do not merge it backward into the earlier one.
+WORKED EXAMPLE — if the CV lists, in this order:
+  Company A                              2017 – 2020
+  Company B                              2015 – 2017
+  Company A                              2011 – 2015
+Company B sits BETWEEN the two Company A stints, so this is NOT one merged "Company A 2011-2020" entry. It is THREE separate company array entries in exactly this order: Company A (2017-2020), then Company B (2015-2017), then Company A (2011-2015) again. The output array order must follow the CV's chronological listing, not be grouped alphabetically or by company name.
+Preserve the CV's original chronological order in the output array — the earlier stint and the later stint of a re-joined company must each appear in their own correct position relative to the employer(s) in between, exactly as the CV lists them.
 - company.name: Company name only — no location, no punctuation added.
 - company.dates: The OVERALL tenure across ALL roles at this company — earliest start date to latest end date. ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Dec 2005 – Oct 2025". Never use full month names or "Sept".
 - company.location: City/Country of the company headquarters or primary location. Leave "" if not stated.
 - role.role: Exact job title. If that specific role was in a different location, append it after a comma e.g. "Programme Manager — Group Risk, London / India".
 - role.role_dates: Dates for this role only. REQUIRED when company has 2 or more roles. Leave "" only if company has exactly ONE role.
-- role.bullets: Capture ALL content under the role VERBATIM and in order. CRITICAL — if the CV has sub-headings within a role (e.g. "Key Achievements & Responsibilities", "Operational Risk Management", "Business Continuity & Operational Resilience" etc.), include them as bullet items with ">>" prefix so they are identifiable as headings. E.g. if CV has:
+- company.overview_bullets: Use this INSTEAD of role.bullets when the CV lists multiple job titles/promotions at ONE company together as a group of title+date lines, followed by paragraph(s) describing responsibilities across that WHOLE progression as a single narrative — not broken out separately under each specific title. In that case: list every role/title with its own role_dates (leave each role's bullets as []), and put the narrative paragraph(s) in company.overview_bullets instead (one array item per paragraph, verbatim). Example — if the CV shows:
+  Vice President, Global Privacy    2025 – Present
+  Chief Privacy Officer             2022 – 2025
+  Senior Director                  2021 – 2022
+  [paragraph describing overall scope across all three roles]
+  [second paragraph, still about the overall role, not any one title]
+Then: roles = [{role:"Vice President, Global Privacy", role_dates:"2025 – Present", bullets:[]}, {role:"Chief Privacy Officer", role_dates:"2022 – 2025", bullets:[]}, {role:"Senior Director", role_dates:"2021 – 2022", bullets:[]}], and company.overview_bullets = ["[paragraph 1 verbatim]", "[paragraph 2 verbatim]"].
+- If instead each specific title/role has its OWN distinct bullets that clearly only describe that one role, use role.bullets per role as normal and leave company.overview_bullets as [].
+- role.bullets: Capture ALL content under the role VERBATIM and in order (only when NOT using company.overview_bullets — see above). CRITICAL — if the CV has sub-headings within a role (e.g. "Key Achievements & Responsibilities", "Operational Risk Management", "Business Continuity & Operational Resilience" etc.), include them as bullet items with ">>" prefix so they are identifiable as headings. E.g. if CV has:
   Key Achievements & Responsibilities
     • Bullet one
     • Bullet two
@@ -3312,22 +3394,27 @@ CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same co
 Then bullets array should be: [">> Key Achievements & Responsibilities", "Bullet one", "Bullet two", ">> Business Continuity", "Bullet three"]
 If the role has an italic overview/intro line before the bullets, include it as the first item with ">>" prefix too.
 Capture every single bullet and sub-heading. Do NOT flatten or skip headings.
-- IMPORTANT: If the CV has sections like "Summary of Key Responsibilities" or "Select Deal Experience" or similar summary sections that appear AFTER ALL work histories (i.e. not under a specific role), attach them to the MOST RECENT role as additional bullets using ">>" prefix for the section heading.
+- IMPORTANT: If the CV has a short "Summary of Key Responsibilities" recap that appears immediately after a specific role's own bullets and clearly continues describing that same role, attach it to that role's bullets using ">>" prefix for the heading. 
+- CRITICAL EXCEPTION — DO NOT apply the rule above to a standalone deal list. If the CV has a separate, clearly delineated section such as "Transaction Experience", "Select Deal Experience", "Selected Transactions", or similar — typically a long flat list of deals/transactions each with a client/target name, deal type, value and year, NOT written as prose bullets under a specific job — this is NOT part of any role's bullets. Never attach it to any company or role. Extract it ONLY into the separate TRANSACTION_EXPERIENCE field described below.
 - Most recent company first.
 
+TRANSACTION_EXPERIENCE: If the CV has a standalone deal/transaction list section (see CRITICAL EXCEPTION above), extract every line as a flat array of strings, copied VERBATIM in the exact order given, one array item per deal (e.g. ["Teamviewer, sell-down €181m (2023)", "wefox, RCF facility (2023)", ...]). Do not group by employer, do not reorder, do not summarize. If the CV has an intro note for this section (e.g. "references can be provided upon request"), put it in TRANSACTION_EXPERIENCE_NOTE exactly as written. Leave both "" / [] if no such section exists.
+
 EDUCATION:
-- education[]: Array of {years, institution, location, degrees[]}. ONLY include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc. Do NOT include professional certifications, licences or chartered qualifications (CFA, FRM, CAIA, ACCA, CPA, PRINCE2 etc) — those go in PROFESSIONAL_QUALS only.
+- education[]: Array of {years, institution, location, degrees[]}. Include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc.
+- CRITICAL — if the CV's own section heading combines academic degrees together with bar admissions, "Call to the Bar," or similar entry-to-practice legal/professional designations under ONE heading (e.g. "Education & Designations", "Education & Credentials"), include ALL of those entries in education[] together, in the CV's own order — do NOT split bar admissions or designations out into PROFESSIONAL_QUALS just because they involve licensure. Only use PROFESSIONAL_QUALS for items the CV lists under a genuinely SEPARATE "Professional Qualifications" / "Certifications" heading of their own (e.g. CFA, FRM, CAIA, ACCA, CPA, PRINCE2).
 - GROUP multiple degrees from the SAME institution into ONE entry — do NOT create separate entries for the same university.
 - years: Combined date for the institution entry. If multiple degrees at same institution, combine as "May 2000 / Dec 2006" (earlier first) or just use the single year if one degree. Use 3-letter month abbreviations if months given.
-- institution: Full institution name only e.g. "University of Nebraska" — no location in this field.
-- location: City, State/Country as written in CV e.g. "Omaha, NE" or "London, UK". Leave "" if not stated.
-- degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = thesis title, specialisation, honours or any extra line for this specific degree — leave "" if none. Most recent degree first within the array.
+- institution: Full institution name ONLY e.g. "European Business School" — do NOT include location, city, or a dash-separated location here. Location goes only in the location field below, never duplicated into institution.
+- location: City as written in CV e.g. "Oestrich-Winkel" or "Omaha, NE". Leave "" if not stated.
+- degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = additional lines for this degree (majors, thesis title, specialisation, honours, semester-abroad notes, etc.) — if the CV lists these as multiple separate lines, PRESERVE them as separate lines by joining with a newline character \n between each one (do NOT merge them into a single run-on sentence with added periods). Leave "" if no extra lines. Most recent degree first within the array.
 - Most recent institution first.
 
-PROFESSIONAL_QUALS: Extract ONLY professional qualifications and certifications (CFA, FRM, CAIA, ACCA, CPA etc). Format as array of {year, qualification} e.g. [{year:"2026",qualification:"CAIA charterholder, CAIA Association"},{year:"2025",qualification:"Certified FRM, Global Association of Risk Professionals"}]. Most recent first.
-TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single string exactly as written in the CV. Leave "" if none.
-NATIONALITY: Exact nationality. Leave "" if not found.
-LANGUAGES: Languages with levels. Leave "" if not found.
+AFFILIATIONS: Some CVs have a section for board seats, non-profit involvement, or professional body memberships — under headings that vary a lot, e.g. "Board Experience & Non-Profit Roles", "Professional Affiliations", "Board Memberships", "Volunteering", "Committees", etc. Recognize this by MEANING (governance/advisory/volunteer roles at organisations, distinct from paid employment history) rather than by matching one exact heading name. These will be listed together with PROFESSIONAL_QUALS in the profile's "Professional Qualifications" section — no separate heading is created for them.
+- AFFILIATIONS: array of {organization, role, dates}. organization = the body/company name. role = the position held there (e.g. "Board Member", "Chair, Risk Committee", "Canadian Advisory Board Member") — if a candidate holds multiple roles at the same organisation (e.g. Board Member AND Chair of a committee), create one array entry per role, repeating the organization name for each, in the CV's own order. dates = as written (e.g. "2023 – Present", "2020 – 2023"). Leave [] if no such section exists — do not invent this section if the CV doesn't have one.
+
+TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single comma-separated string, e.g. "Microsoft Office, FactSet, CapitalIQ, Bloomberg, Pitchbook" — regardless of what separator the CV itself uses (commas, pipes, or line breaks), always join with ", " in your output. Leave "" if none.
+LANGUAGES: Extract as an array of objects [{"language":"German","level":"Native"},{"language":"English","level":"Fluent"}, ...], one object per language, in the order listed in the CV. Capitalize the level (Native, Fluent, Conversational, Beginner, Basic etc. — use Title Case). Leave [] if not found.
 ADDITIONAL_INFO: Extract the candidate's leadership character, values, cultural approach, and working style — typically found in a section labelled "Leadership Character" or similar. This is prose about HOW the candidate leads and works (e.g. "Known for collaborative, resilient leadership that builds trust. Committed to developing others..."). Leave "" if not found.
 INTERESTS: Extract ONLY outside-work hobbies, sports, personal interests — found after phrases like "Outside work:" or "Hobbies:" (e.g. "family, sports and ad-hoc challenges - New York Marathon..."). Do NOT put leadership character text here. Leave "" if not found.
 
@@ -3583,7 +3670,79 @@ CANDIDATE SOURCE:
 
 ` + inputText;
 
-var gmBasicPrompt = `You are extracting structured data from a CV/resume to populate a GM Global Candidate Profile (Basic format).
+var briefingPackPrompt = `You are extracting structured data from a Job Description (JD) document to populate a Sheffield Haworth Candidate Briefing Pack.
+
+Extract the following and return ONLY valid JSON, no markdown:
+
+{
+  "COMPANY_NAME": "Company or organisation name",
+  "ROLE_TITLE": "Short role title e.g. Business Head - EMS",
+  "LOCATION": "Short location e.g. New Delhi - India",
+  "YEAR": "Current year as 4-digit string",
+  "OVERVIEW_HEADING": "Heading for company overview section — leave empty string if no overview",
+  "OVERVIEW_PARAS": [{"text": "First paragraph of company overview"}],
+  "ROLE_FULL": "Full role title exactly as written",
+  "ROLE_LOCATION": "Full location e.g. New Delhi, India",
+  "REPORTING_TO": "Reporting line — leave empty string if not stated",
+  "OBJECTIVE_PARAS": [{"text": "First paragraph of role objective"}],
+  "RESP_HEADING": "Heading for responsibilities section e.g. Responsibilities",
+  "RESP_GROUPS": [
+    {
+      "heading": "Sub-heading if grouped — leave empty string if no sub-heading",
+      "items": [{"text": "First responsibility bullet"}]
+    }
+  ],
+  "HAS_FACILITIES": "true or false — true only if the source describes the company's physical facilities/plants/assets in detail",
+  "FACILITIES_HEADING": "Heading for facilities section e.g. Facilities — leave empty string if not present",
+  "FACILITIES_INTRO_PARAS": [{"text": "Optional intro paragraph before the individual facility descriptions — leave [] if none"}],
+  "FACILITIES_GROUPS": [
+    {
+      "heading": "Name of this facility/asset e.g. 'Direct Reduced Iron (DRI) Plant:'",
+      "paras": [{"text": "Narrative paragraph(s) describing this facility"}],
+      "items": [{"text": "Bullet point if the facility description includes a list, e.g. equipment/process steps — leave [] if the facility is described in prose only"}]
+    }
+  ],
+  "PROFILE_GROUPS": [
+    {
+      "heading": "Section heading exactly as written, e.g. 'Key Requisites for the Incumbent', 'Key Skills and Competencies: Technical', 'Key Skills and Competencies — Behavioural'. Create ONE group per distinctly-headed candidate requirement/skill section found in the source — do NOT merge separately-headed sections into one.",
+      "items": [{"text": "First bullet in this section"}]
+    }
+  ],
+  "NEWS_HEADING": "Heading for latest news section e.g. Latest News Coverage — leave empty string if no news content was pasted",
+  "NEWS_ITEMS": [
+    {
+      "headline": "Article headline exactly as given",
+      "source": "Publication name e.g. Bloomberg",
+      "date": "Date as written e.g. 4th December 2022",
+      "summary": "2-4 sentence factual summary of the article, third person, professional tone"
+    }
+  ],
+  "CONTACTS": [
+    {
+      "name": "Consultant full name",
+      "title": "Consultant title",
+      "mobile": "+XX XX XXXX XXXX",
+      "email": "email@sheffieldhaworth.com"
+    }
+  ]
+}
+
+Rules:
+- OVERVIEW_PARAS: one object per paragraph. Leave [] if no company overview.
+- OBJECTIVE_PARAS: one object per paragraph. Leave [] if no objective section.
+- RESP_GROUPS: group by sub-heading if present. If no sub-headings, use one group with empty heading.
+- FACILITIES_GROUPS: only populate if the source describes distinct physical facilities/plants/assets (common in company overview documents for industrial/manufacturing roles). Each distinctly-named facility becomes its own group. Preserve narrative paragraphs in "paras" and any itemized lists (equipment, process steps) in "items". Leave HAS_FACILITIES false and both arrays [] if the source has no facilities content.
+- PROFILE_GROUPS: create ONE group per distinctly-headed section covering candidate requirements, qualifications, or skills (e.g. a JD may have separate headed sections like "Key Requisites", "Technical Skills", "Behavioural Skills" — these must become THREE separate groups with their original headings preserved, never merged into one list). If the source has only one such section, return a single group.
+- NEWS_ITEMS: only populate if news articles, headlines, or links were pasted alongside the JD in the source material. Summarize each article in your own words — do not copy long verbatim text. Never invent or look up news that wasn't provided. Leave [] if no news content is present in the source.
+- CONTACTS: only include if consultant details explicitly given. Leave [] if not present.
+- All array fields should be [] if section does not exist.
+- Return only the JSON object, nothing else
+
+SOURCE DOCUMENT:
+
+` + inputText;
+
+  gmBasicPrompt = `You are extracting structured data from a CV/resume to populate a GM Global Candidate Profile (Basic format).
 
 Extract the following and return ONLY valid JSON, no markdown:
 
@@ -3806,6 +3965,63 @@ CANDIDATE SOURCE — extract ALL information from this text:
 
 ` + inputText;
 
+var advisorProfilePrompt = `You are producing an executive Advisor Profile suitable for a Sheffield Haworth consulting bench or proposal document — NOT a CV, NOT a LinkedIn summary, and NOT a chronological employment history.
+
+OBJECTIVE
+Position the individual as a senior subject-matter expert whose experience is immediately relevant to client transformation engagements. Emphasize: what they help clients achieve, sectors worked in, strategic programmes led, outcomes delivered, and executive credibility — never a list of job duties.
+
+TAILORING — before writing, identify the individual's domain and emphasize accordingly:
+- Insurance transformation leaders → operating models, entity establishment, underwriting, claims, finance, MGAs, reinsurance.
+- Compliance executives → regulatory transformation, governance, control frameworks, regulatory engagement, compliance technology.
+- Board-level executives → governance, strategy, independent oversight, executive leadership.
+- Strategy leaders → business planning, transformation portfolios, M&A, organisational design, executive advisory.
+
+FIELDS TO PRODUCE:
+
+1. FULL_NAME: the candidate's full name.
+
+2. EMAIL and PHONE: extract only if present in the source. Return "" if not found — never invent.
+
+3. SUMMARY (one paragraph, this is their professional positioning statement, HARD LIMIT 500 characters including spaces): who they are, their specialism, years of experience, and what they help organisations achieve. Explicitly name at least one or two of the most instantly-recognizable prior employers found in the source — these are credibility anchors and must not be dropped in favor of vaguer descriptions like "capital markets" or "consulting." Third person, executive tone.
+   The paragraph MUST end with a closing sentence naming their 3-6 core areas of specialist expertise as a direct list, in this exact pattern: "[Name] brings specialist expertise in [area], [area], [area], [area] and [area]." — e.g. "Eric brings specialist expertise in financial crime, enterprise risk management, digital asset regulation, AML/CFT, governance and regulatory transformation." This closing sentence is not optional and must not be cut for length — trim the earlier identity sentence instead if needed to stay within the character limit.
+
+4. EXPERIENCE_PARA_1/2/3 (exactly 3 short paragraphs, HARD LIMIT 220 characters including spaces EACH — together these form the "why clients engage them" narrative, and must NOT restate or heavily duplicate the SUMMARY):
+   - PARA_1: what has made them distinctive and what value they add — the types of problems they solve and who they advise. Frame notable roles as evidence of influence, not just job titles (e.g. a committee founding membership is evidence of influence, not a line item).
+   - PARA_2: supporting credibility evidence — board/advisory affiliations, recognition, or a notable engagement that broadens their range (e.g. showing expertise extends into adjacent or emerging areas). If the source names a specific board, advisory role, or affiliation, name it explicitly here — do not generalize it away into a vaguer statement.
+   - PARA_3: broader impact themes — the kinds of transformation/outcomes they're known for across their career.
+
+5. ENGAGEMENT_1/2/3/4 (exactly 4 — the "Relevant Experience" section, the most important part of the profile, NOT employment history. HARD LIMIT for DETAIL: 260 characters including spaces EACH):
+   - Each is an engagement summary, not a role listing. COMPANY = organisation name only. DETAIL must begin with the role, then a concise clause covering: why they were engaged, what they delivered, and the business outcome — never a list of responsibilities. Example DETAIL (this length is the target, do not exceed it): "Business Consultant. Led the operating model design for Brit Re's Bermuda reinsurance entity, building governance frameworks to support regulatory approval and operational readiness."
+   - SELECTION PRIORITY (apply in this order when choosing which 4 to feature): (1) the candidate's CURRENT role(s) — if they hold multiple concurrent current roles, combine them into one entry; this must always get its own entry and must never be dropped in favor of an older one; (2) any single role that is uniquely prestigious or credibility-defining on its own (e.g. a regulator, or a notable committee/board founding membership); (3) a mid-career role showing distinct sector or transformation expertise (e.g. a recognized consulting/advisory firm); (4) a dedicated entry merging early-career roles at globally-recognized employers (e.g. major banks) — this merged entry must name those employers explicitly and must NEVER be dropped or absorbed into a different, less-prestigious merge just because it's older. Prestigious legacy employer names are a feature, not something to be pruned for recency.
+   - Never include employment dates anywhere.
+
+HARD CHARACTER LIMITS ARE NON-NEGOTIABLE. These fields sit in fixed-size boxes on a single PowerPoint slide with no room to grow — if a field runs over its limit, the text shrinks to an illegible size or overlaps neighbouring content. Before finalizing each field, count its length and cut it down if it exceeds the limit. Prioritize the single most important fact over completeness — a shorter, punchier sentence is always better than a longer, more complete one here.
+
+6. SKILL_1/2/3 (exactly 3, HARD LIMIT 40 characters EACH — pick the 3 strongest consulting capabilities, not raw keywords): consulting-capability phrases such as Operating Model Design, Regulatory Change, Programme Leadership, Business Transformation, Governance, M&A Integration, Enterprise Risk, Change Management, Target Operating Models, Process Optimisation, Compliance, Strategic Planning. Avoid listing every technology or regulation unless it is central to their profile.
+
+7. QUAL_1/2 (exactly 2, HARD LIMIT 50 characters EACH): only professional qualifications (e.g. ACA, CIMA, CFA, ICAEW, Lean Six Sigma Black Belt, PRINCE2) or relevant academic degrees — never school education. Pick the two most senior/relevant.
+
+WRITING STYLE (apply throughout): executive-level, third person, consulting language, proposal-ready, British English, outcome-focused. Avoid repetition and remove duplicated information across fields. Group similar experience together rather than listing it separately. Avoid CV language such as "responsible for...". Prioritize transformation, governance, operating model, regulatory and strategic work over administrative responsibilities.
+
+Return ONLY valid JSON, no markdown fences, no preamble, in this exact shape:
+{
+  "FULL_NAME": "",
+  "EMAIL": "",
+  "PHONE": "",
+  "SUMMARY": "",
+  "ENGAGEMENT_1_COMPANY": "", "ENGAGEMENT_1_DETAIL": "",
+  "ENGAGEMENT_2_COMPANY": "", "ENGAGEMENT_2_DETAIL": "",
+  "ENGAGEMENT_3_COMPANY": "", "ENGAGEMENT_3_DETAIL": "",
+  "ENGAGEMENT_4_COMPANY": "", "ENGAGEMENT_4_DETAIL": "",
+  "EXPERIENCE_PARA_1": "", "EXPERIENCE_PARA_2": "", "EXPERIENCE_PARA_3": "",
+  "SKILL_1": "", "SKILL_2": "", "SKILL_3": "",
+  "QUAL_1": "", "QUAL_2": ""
+}
+
+CANDIDATE SOURCE — extract ALL information from this text:
+
+` + inputText;
+
 var prompt = isApacEy
   ? apacEyPrompt
   : isEaIndiaV2
@@ -3976,6 +4192,10 @@ FORMATTING RULES:
 Use this exact JSON structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ extract ALL information from this text:\n\n' + inputText
   : isGmBasic
   ? gmBasicPrompt
+  : isAdvisorProfile
+  ? advisorProfilePrompt
+  : isBriefingPack
+  ? briefingPackPrompt
   : isServicesProfile
   ? svcPrompt
   : `You are a Sheffield Haworth executive search document assistant.
@@ -4113,11 +4333,18 @@ try {
         if (output && typeof output === 'object' && !Array.isArray(output)) {
           _resolvedName = (
             output.CANDIDATE_NAME ||
+            output.FULL_NAME ||
             output.fullName ||
             output.fullname ||
             output.name ||
             (((output.firstName || '') + ' ' + (output.lastName || '')).trim())
           ) || '';
+          if (!_resolvedName && isBriefingPack && (output.COMPANY_NAME || output.ROLE_TITLE)) {
+            _resolvedName = 'Candidate Briefing Pack_' +
+              (output.COMPANY_NAME || '') +
+              (output.ROLE_TITLE ? '_' + output.ROLE_TITLE : '') +
+              (output.YEAR ? '_' + output.YEAR : '');
+          }
         }
         _resolvedName = String(_resolvedName || '').trim();
 
@@ -4179,11 +4406,18 @@ function hideProgress(msg) {
     if ((!_histName || _histName === 'Unknown Candidate') && item && item.content && typeof item.content === 'object' && !Array.isArray(item.content)) {
       _histName = (
         item.content.CANDIDATE_NAME ||
+        item.content.FULL_NAME ||
         item.content.fullName ||
         item.content.fullname ||
         item.content.name ||
         (((item.content.firstName || '') + ' ' + (item.content.lastName || '')).trim())
       ) || '';
+      if (!_histName && item.template === 'candidate-briefing-pack' && (item.content.COMPANY_NAME || item.content.ROLE_TITLE)) {
+        _histName = 'Candidate Briefing Pack_' +
+          (item.content.COMPANY_NAME || '') +
+          (item.content.ROLE_TITLE ? '_' + item.content.ROLE_TITLE : '') +
+          (item.content.YEAR ? '_' + item.content.YEAR : '');
+      }
     }
     _histName = String(_histName || '').trim() || 'Unknown Candidate';
 
@@ -4547,7 +4781,80 @@ async function downloadHistory(index) {
   var baseName = _safeFileName(_profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel, 'Document');
   try {
       // ── PPT Candidate Update Report ─────────────────────────────
-            // ── GM Global Profile Basic ──────────────────────────────────────────
+            // ── Candidate Briefing Pack ──────────────────────────────────────────
+      if (item.template === 'candidate-briefing-pack') {
+        var _bpCv = item.content;
+        var _bpRaw = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+        var _bpTplResp = await fetch(_bpRaw + 'templates/SH_Candidate_Briefing_Pack_TEMPLATE_v2.docx?v=' + Date.now());
+        if (!_bpTplResp.ok) throw new Error('Failed to fetch Briefing Pack template');
+        var _bpZip = new PizZip(await _bpTplResp.arrayBuffer());
+        var _bpDoc = new docxtemplater(_bpZip, {
+          paragraphLoop: true, linebreaks: true,
+          delimiters: { start: '{{', end: '}}' },
+          nullGetter: function() { return ''; }
+        });
+        var _bpOverviewParas = Array.isArray(_bpCv.OVERVIEW_PARAS) ? _bpCv.OVERVIEW_PARAS : [];
+        var _bpObjParas      = Array.isArray(_bpCv.OBJECTIVE_PARAS) ? _bpCv.OBJECTIVE_PARAS : [];
+        var _bpRespGroups    = Array.isArray(_bpCv.RESP_GROUPS) ? _bpCv.RESP_GROUPS : [];
+        var _bpFacIntro      = Array.isArray(_bpCv.FACILITIES_INTRO_PARAS) ? _bpCv.FACILITIES_INTRO_PARAS : [];
+        var _bpFacGroups     = Array.isArray(_bpCv.FACILITIES_GROUPS) ? _bpCv.FACILITIES_GROUPS : [];
+        var _bpProfileGroups = Array.isArray(_bpCv.PROFILE_GROUPS) ? _bpCv.PROFILE_GROUPS : [];
+        var _bpNewsItems     = Array.isArray(_bpCv.NEWS_ITEMS) ? _bpCv.NEWS_ITEMS : [];
+        var _bpContacts      = Array.isArray(_bpCv.CONTACTS) ? _bpCv.CONTACTS : [];
+        _bpDoc.render({
+          COMPANY_NAME:     _bpCv.COMPANY_NAME   || '',
+          HEADER_TITLE:     _bpCv.ROLE_TITLE     || '',
+          ROLE_TITLE:       _bpCv.ROLE_TITLE     || '',
+          LOCATION:         _bpCv.LOCATION       || '',
+          YEAR:             _bpCv.YEAR           || String(new Date().getFullYear()),
+          HAS_OVERVIEW:     _bpOverviewParas.length > 0,
+          OVERVIEW_HEADING: _bpCv.OVERVIEW_HEADING || '',
+          OVERVIEW_PARAS:   _bpOverviewParas,
+          ROLE_FULL:        _bpCv.ROLE_FULL      || _bpCv.ROLE_TITLE || '',
+          ROLE_LOCATION:    _bpCv.ROLE_LOCATION  || _bpCv.LOCATION   || '',
+          REPORTING_TO:     _bpCv.REPORTING_TO   || '',
+          HAS_OBJECTIVE:    _bpObjParas.length > 0,
+          OBJECTIVE_PARAS:  _bpObjParas,
+          HAS_RESP:         _bpRespGroups.length > 0,
+          RESP_HEADING:     _bpCv.RESP_HEADING   || 'Responsibilities',
+          RESP_GROUPS:      _bpRespGroups.map(function(g) {
+            return { heading: g.heading || '', items: Array.isArray(g.items) ? g.items : [] };
+          }),
+          HAS_PROFILE_GROUPS: _bpProfileGroups.length > 0,
+          PROFILE_GROUPS:   _bpProfileGroups.map(function(g) {
+            return { heading: g.heading || '', items: Array.isArray(g.items) ? g.items : [] };
+          }),
+          HAS_FACILITIES:   _bpFacGroups.length > 0,
+          FACILITIES_HEADING: _bpCv.FACILITIES_HEADING || 'Facilities',
+          FACILITIES_INTRO_PARAS: _bpFacIntro,
+          FACILITIES_GROUPS: _bpFacGroups.map(function(g) {
+            return {
+              heading: g.heading || '',
+              paras: Array.isArray(g.paras) ? g.paras : [],
+              items: Array.isArray(g.items) ? g.items : []
+            };
+          }),
+          HAS_NEWS:         _bpNewsItems.length > 0,
+          NEWS_HEADING:     _bpCv.NEWS_HEADING   || 'Latest News Coverage',
+          NEWS_ITEMS:       _bpNewsItems.map(function(n) {
+            return { headline: n.headline||'', source: n.source||'', date: n.date||'', summary: n.summary||'' };
+          }),
+          HAS_CONTACTS:     _bpContacts.length > 0,
+          CONTACTS:         _bpContacts.map(function(c) {
+            return { name: c.name||'', title: c.title||'', mobile: c.mobile||'', email: c.email||'' };
+          })
+        });
+        var _bpOut = _bpDoc.getZip().generate({ type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        var _bpUrl = URL.createObjectURL(_bpOut);
+        var _bpA = document.createElement('a');
+        _bpA.href = _bpUrl;
+        _bpA.download = (_bpCv.COMPANY_NAME ? _bpCv.COMPANY_NAME + ' - ' : '') + (_bpCv.ROLE_TITLE || 'Briefing Pack') + '.docx';
+        _bpA.click();
+        setTimeout(function(){ URL.revokeObjectURL(_bpUrl); }, 2000);
+        return;
+      }
+
+      // ── GM Global Profile Basic ──────────────────────────────────────────
       if (item.template === 'gm-global-profile-basic') {
         var _gmCv = item.content;
         var _gmRaw = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
@@ -4603,6 +4910,57 @@ async function downloadHistory(index) {
         _gmA.download = _safeFileName((_gmCv.CANDIDATE_NAME || item.name || 'GM Profile'), 'GM Profile') + '.docx';
         _gmA.click();
         setTimeout(function(){ URL.revokeObjectURL(_gmUrl); }, 2000);
+        return;
+      }
+
+      // ── Advisor Profile (PowerPoint) ──────────────────────────────────────
+      if (item.template === 'advisor-profile') {
+        var _apCv = item.content || {};
+        var _apRawBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+        var _apTplResp = await fetch(_apRawBase + 'templates/Advisor_Profile_Template_DocGen.pptx?v=' + Date.now());
+        if (!_apTplResp.ok) throw new Error('Failed to fetch Advisor Profile template');
+        var _apZip = await JSZip.loadAsync(await _apTplResp.arrayBuffer());
+
+        function _apXe(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function _apRep(xml, token, val) { return xml.split(token).join(_apXe(val)); }
+
+        var _apSlidePath = 'ppt/slides/slide1.xml';
+        var _apXml = await _apZip.file(_apSlidePath).async('string');
+
+        var _apTokens = {
+          '{{FULL_NAME}}': _apCv.FULL_NAME,
+          '{{EMAIL}}': _apCv.EMAIL,
+          '{{PHONE}}': _apCv.PHONE,
+          '{{SUMMARY}}': _apCv.SUMMARY,
+          '{{ENGAGEMENT_1_COMPANY}}': _apCv.ENGAGEMENT_1_COMPANY,
+          '{{ENGAGEMENT_1_DETAIL}}': _apCv.ENGAGEMENT_1_DETAIL,
+          '{{ENGAGEMENT_2_COMPANY}}': _apCv.ENGAGEMENT_2_COMPANY,
+          '{{ENGAGEMENT_2_DETAIL}}': _apCv.ENGAGEMENT_2_DETAIL,
+          '{{ENGAGEMENT_3_COMPANY}}': _apCv.ENGAGEMENT_3_COMPANY,
+          '{{ENGAGEMENT_3_DETAIL}}': _apCv.ENGAGEMENT_3_DETAIL,
+          '{{ENGAGEMENT_4_COMPANY}}': _apCv.ENGAGEMENT_4_COMPANY,
+          '{{ENGAGEMENT_4_DETAIL}}': _apCv.ENGAGEMENT_4_DETAIL,
+          '{{EXPERIENCE_PARA_1}}': _apCv.EXPERIENCE_PARA_1,
+          '{{EXPERIENCE_PARA_2}}': _apCv.EXPERIENCE_PARA_2,
+          '{{EXPERIENCE_PARA_3}}': _apCv.EXPERIENCE_PARA_3,
+          '{{SKILL_1}}': _apCv.SKILL_1,
+          '{{SKILL_2}}': _apCv.SKILL_2,
+          '{{SKILL_3}}': _apCv.SKILL_3,
+          '{{QUAL_1}}': _apCv.QUAL_1,
+          '{{QUAL_2}}': _apCv.QUAL_2
+        };
+        Object.keys(_apTokens).forEach(function(tk) {
+          _apXml = _apRep(_apXml, tk, _apTokens[tk]);
+        });
+
+        _apZip.file(_apSlidePath, _apXml);
+        var _apOut = await _apZip.generateAsync({ type: 'blob' });
+        var _apUrl = URL.createObjectURL(_apOut);
+        var _apA = document.createElement('a');
+        _apA.href = _apUrl;
+        _apA.download = _safeFileName((_apCv.FULL_NAME || item.name || 'Advisor Profile'), 'Advisor Profile') + '.pptx';
+        _apA.click();
+        setTimeout(function(){ URL.revokeObjectURL(_apUrl); }, 2000);
         return;
       }
 
@@ -5758,7 +6116,7 @@ async function downloadHistory(index) {
           QUAL_YEAR:         '',
           QUAL_1:            '',
           NATIONALITY:       _ei2Cv.NATIONALITY || '',
-          LANGUAGES:         _ei2Cv.LANGUAGES || '',
+          LANGUAGES:         '',
           ADDITIONAL_INFO:   _ei2Cv.ADDITIONAL_INFO || '',
           INTERESTS:         _ei2Cv.INTERESTS || ''
         };
@@ -5772,14 +6130,15 @@ async function downloadHistory(index) {
           var _B  = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _N  = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _TAB = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
-          var _PP = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB + '</w:pPr>';
+          var _PP_HEAD = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB + '<w:jc w:val="both"/></w:pPr>';
+          var _PP = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="2127"/><w:jc w:val="both"/></w:pPr>';
           var _eduXml = '';
           var _SP = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
           _edu.forEach(function(e){
             if (!e.institution && !e.degree && !(e.degrees && e.degrees.length)) return;
             if (_eduXml) _eduXml += _SP;
             // Institution header line — bold with location
-            _eduXml += '<w:p>' + _PP
+            _eduXml += '<w:p>' + _PP_HEAD
               + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.years||'') + ':</w:t></w:r>'
               + '<w:r><w:tab/></w:r>'
               + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.institution||'') + (e.location ? ', ' + _xe(e.location) : '') + '</w:t></w:r>'
@@ -5791,7 +6150,12 @@ async function downloadHistory(index) {
               _eduXml += '<w:p>' + _PP
                 + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(d.degree||'') + '</w:t></w:r>'
                 + '</w:p>';
-              if (d.extra) _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(d.extra) + '</w:t></w:r></w:p>';
+              if (d.extra) {
+                // Preserve each original line as its own paragraph, aligned under the institution name
+                (d.extra || '').split(/\n+/).map(function(l){return l.trim();}).filter(Boolean).forEach(function(line){
+                  _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(line) + '</w:t></w:r></w:p>';
+                });
+              }
             });
           });
           // Replace P39 start to P40 end using paraId anchors
@@ -5804,11 +6168,48 @@ async function downloadHistory(index) {
           }
         })();
 
-        // ── Quals: replace P46(4BB10D82) with all qual entries + tech skills ──
+        // ── Languages: replace {{LANGUAGES}} with one language per line ──
+        (function(){
+          var _langs = _ei2Cv.LANGUAGES || [];
+          var _liIdx = _ei2DocXml.indexOf('{{LANGUAGES}}');
+          if (_liIdx === -1) return;
+          function _xl(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+          var _liPStart = _liIdx, _liSearch = _liIdx;
+          while (_liSearch > 0) {
+            var _liC = _ei2DocXml.lastIndexOf('<w:p', _liSearch - 1);
+            if (_liC < 0) break;
+            var _liN = _ei2DocXml.charAt(_liC + 4);
+            if (_liN === '>' || _liN === ' ') { _liPStart = _liC; break; }
+            _liSearch = _liC;
+          }
+          var _liPEnd = _ei2DocXml.indexOf('</w:p>', _liIdx) + 6;
+          if (!Array.isArray(_langs) || _langs.length === 0) {
+            _ei2DocXml = _ei2DocXml.substring(0, _liPStart) + _ei2DocXml.substring(_liPEnd);
+            return;
+          }
+          var _LP_FIRST = '<w:pPr><w:pStyle w:val="SHText"/></w:pPr>';
+          var _LP_CONT  = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="1440" w:firstLine="720"/></w:pPr>';
+          function _langLine(l) {
+            var lang = _xl(l.language || '');
+            var lvl = _xl(l.level || '');
+            return lang + (lvl ? ', ' + lvl : '');
+          }
+          var _langXml = '<w:p>' + _LP_FIRST
+            + '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>Languages</w:t></w:r>'
+            + '<w:r><w:tab/></w:r><w:r><w:tab/><w:t xml:space="preserve">' + _langLine(_langs[0]) + '</w:t></w:r>'
+            + '</w:p>';
+          for (var _li = 1; _li < _langs.length; _li++) {
+            _langXml += '<w:p>' + _LP_CONT + '<w:r><w:t xml:space="preserve">' + _langLine(_langs[_li]) + '</w:t></w:r></w:p>';
+          }
+          _ei2DocXml = _ei2DocXml.substring(0, _liPStart) + _langXml + _ei2DocXml.substring(_liPEnd);
+        })();
+
+        // ── Quals: replace P46(4BB10D82) with all qual entries + affiliations + tech skills ──
         (function(){
           var _pq = _ei2Cv.PROFESSIONAL_QUALS || [];
+          var _aff = _ei2Cv.AFFILIATIONS || [];
           var _ts = (_ei2Cv.TECH_SKILLS || '').trim();
-          if (!_pq.length && !_ts) return;
+          if (!_pq.length && !_aff.length && !_ts) return;
           function _xq(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
           var _B2  = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _N2  = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
@@ -5825,23 +6226,25 @@ async function downloadHistory(index) {
               + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(q.qualification) + '</w:t></w:r>'
               + '</w:p>';
           });
+          _aff.forEach(function(a, ai){
+            if (!a.organization && !a.role) return;
+            if (_qualXml || ai > 0) { _qualXml += _QSPACER; }
+            var _affText = [a.role, a.organization].filter(Boolean).join(', ');
+            _qualXml += '<w:p>' + _PP2
+              + '<w:r>' + _B2 + '<w:t xml:space="preserve">' + _xq(a.dates||'') + ':</w:t></w:r>'
+              + '<w:r><w:tab/></w:r>'
+              + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(_affText) + '</w:t></w:r>'
+              + '</w:p>';
+          });
           if (_ts) {
             _qualXml += '<w:p>' + _PP2 + '</w:p>';
-            var _tsLines = _ts.split('|').map(function(s){ return s.trim(); }).filter(Boolean);
-            _tsLines.forEach(function(tl, ti) {
-              if (ti === 0) {
-                _qualXml += '<w:p>' + _PP2
-                  + '<w:r>' + _B2 + '<w:t xml:space="preserve">Technical Skills:</w:t></w:r>'
-                  + '<w:r><w:tab/></w:r>'
-                  + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(tl) + '</w:t></w:r>'
-                  + '</w:p>';
-              } else {
-                _qualXml += '<w:p>' + _PP2
-                  + '<w:r><w:tab/></w:r>'
-                  + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(tl) + '</w:t></w:r>'
-                  + '</w:p>';
-              }
-            });
+            var _tsItems = _ts.split(/[|,]/).map(function(s){ return s.trim(); }).filter(Boolean);
+            var _tsJoined = _tsItems.join(', ');
+            _qualXml += '<w:p>' + _PP2
+              + '<w:r>' + _B2 + '<w:t xml:space="preserve">Technical Skills:</w:t></w:r>'
+              + '<w:r><w:tab/></w:r>'
+              + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(_tsJoined) + '</w:t></w:r>'
+              + '</w:p>';
           }
           var _a46 = _ei2DocXml.indexOf('paraId="26D4D308"');
           if (_a46 !== -1) {
@@ -5849,6 +6252,43 @@ async function downloadHistory(index) {
             var _qpe = _ei2DocXml.indexOf('</w:p>', _a46) + 6;
             _ei2DocXml = _ei2DocXml.substring(0, _qps) + _qualXml + _ei2DocXml.substring(_qpe);
           }
+        })();
+
+        // ── Transaction Experience: replace {{TRANSACTION_EXPERIENCE_BLOCK}} ──
+        (function(){
+          var _tx = _ei2Cv.TRANSACTION_EXPERIENCE || [];
+          var _txIdx = _ei2DocXml.indexOf('{{TRANSACTION_EXPERIENCE_BLOCK}}');
+          if (_txIdx === -1) return;
+          function _xt(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+          var _txPStart = _txIdx, _txSearch = _txIdx;
+          while (_txSearch > 0) {
+            var _txC = _ei2DocXml.lastIndexOf('<w:p', _txSearch - 1);
+            if (_txC < 0) break;
+            var _txN = _ei2DocXml.charAt(_txC + 4);
+            if (_txN === '>' || _txN === ' ') { _txPStart = _txC; break; }
+            _txSearch = _txC;
+          }
+          var _txPEnd = _ei2DocXml.indexOf('</w:p>', _txIdx) + 6;
+          if (!Array.isArray(_tx) || _tx.length === 0) {
+            // No transaction data — remove the placeholder paragraph entirely
+            _ei2DocXml = _ei2DocXml.substring(0, _txPStart) + _ei2DocXml.substring(_txPEnd);
+            return;
+          }
+          var _HEAD_PPR = '<w:pPr><w:pStyle w:val="SHSubHeading"/><w:pageBreakBefore/><w:spacing w:after="120"/></w:pPr>';
+          var _HEAD_RPR = '';
+          var _NOTE_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="160"/></w:pPr>';
+          var _NOTE_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>';
+          var _txXml = '<w:p>' + _HEAD_PPR + '<w:r>' + _HEAD_RPR + '<w:t>Transaction Experience</w:t></w:r></w:p>';
+          var _txNote = (_ei2Cv.TRANSACTION_EXPERIENCE_NOTE || '').trim();
+          if (_txNote) {
+            _txXml += '<w:p>' + _NOTE_PPR + '<w:r>' + _NOTE_RPR + '<w:t xml:space="preserve">(' + _xt(_txNote) + ')</w:t></w:r></w:p>';
+          }
+          _txXml += _tx.map(function(t){
+            t = (t || '').trim();
+            if (!t) return '';
+            return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr><w:r><w:t xml:space="preserve">' + _xt(t) + '</w:t></w:r></w:p>';
+          }).join('');
+          _ei2DocXml = _ei2DocXml.substring(0, _txPStart) + _txXml + _ei2DocXml.substring(_txPEnd);
         })();
 
         try {
