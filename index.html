@@ -3309,7 +3309,7 @@ var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var isAdvisorProfile = (tpl === 'advisor-profile');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE":[""],"TRANSACTION_EXPERIENCE_NOTE":""}';
+var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE":[""],"TRANSACTION_EXPERIENCE_NOTE":""}';
 var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
@@ -3364,15 +3364,12 @@ EDUCATION:
 - education[]: Array of {years, institution, location, degrees[]}. ONLY include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc. Do NOT include professional certifications, licences or chartered qualifications (CFA, FRM, CAIA, ACCA, CPA, PRINCE2 etc) — those go in PROFESSIONAL_QUALS only.
 - GROUP multiple degrees from the SAME institution into ONE entry — do NOT create separate entries for the same university.
 - years: Combined date for the institution entry. If multiple degrees at same institution, combine as "May 2000 / Dec 2006" (earlier first) or just use the single year if one degree. Use 3-letter month abbreviations if months given.
-- institution: Full institution name only e.g. "University of Nebraska" — no location in this field.
-- location: City, State/Country as written in CV e.g. "Omaha, NE" or "London, UK". Leave "" if not stated.
-- degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = thesis title, specialisation, honours or any extra line for this specific degree — leave "" if none. Most recent degree first within the array.
+- institution: Full institution name ONLY e.g. "European Business School" — do NOT include location, city, or a dash-separated location here. Location goes only in the location field below, never duplicated into institution.
+- location: City as written in CV e.g. "Oestrich-Winkel" or "Omaha, NE". Leave "" if not stated.
+- degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = additional lines for this degree (majors, thesis title, specialisation, honours, semester-abroad notes, etc.) — if the CV lists these as multiple separate lines, PRESERVE them as separate lines by joining with a newline character \n between each one (do NOT merge them into a single run-on sentence with added periods). Leave "" if no extra lines. Most recent degree first within the array.
 - Most recent institution first.
 
-PROFESSIONAL_QUALS: Extract ONLY professional qualifications and certifications (CFA, FRM, CAIA, ACCA, CPA etc). Format as array of {year, qualification} e.g. [{year:"2026",qualification:"CAIA charterholder, CAIA Association"},{year:"2025",qualification:"Certified FRM, Global Association of Risk Professionals"}]. Most recent first.
-TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single string exactly as written in the CV. Leave "" if none.
-NATIONALITY: Exact nationality. Leave "" if not found.
-LANGUAGES: Languages with levels. Leave "" if not found.
+LANGUAGES: Extract as an array of objects [{"language":"German","level":"Native"},{"language":"English","level":"Fluent"}, ...], one object per language, in the order listed in the CV. Capitalize the level (Native, Fluent, Conversational, Beginner, Basic etc. — use Title Case). Leave [] if not found.
 ADDITIONAL_INFO: Extract the candidate's leadership character, values, cultural approach, and working style — typically found in a section labelled "Leadership Character" or similar. This is prose about HOW the candidate leads and works (e.g. "Known for collaborative, resilient leadership that builds trust. Committed to developing others..."). Leave "" if not found.
 INTERESTS: Extract ONLY outside-work hobbies, sports, personal interests — found after phrases like "Outside work:" or "Hobbies:" (e.g. "family, sports and ad-hoc challenges - New York Marathon..."). Do NOT put leadership character text here. Leave "" if not found.
 
@@ -6074,7 +6071,7 @@ async function downloadHistory(index) {
           QUAL_YEAR:         '',
           QUAL_1:            '',
           NATIONALITY:       _ei2Cv.NATIONALITY || '',
-          LANGUAGES:         _ei2Cv.LANGUAGES || '',
+          LANGUAGES:         '',
           ADDITIONAL_INFO:   _ei2Cv.ADDITIONAL_INFO || '',
           INTERESTS:         _ei2Cv.INTERESTS || ''
         };
@@ -6088,14 +6085,15 @@ async function downloadHistory(index) {
           var _B  = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _N  = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _TAB = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
-          var _PP = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB + '<w:jc w:val="both"/></w:pPr>';
+          var _PP_HEAD = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB + '<w:jc w:val="both"/></w:pPr>';
+          var _PP = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="2127"/><w:jc w:val="both"/></w:pPr>';
           var _eduXml = '';
           var _SP = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
           _edu.forEach(function(e){
             if (!e.institution && !e.degree && !(e.degrees && e.degrees.length)) return;
             if (_eduXml) _eduXml += _SP;
             // Institution header line — bold with location
-            _eduXml += '<w:p>' + _PP
+            _eduXml += '<w:p>' + _PP_HEAD
               + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.years||'') + ':</w:t></w:r>'
               + '<w:r><w:tab/></w:r>'
               + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.institution||'') + (e.location ? ', ' + _xe(e.location) : '') + '</w:t></w:r>'
@@ -6107,7 +6105,12 @@ async function downloadHistory(index) {
               _eduXml += '<w:p>' + _PP
                 + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(d.degree||'') + '</w:t></w:r>'
                 + '</w:p>';
-              if (d.extra) _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(d.extra) + '</w:t></w:r></w:p>';
+              if (d.extra) {
+                // Preserve each original line as its own paragraph, aligned under the institution name
+                (d.extra || '').split(/\n+/).map(function(l){return l.trim();}).filter(Boolean).forEach(function(line){
+                  _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(line) + '</w:t></w:r></w:p>';
+                });
+              }
             });
           });
           // Replace P39 start to P40 end using paraId anchors
@@ -6118,6 +6121,42 @@ async function downloadHistory(index) {
             var _pe = _ei2DocXml.indexOf('</w:p>', _a40) + 6;
             _ei2DocXml = _ei2DocXml.substring(0, _ps) + _eduXml + _ei2DocXml.substring(_pe);
           }
+        })();
+
+        // ── Languages: replace {{LANGUAGES}} with one language per line ──
+        (function(){
+          var _langs = _ei2Cv.LANGUAGES || [];
+          var _liIdx = _ei2DocXml.indexOf('{{LANGUAGES}}');
+          if (_liIdx === -1) return;
+          function _xl(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+          var _liPStart = _liIdx, _liSearch = _liIdx;
+          while (_liSearch > 0) {
+            var _liC = _ei2DocXml.lastIndexOf('<w:p', _liSearch - 1);
+            if (_liC < 0) break;
+            var _liN = _ei2DocXml.charAt(_liC + 4);
+            if (_liN === '>' || _liN === ' ') { _liPStart = _liC; break; }
+            _liSearch = _liC;
+          }
+          var _liPEnd = _ei2DocXml.indexOf('</w:p>', _liIdx) + 6;
+          if (!Array.isArray(_langs) || _langs.length === 0) {
+            _ei2DocXml = _ei2DocXml.substring(0, _liPStart) + _ei2DocXml.substring(_liPEnd);
+            return;
+          }
+          var _LP_FIRST = '<w:pPr><w:pStyle w:val="SHText"/></w:pPr>';
+          var _LP_CONT  = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="1440" w:firstLine="720"/></w:pPr>';
+          function _langLine(l) {
+            var lang = _xl(l.language || '');
+            var lvl = _xl(l.level || '');
+            return lang + (lvl ? ', ' + lvl : '');
+          }
+          var _langXml = '<w:p>' + _LP_FIRST
+            + '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>Languages</w:t></w:r>'
+            + '<w:r><w:tab/></w:r><w:r><w:tab/><w:t xml:space="preserve">' + _langLine(_langs[0]) + '</w:t></w:r>'
+            + '</w:p>';
+          for (var _li = 1; _li < _langs.length; _li++) {
+            _langXml += '<w:p>' + _LP_CONT + '<w:r><w:t xml:space="preserve">' + _langLine(_langs[_li]) + '</w:t></w:r></w:p>';
+          }
+          _ei2DocXml = _ei2DocXml.substring(0, _liPStart) + _langXml + _ei2DocXml.substring(_liPEnd);
         })();
 
         // ── Quals: replace P46(4BB10D82) with all qual entries + tech skills ──
@@ -6187,8 +6226,8 @@ async function downloadHistory(index) {
             _ei2DocXml = _ei2DocXml.substring(0, _txPStart) + _ei2DocXml.substring(_txPEnd);
             return;
           }
-          var _HEAD_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:pageBreakBefore/><w:spacing w:after="120"/></w:pPr>';
-          var _HEAD_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr>';
+          var _HEAD_PPR = '<w:pPr><w:pStyle w:val="SHSubHeading"/><w:pageBreakBefore/><w:spacing w:after="120"/></w:pPr>';
+          var _HEAD_RPR = '';
           var _NOTE_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="160"/></w:pPr>';
           var _NOTE_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>';
           var _txXml = '<w:p>' + _HEAD_PPR + '<w:r>' + _HEAD_RPR + '<w:t>Transaction Experience</w:t></w:r></w:p>';
