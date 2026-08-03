@@ -2183,7 +2183,6 @@ function buildEaIndiaRegBizExp(companies) {
       } else {
         xml += '<w:p>' + ROL_PPR_P + '<w:r>' + ROL_RPR + '<w:t>' + xe(role.role) + '</w:t></w:r></w:p>';
       }
-      xml += SPACER;
       var bullets = role.bullets || [];
       for (var bi = 0; bi < bullets.length; bi++) {
         var b = (bullets[bi] || '').trim();
@@ -3333,7 +3332,7 @@ var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var isAdvisorProfile = (tpl === 'advisor-profile');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","overview_bullets":[""],"roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE":[""],"TRANSACTION_EXPERIENCE_NOTE":"","AFFILIATIONS":[{"organization":"","role":"","dates":""}]}';
+var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","overview_bullets":[""],"roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE_HEADING":"","TRANSACTION_EXPERIENCE":[{"subheading":"","items":[""]}],"TRANSACTION_EXPERIENCE_NOTE":"","AFFILIATIONS":[{"organization":"","role":"","dates":""}]}';
 var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
@@ -3349,7 +3348,8 @@ CLIENT_COMPANY: Always "".
 SEARCH_TITLE: Always "".
 MONTH_YEAR: "` + _ei2M2[_ei2Now2.getMonth()] + ' ' + _ei2Now2.getFullYear() + `"
 
-SUMMARY: Extract the candidate's opening prose paragraphs VERBATIM. Separate each paragraph with a newline character \n. Do NOT include bullet points or skills lists — prose only.
+SUMMARY: Extract the candidate's opening prose paragraphs VERBATIM — ONLY if they appear BEFORE the Business Experience / Work History section begins, as a genuine document-level introduction to the whole candidate (often under a heading like "Profile", "Summary", or with no heading at all, but always positioned before any specific employer is mentioned). Separate each paragraph with a newline character \n. Do NOT include bullet points or skills lists — prose only.
+CRITICAL — DO NOT CONFUSE WITH ROLE-SPECIFIC OVERVIEW CONTENT: many CVs have an "Overview:" bullet list positioned INSIDE a specific role's own entry (e.g. directly under a job title, describing that particular tenure) — this is NOT a candidate-level summary and must NEVER be extracted into SUMMARY. It belongs to that role's own content only (see role.bullets below). If the CV has no genuine document-level intro before Business Experience starts, leave SUMMARY as "" — do not synthesize one from a role's own overview bullets, and do not leave this section populated with content that isn't truly there. When in doubt, check position: content appearing after a company/employer name has already been introduced belongs to that role, not to SUMMARY.
 
 SUMMARY_BULLETS: Extract the candidate's main skills/competencies section (e.g. "Core Leadership Strengths", "Key Skills", "Core Competencies"). Return as a pipe-separated string of items exactly as written. If no such section exists, leave "".
 
@@ -3374,7 +3374,7 @@ Company B sits BETWEEN the two Company A stints, so this is NOT one merged "Comp
 Preserve the CV's original chronological order in the output array — the earlier stint and the later stint of a re-joined company must each appear in their own correct position relative to the employer(s) in between, exactly as the CV lists them.
 - company.name: Company name only — no location, no punctuation added.
 - company.dates: The OVERALL tenure across ALL roles at this company — earliest start date to latest end date. ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Dec 2005 – Oct 2025". Never use full month names or "Sept".
-- company.location: City/Country of the company headquarters or primary location. Leave "" if not stated.
+- company.location: City/Country of the company headquarters or primary location. Leave "" if not stated. Normalize "USA" to "US" — always write "US", never "USA", regardless of how the source CV writes it.
 - role.role: Exact job title. If that specific role was in a different location, append it after a comma e.g. "Programme Manager — Group Risk, London / India".
 - role.role_dates: Dates for this role only. REQUIRED when company has 2 or more roles. Leave "" only if company has exactly ONE role.
 - company.overview_bullets: Use this INSTEAD of role.bullets when the CV lists multiple job titles/promotions at ONE company together as a group of title+date lines, followed by paragraph(s) describing responsibilities across that WHOLE progression as a single narrative — not broken out separately under each specific title. In that case: list every role/title with its own role_dates (leave each role's bullets as []), and put the narrative paragraph(s) in company.overview_bullets instead (one array item per paragraph, verbatim). Example — if the CV shows:
@@ -3398,7 +3398,13 @@ Capture every single bullet and sub-heading. Do NOT flatten or skip headings.
 - CRITICAL EXCEPTION — DO NOT apply the rule above to a standalone deal list. If the CV has a separate, clearly delineated section such as "Transaction Experience", "Select Deal Experience", "Selected Transactions", or similar — typically a long flat list of deals/transactions each with a client/target name, deal type, value and year, NOT written as prose bullets under a specific job — this is NOT part of any role's bullets. Never attach it to any company or role. Extract it ONLY into the separate TRANSACTION_EXPERIENCE field described below.
 - Most recent company first.
 
-TRANSACTION_EXPERIENCE: If the CV has a standalone deal/transaction list section (see CRITICAL EXCEPTION above), extract every line as a flat array of strings, copied VERBATIM in the exact order given, one array item per deal (e.g. ["Teamviewer, sell-down €181m (2023)", "wefox, RCF facility (2023)", ...]). Do not group by employer, do not reorder, do not summarize. If the CV has an intro note for this section (e.g. "references can be provided upon request"), put it in TRANSACTION_EXPERIENCE_NOTE exactly as written. Leave both "" / [] if no such section exists.
+TRANSACTION_EXPERIENCE_HEADING: If the CV has a standalone deal/transaction list section (see CRITICAL EXCEPTION above), copy the CV's own literal heading for that section VERBATIM, exactly as written (e.g. "Selected Deal Experience", "Select Deal Experience", "Transaction Experience", "Selected Transactions") — do not substitute a generic title. Leave "" if no such section exists.
+TRANSACTION_EXPERIENCE: If the CV has a standalone deal/transaction list section, extract it as an array of GROUPS: [{"subheading": "", "items": [""]}].
+- If the deal list has its own sub-category headers (e.g. "M&A", "Equity", "Debt"), create ONE group per sub-category, with subheading = that sub-category's heading VERBATIM, and items = the flat list of deals under it, copied VERBATIM in the exact order given.
+- If the deal list has NO sub-category headers — just one continuous flat list — return a SINGLE group with subheading = "" (empty) and items = every deal line VERBATIM in order.
+- Never fold a sub-category heading into the items array as a bullet with any prefix — subheadings are a separate field, not a list item.
+- Do not group by employer, do not reorder, do not summarize, do not skip any deals.
+If the CV has an intro note for this section (e.g. "references can be provided upon request"), put it in TRANSACTION_EXPERIENCE_NOTE exactly as written. Leave TRANSACTION_EXPERIENCE as [] and TRANSACTION_EXPERIENCE_NOTE as "" if no such section exists.
 
 EDUCATION:
 - education[]: Array of {years, institution, location, degrees[]}. Include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc.
@@ -3406,7 +3412,7 @@ EDUCATION:
 - GROUP multiple degrees from the SAME institution into ONE entry — do NOT create separate entries for the same university.
 - years: Combined date for the institution entry. If multiple degrees at same institution, combine as "May 2000 / Dec 2006" (earlier first) or just use the single year if one degree. Use 3-letter month abbreviations if months given.
 - institution: Full institution name ONLY e.g. "European Business School" — do NOT include location, city, or a dash-separated location here. Location goes only in the location field below, never duplicated into institution.
-- location: City as written in CV e.g. "Oestrich-Winkel" or "Omaha, NE". Leave "" if not stated.
+- location: City as written in CV e.g. "Oestrich-Winkel" or "Omaha, NE". Leave "" if not stated. Normalize "USA" to "US" — always write "US", never "USA", regardless of how the source CV writes it.
 - degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = additional lines for this degree (majors, thesis title, specialisation, honours, semester-abroad notes, etc.) — if the CV lists these as multiple separate lines, PRESERVE them as separate lines by joining with a newline character \n between each one (do NOT merge them into a single run-on sentence with added periods). Leave "" if no extra lines. Most recent degree first within the array.
 - Most recent institution first.
 
@@ -6276,18 +6282,29 @@ async function downloadHistory(index) {
           }
           var _HEAD_PPR = '<w:pPr><w:pStyle w:val="SHSubHeading"/><w:pageBreakBefore/><w:spacing w:after="120"/></w:pPr>';
           var _HEAD_RPR = '';
+          var _SUB_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:before="200" w:after="80"/></w:pPr>';
+          var _SUB_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _NOTE_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="160"/></w:pPr>';
           var _NOTE_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>';
-          var _txXml = '<w:p>' + _HEAD_PPR + '<w:r>' + _HEAD_RPR + '<w:t>Transaction Experience</w:t></w:r></w:p>';
+          var _txHeading = (_ei2Cv.TRANSACTION_EXPERIENCE_HEADING || '').trim() || 'Transaction Experience';
+          var _txXml = '<w:p>' + _HEAD_PPR + '<w:r>' + _HEAD_RPR + '<w:t xml:space="preserve">' + _xt(_txHeading) + '</w:t></w:r></w:p>';
           var _txNote = (_ei2Cv.TRANSACTION_EXPERIENCE_NOTE || '').trim();
           if (_txNote) {
             _txXml += '<w:p>' + _NOTE_PPR + '<w:r>' + _NOTE_RPR + '<w:t xml:space="preserve">(' + _xt(_txNote) + ')</w:t></w:r></w:p>';
           }
-          _txXml += _tx.map(function(t){
-            t = (t || '').trim();
-            if (!t) return '';
-            return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr><w:r><w:t xml:space="preserve">' + _xt(t) + '</w:t></w:r></w:p>';
-          }).join('');
+          _tx.forEach(function(grp){
+            if (!grp) return;
+            var subheading = (grp.subheading || '').trim();
+            var items = Array.isArray(grp.items) ? grp.items : [];
+            if (subheading) {
+              _txXml += '<w:p>' + _SUB_PPR + '<w:r>' + _SUB_RPR + '<w:t xml:space="preserve">' + _xt(subheading) + '</w:t></w:r></w:p>';
+            }
+            items.forEach(function(t){
+              t = (t || '').trim();
+              if (!t) return;
+              _txXml += '<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr><w:r><w:t xml:space="preserve">' + _xt(t) + '</w:t></w:r></w:p>';
+            });
+          });
           _ei2DocXml = _ei2DocXml.substring(0, _txPStart) + _txXml + _ei2DocXml.substring(_txPEnd);
         })();
 
