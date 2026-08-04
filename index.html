@@ -7149,40 +7149,6 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 
 
-function exportUsageLogs(){
-  // Try server CSV, fall back to localStorage
-  fetch('/api/proxy/logs/csv').then(function(r){
-    if(!r.ok) throw new Error('Server unavailable');
-    return r.blob();
-  }).then(function(blob){
-    var a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='SH_DocGen_Usage_'+new Date().toISOString().slice(0,10)+'.csv';
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
-    notify('⬇ Usage report downloaded from server');
-  }).catch(function(){
-    // Fallback: export from localStorage
-    var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');
-    if(!logs.length){notify('No usage data yet');return;}
-    var headers=['ID','User','Template','Input Method','Status','Timestamp'];
-    var _nl='\n';var csv=[headers.join(',')].concat(logs.map(function(r,i){
-      var lbl=(typeof TEMPLATES!=='undefined'&&TEMPLATES[r.template])?TEMPLATES[r.template].label:(r.template||'');
-      return[i+1,r.user||'',lbl,r.inputMethod||'',r.status||'',r.timestamp||''].map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');
-    })).join(_nl);
-    var blob=new Blob([csv],{type:'text/csv'});
-    var a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='SH_DocGen_Usage_'+new Date().toISOString().slice(0,10)+'.csv';
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
-    notify('⬇ Exported '+logs.length+' local log entries');
-  });
-}
-function clearUsageLogs(){
-  if(!confirm('Clear all local log entries? Server logs are unaffected.'))return;
-  localStorage.removeItem('sh_usage_logs');
-  loadUsageLogs();
-  (window._safeNotify || notify)('✓ Local logs cleared');
-}
 // ══════════════════════════════════════════════════════
 // TEMPLATE PREVIEW TAB
 // ══════════════════════════════════════════════════════
@@ -7509,12 +7475,43 @@ function renderLogs(logs,tbody,summary){
     return '<tr><td>'+r.user+'</td><td style="font-size:11px">'+tplLabel+'</td><td>'+inp+'</td><td class="status-'+stClass+'">'+st+'</td><td>'+date+'</td></tr>';
   }).join('');
 }
-function exportUsageLogs(){
-  var a=document.createElement('a');
-  a.href='/api/proxy/logs/csv';
-  a.download='SH_DocGen_Usage_'+new Date().toISOString().slice(0,10)+'.csv';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  (window._safeNotify || notify)('⬇ Downloading usage report...');
+async function exportUsageLogs(){
+  var notifyFn = window._safeNotify || notify;
+  var tok = '';
+  try {
+    if (window.__auth && window.__auth.idToken) tok = window.__auth.idToken;
+    else if (window.__auth && window.__auth.token) tok = window.__auth.token;
+    else if (window.__auth && window.__auth.msal) {
+      var acc = window.__auth.account || (window.__auth.msal.getAllAccounts && window.__auth.msal.getAllAccounts()[0]);
+      if (acc) {
+        var silent = await window.__auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: acc });
+        tok = (silent && (silent.idToken || silent.accessToken)) || '';
+      }
+    }
+  } catch(e) {}
+  var hdrs = tok ? { 'Authorization': 'Bearer ' + tok } : {};
+  try {
+    // Same endpoint + same auth as the on-screen table, so the export always matches what's displayed.
+    var r = await fetch('/api/proxy/logs?nocache=' + Date.now(), { cache: 'no-store', headers: hdrs });
+    if (!r.ok) throw new Error('Server logs unavailable (status ' + r.status + ')');
+    var logs = await r.json();
+    if (!Array.isArray(logs) || !logs.length) { notifyFn('No usage data yet'); return; }
+    var headers = ['ID','User','Template','Input Method','Status','Timestamp'];
+    var csv = [headers.join(',')].concat(logs.map(function(row, i){
+      var lbl = (typeof TEMPLATES !== 'undefined' && TEMPLATES[row.template]) ? TEMPLATES[row.template].label : (row.template || '');
+      return [i+1, row.user || row.userName || '', lbl, row.inputMethod || '', row.status || '', row.timestamp || '']
+        .map(function(v){ return '"' + String(v||'').replace(/"/g,'""') + '"'; }).join(',');
+    })).join('\n');
+    var blob = new Blob([csv], { type: 'text/csv' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'SH_DocGen_Usage_' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    notifyFn('⬇ Exported ' + logs.length + ' usage log entries');
+  } catch(e) {
+    console.error('[EXPORT] Failed:', e.message);
+    notifyFn('Export failed: ' + e.message);
+  }
 }
 function clearUsageLogs(){
   if(!confirm('Clear all local log entries? Server logs are unaffected.'))return;
