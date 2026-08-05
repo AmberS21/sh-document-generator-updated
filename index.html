@@ -292,6 +292,15 @@ table.usage tr:last-child td{border-bottom:none;}
 #adminModalBox button{width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:4px;}
 #adminModalBox button:hover{background:#1d4ed8;}
 #adminErrMsg{color:#dc2626;font-size:0.85rem;text-align:center;margin-top:10px;min-height:18px;}
+.corner-frame{position:relative;border:1px solid var(--brd);border-radius:10px;}
+.corner-frame::before,.corner-frame::after{content:"+";position:absolute;font-size:11px;color:var(--mut);line-height:1;pointer-events:none;}
+.corner-frame::before{top:-6px;left:-6px;}
+.corner-frame::after{bottom:-6px;left:-6px;}
+.corner-frame .cf-tr{content:"+";position:absolute;top:-6px;right:-6px;font-size:11px;color:var(--mut);}
+.corner-frame .cf-br{content:"+";position:absolute;bottom:-6px;right:-6px;font-size:11px;color:var(--mut);}
+.usage-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.usage-pill.status-ok{background:rgba(34,197,94,.15);color:#15803d;}
+.usage-pill.status-bad{background:rgba(239,68,68,.1);color:#b91c1c;border:1px solid rgba(239,68,68,.35);}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
@@ -835,36 +844,49 @@ table.usage tr:last-child td{border-bottom:none;}
 <div class="page hidden" id="sec-admin">
   <!-- old usage card hidden -->
   <div class="card">
-    <div class="card-title"><div class="step-dot">&#128202;</div> Usage by User</div>
-    <div id="logStorageStatus" style="margin-bottom:8px;padding:6px 12px;background:rgba(0,0,0,.2);border-radius:6px;"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-      <select id="usageMonthSel" onchange="onUsageMonthChange()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 10px;border-radius:6px;font-size:12px;"></select>
-      <span id="usageCompareBadge" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:rgba(34,197,94,.18);color:#4ade80;"></span>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+      <div>
+        <div class="card-title" style="margin-bottom:2px;"><div class="step-dot">&#128202;</div> Usage by User</div>
+        <div id="logStorageStatus" style="font-size:12px;margin-left:2px;"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <select id="usageMonthSel" onchange="onUsageMonthChange()" style="background:var(--chip);border:1px solid var(--brd);color:var(--txt);padding:6px 10px;border-radius:6px;font-size:12px;"></select>
+        <span id="usageCompareBadge" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid var(--brd);background:var(--chip);color:var(--txt);"></span>
+      </div>
     </div>
-    <div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
-    <div id="usageAttribution" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;"></div>
+    <div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 8px;"></div>
+    <div id="usageAttribution" style="font-size:12px;color:var(--mut);margin-bottom:16px;"></div>
 
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-      <div id="usageChartTitle" style="font-size:11px;font-weight:600;opacity:.7;letter-spacing:.3px;"></div>
-      <select id="usageUserSel" onchange="onUsageUserFilterChange()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;padding:4px 8px;border-radius:6px;font-size:11px;"></select>
+    <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:18px;align-items:start;">
+      <div class="corner-frame" style="padding:14px 18px;">
+        <span class="cf-tr"></span><span class="cf-br"></span>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div id="usageChartTitle" style="font-size:11px;font-weight:600;color:var(--mut);letter-spacing:.3px;"></div>
+          <select id="usageUserSel" onchange="onUsageUserFilterChange()" style="background:var(--chip);border:1px solid var(--brd);color:var(--txt);padding:4px 8px;border-radius:6px;font-size:11px;"></select>
+        </div>
+        <div id="usageChartBars" style="display:flex;align-items:flex-end;gap:20px;height:100px;"></div>
+      </div>
+      <div class="corner-frame" style="padding:14px 18px;">
+        <span class="cf-tr"></span><span class="cf-br"></span>
+        <div id="usageTopTemplatesTitle" style="font-size:11px;font-weight:600;color:var(--mut);letter-spacing:.3px;margin-bottom:10px;">TOP TEMPLATES</div>
+        <div id="usageTopTemplates"></div>
+      </div>
     </div>
-    <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:14px 18px;margin-bottom:14px;">
-      <div id="usageChartBars" style="display:flex;align-items:flex-end;gap:20px;height:100px;"></div>
-    </div>
 
-    <div style="font-size:11px;font-weight:600;opacity:.7;letter-spacing:.3px;margin-bottom:6px;">TOP USERS <span style="opacity:.6;font-weight:400;">(click to filter chart)</span></div>
-    <div id="usageTopUsers" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;"></div>
+    <div style="font-size:11px;font-weight:600;color:var(--mut);letter-spacing:.3px;margin-bottom:8px;">TOP USERS <span style="font-weight:400;">— select to filter the log below</span></div>
+    <div id="usageTopUsers" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;"></div>
 
-    <div style="font-size:11px;font-weight:600;opacity:.7;letter-spacing:.3px;margin-bottom:6px;">TOP TEMPLATES</div>
-    <div id="usageTopTemplates" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;"></div>
-
-    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-      <input id="usageSearchBox" oninput="onUsageSearchChange()" placeholder="Search by user or template..." style="flex:1;min-width:200px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;padding:7px 10px;border-radius:6px;font-size:12px;">
-      <select id="usageStatusFilter" onchange="onUsageSearchChange()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;padding:7px 10px;border-radius:6px;font-size:12px;">
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+      <div style="position:relative;flex:1;min-width:200px;">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.5;font-size:13px;">&#128269;</span>
+        <input id="usageSearchBox" oninput="onUsageSearchChange()" placeholder="Search by user or template..." style="width:100%;box-sizing:border-box;background:var(--chip);border:1px solid var(--brd);color:var(--txt);padding:7px 10px 7px 30px;border-radius:6px;font-size:12px;">
+      </div>
+      <select id="usageStatusFilter" onchange="onUsageSearchChange()" style="background:var(--chip);border:1px solid var(--brd);color:var(--txt);padding:7px 10px;border-radius:6px;font-size:12px;">
         <option value="">All statuses</option>
         <option value="success">Success</option>
         <option value="failed">Failed</option>
       </select>
+      <span id="usageEntriesCount" style="font-size:12px;color:var(--mut);white-space:nowrap;"></span>
     </div>
 
     <table class="usage"><thead><tr><th>User</th><th>Template</th><th>Input</th><th>Status</th><th>Date &amp; Time</th></tr></thead><tbody id="usageLogBody">
@@ -7557,7 +7579,7 @@ function renderUsageDashboard(){
         var arrow = diff >= 0 ? '▲' : '▼';
         compareEl.textContent = arrow + ' ' + Math.abs(pct) + '% vs ' + _usageMonthLabel(prevMonthKey);
         compareEl.style.background = diff >= 0 ? 'rgba(34,197,94,.18)' : 'rgba(239,68,68,.18)';
-        compareEl.style.color = diff >= 0 ? '#4ade80' : '#f87171';
+        compareEl.style.color = diff >= 0 ? '#15803d' : '#b91c1c';
       } else { compareEl.textContent = ''; }
     } else { compareEl.textContent = '— no prior month to compare'; }
   }
@@ -7587,17 +7609,14 @@ function renderUsageDashboard(){
         '<div style="font-size:10px;opacity:.6;">'+allTimeReal.length+' successful</div></div>';
   }
 
-  // ---- Known/unknown attribution breakdown ----
+  // ---- Known/unknown attribution breakdown (simple text line) ----
   var attrEl = document.getElementById('usageAttribution');
   if (attrEl) {
     var uniqueUsers = new Set(monthReal.map(function(r){return r.canonicalUser;})).size;
-    attrEl.innerHTML =
-      '<div style="flex:1;min-width:200px;background:rgba(255,255,255,.08);border-radius:8px;padding:8px 12px;font-size:12px;">' +
-        '<b>'+monthReal.length+' attributed</b> to '+uniqueUsers+' named users</div>' +
-      (monthUnknown.length ? '<div style="flex:1;min-width:200px;background:rgba(201,162,39,.12);border-radius:8px;padding:8px 12px;font-size:12px;">' +
-        '<b>'+monthUnknown.length+' unattributed</b> (logging defect)</div>' : '') +
-      (monthTestCount ? '<div style="flex:1;min-width:200px;background:rgba(255,255,255,.05);border-radius:8px;padding:8px 12px;font-size:12px;opacity:.7;">' +
-        monthTestCount+' internal/testing generations excluded</div>' : '');
+    var attrText = monthBusiness.length + ' generations this month attributed to ' + uniqueUsers + ' named users.';
+    if (monthUnknown.length) attrText += ' ' + monthUnknown.length + ' unattributed (logging defect).';
+    if (monthTestCount) attrText += ' ' + monthTestCount + ' internal/testing generations excluded.';
+    attrEl.textContent = attrText;
   }
 
   // ---- Top users (clickable, filters the chart) + top templates ----
@@ -7610,8 +7629,8 @@ function renderUsageDashboard(){
   if (topUsersEl) {
     topUsersEl.innerHTML = topUsersSorted.slice(0,8).map(function(n){
       var active = n === activeUserFilter;
-      return '<div onclick="setUsageUserFilter(\''+n.replace(/'/g,"\\'")+'\')" style="cursor:pointer;background:rgba(255,255,255,.1);border:1.5px solid '+(active?'#147689':'transparent')+';border-radius:8px;padding:6px 12px;font-size:12px;">' +
-        '<b>'+n+'</b> <span style="color:#7fd6c9;font-weight:700;">'+userCounts[n]+'</span></div>';
+      return '<div onclick="setUsageUserFilter(\''+n.replace(/'/g,"\\'")+'\')" style="cursor:pointer;background:var(--chip);border:1.5px solid '+(active?'#147689':'var(--brd)')+';border-radius:20px;padding:6px 14px;font-size:12px;">' +
+        n+' <span style="color:#147689;font-weight:700;">'+userCounts[n]+'</span></div>';
     }).join('');
   }
   if (userSel && userSel.dataset.built !== topUsersSorted.join(',')) {
@@ -7627,12 +7646,23 @@ function renderUsageDashboard(){
     tplCounts[lbl] = (tplCounts[lbl]||0)+1;
   });
   var topTplSorted = Object.keys(tplCounts).sort(function(a,b){return tplCounts[b]-tplCounts[a];});
+  var tplTitleEl = document.getElementById('usageTopTemplatesTitle');
+  if (tplTitleEl) tplTitleEl.textContent = 'TOP TEMPLATES — ' + _usageMonthLabel(selectedMonth).toUpperCase();
   var topTplEl = document.getElementById('usageTopTemplates');
   if (topTplEl) {
     var tplTotal = monthBusiness.length || 1;
+    var tplMax = topTplSorted.length ? tplCounts[topTplSorted[0]] : 1;
     topTplEl.innerHTML = topTplSorted.slice(0,6).map(function(n){
       var pct = Math.round((tplCounts[n]/tplTotal)*100);
-      return '<div style="background:rgba(255,255,255,.1);border-radius:8px;padding:6px 12px;font-size:12px;"><b>'+n+'</b> <span style="color:#7fd6c9;font-weight:700;">'+tplCounts[n]+'</span> · '+pct+'%</div>';
+      var barPct = Math.round((tplCounts[n]/tplMax)*100);
+      return '<div style="margin-bottom:10px;">' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">' +
+          '<span style="color:#147689;">'+n+'</span>' +
+          '<span style="color:var(--mut);white-space:nowrap;margin-left:8px;">'+tplCounts[n]+' · '+pct+'%</span>' +
+        '</div>' +
+        '<div style="background:var(--brd);border-radius:4px;height:5px;overflow:hidden;">' +
+          '<div style="background:#147689;height:100%;width:'+barPct+'%;border-radius:4px;"></div>' +
+        '</div></div>';
     }).join('');
   }
 
@@ -7678,6 +7708,9 @@ function renderUsageDashboard(){
     return true;
   });
 
+  var entriesEl = document.getElementById('usageEntriesCount');
+  if (entriesEl) entriesEl.textContent = tableRows.length + ' of ' + monthBusiness.length + ' entries';
+
   if(!tableRows.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">No usage data for this filter</td></tr>';return;}
   tbody.innerHTML = tableRows.map(function(r){
     var tplLabel=(typeof TEMPLATES!=='undefined'&&TEMPLATES[r.template])?TEMPLATES[r.template].label:r.template;
@@ -7685,9 +7718,10 @@ function renderUsageDashboard(){
     var date=isNaN(d)?r.timestamp:d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
     var inp = r.inputMethod || '—';
     var st  = r.status || '—';
-    var stClass = st==='success'||st==='completed' ? 'completed' : st==='failed' ? 'failed' : '';
+    var pillClass = st==='success'||st==='completed' ? 'status-ok' : st==='failed' ? 'status-bad' : '';
+    var stHtml = pillClass ? '<span class="usage-pill '+pillClass+'">'+st+'</span>' : st;
     var uName = r.canonicalUser === 'Unknown' ? '<span style="opacity:.6">Unknown</span>' : r.canonicalUser;
-    return '<tr><td>'+uName+'</td><td style="font-size:11px">'+tplLabel+'</td><td>'+inp+'</td><td class="status-'+stClass+'">'+st+'</td><td>'+date+'</td></tr>';
+    return '<tr><td>'+uName+'</td><td style="font-size:11px;color:#147689;">'+tplLabel+'</td><td>'+inp+'</td><td>'+stHtml+'</td><td>'+date+'</td></tr>';
   }).join('');
 }
 
