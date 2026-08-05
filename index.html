@@ -7412,7 +7412,10 @@ async function loadUsageLogs(){
   var _tok = await ensureApiToken();
   var _authHdr = _tok ? { 'Authorization': 'Bearer ' + _tok } : {};
 
-  fetch('/api/proxy/logs/status',{headers:_authHdr}).then(function(r){return r.json();}).then(function(s){
+  fetch('/api/proxy/logs/status',{headers:_authHdr}).then(function(r){
+    if (r.status === 401 || r.status === 403) { var e = new Error('auth-failed'); e.authFailed = true; throw e; }
+    return r.json();
+  }).then(function(s){
     var statusEl=document.getElementById('logStorageStatus');
     if(statusEl){
       if(s.backend==='azure-table'){
@@ -7421,11 +7424,23 @@ async function loadUsageLogs(){
         statusEl.innerHTML='<span style="color:#ef4444;font-size:12px;">&#x26A0; In-memory fallback only — logs lost on restart. Ask Michika to set AZURE_STORAGE_CONNECTION_STRING on the server.</span>';
       }
     }
-  }).catch(function(){});
+  }).catch(function(e){
+    var statusEl=document.getElementById('logStorageStatus');
+    if(statusEl && e && e.authFailed){
+      statusEl.innerHTML='<span style="color:#ef4444;font-size:12px;">&#x26A0; Authentication failed (401) — showing this browser\'s local cache only, NOT the real dataset. Known Azure SWA / backend auth issue — see Rocky/Fyxo.</span>';
+    }
+  });
   fetch('/api/proxy/logs?nocache='+Date.now()+'&r='+Math.random(),{cache:'no-store',headers:Object.assign({'Cache-Control':'no-cache','Pragma':'no-cache'},_authHdr)}).then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
   .then(function(logs){processUsageLogs(logs,tbody,summary);})
   .catch(function(){
-    try{var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');processUsageLogs(logs,tbody,summary);}
+    try{
+      var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');
+      processUsageLogs(logs,tbody,summary);
+      var statusEl=document.getElementById('logStorageStatus');
+      if(statusEl){
+        statusEl.innerHTML='<span style="color:#ef4444;font-size:12px;font-weight:600;">&#x26A0; Could not reach the server — showing this browser\'s local cache only. These numbers are NOT the real dataset and should not be relied on. Refresh once the connection/auth issue is resolved.</span>';
+      }
+    }
     catch(e){tbody.innerHTML='<tr><td colspan="5" style="color:#dc2626">Error: '+e.message+'</td></tr>';}
   });
 }
