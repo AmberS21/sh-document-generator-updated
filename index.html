@@ -836,10 +836,47 @@ table.usage tr:last-child td{border-bottom:none;}
   <!-- old usage card hidden -->
   <div class="card">
     <div class="card-title"><div class="step-dot">&#128202;</div> Usage by User</div>
-    <div id="logStorageStatus" style="margin-bottom:8px;padding:6px 12px;background:rgba(0,0,0,.2);border-radius:6px;"></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;"></div><div style="display:flex;gap:8px;"><button onclick="loadUsageLogs()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x21BA; Refresh</button><button onclick="exportUsageLogs()" style="background:#C9A227;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">&#x2193; Export CSV</button><button onclick="clearUsageLogs()" style="background:rgba(220,38,38,.7);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x1F5D1; Clear Local</button></div></div><table class="usage"><thead><tr><th>User</th><th>Template</th><th>Input</th><th>Status</th><th>Date &amp; Time</th></tr></thead><tbody id="usageLogBody">
+    <div id="logStorageStatus" style="margin-bottom:8px;padding:6px 12px;background:rgba(0,0,0,.2);border-radius:6px;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <select id="usageMonthSel" onchange="onUsageMonthChange()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 10px;border-radius:6px;font-size:12px;"></select>
+      <span id="usageCompareBadge" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:rgba(34,197,94,.18);color:#4ade80;"></span>
+    </div>
+    <div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;"></div>
+    <div id="usageAttribution" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;"></div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div id="usageChartTitle" style="font-size:11px;font-weight:600;opacity:.7;letter-spacing:.3px;"></div>
+      <select id="usageUserSel" onchange="onUsageUserFilterChange()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;padding:4px 8px;border-radius:6px;font-size:11px;"></select>
+    </div>
+    <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:14px 18px;margin-bottom:14px;">
+      <div id="usageChartBars" style="display:flex;align-items:flex-end;gap:20px;height:100px;"></div>
+    </div>
+
+    <div style="font-size:11px;font-weight:600;opacity:.7;letter-spacing:.3px;margin-bottom:6px;">TOP USERS <span style="opacity:.6;font-weight:400;">(click to filter chart)</span></div>
+    <div id="usageTopUsers" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;"></div>
+
+    <div style="font-size:11px;font-weight:600;opacity:.7;letter-spacing:.3px;margin-bottom:6px;">TOP TEMPLATES</div>
+    <div id="usageTopTemplates" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;"></div>
+
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <input id="usageSearchBox" oninput="onUsageSearchChange()" placeholder="Search by user or template..." style="flex:1;min-width:200px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;padding:7px 10px;border-radius:6px;font-size:12px;">
+      <select id="usageStatusFilter" onchange="onUsageSearchChange()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#fff;padding:7px 10px;border-radius:6px;font-size:12px;">
+        <option value="">All statuses</option>
+        <option value="success">Success</option>
+        <option value="failed">Failed</option>
+      </select>
+    </div>
+
+    <table class="usage"><thead><tr><th>User</th><th>Template</th><th>Input</th><th>Status</th><th>Date &amp; Time</th></tr></thead><tbody id="usageLogBody">
         <tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>
       </tbody>
     </table>
+
+    <div style="display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);">
+      <button onclick="loadUsageLogs()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x21BA; Refresh</button>
+      <button onclick="exportUsageLogs()" style="background:#C9A227;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">&#x2193; Export CSV</button>
+      <button onclick="clearUsageLogs()" style="background:rgba(220,38,38,.7);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x1F5D1; Clear Local</button>
+    </div>
   </div>
   <div class="card">
     <div class="card-title"><div class="step-dot">&#128273;</div> Admin Access &#8212; Email List</div>
@@ -7356,7 +7393,6 @@ async function loadUsageLogs(){
   // Ensure token exists for protected /api/proxy/logs* endpoints.
   async function ensureApiToken(){
     try {
-      // Logs/status endpoints are app-protected; idToken works reliably for this backend check.
       if (window.__auth && window.__auth.idToken) return window.__auth.idToken;
       if (window.__auth && window.__auth.token) return window.__auth.token;
       if (window.__auth && window.__auth.msal) {
@@ -7376,7 +7412,6 @@ async function loadUsageLogs(){
   var _tok = await ensureApiToken();
   var _authHdr = _tok ? { 'Authorization': 'Bearer ' + _tok } : {};
 
-  // Check storage backend status
   fetch('/api/proxy/logs/status',{headers:_authHdr}).then(function(r){return r.json();}).then(function(s){
     var statusEl=document.getElementById('logStorageStatus');
     if(statusEl){
@@ -7388,92 +7423,265 @@ async function loadUsageLogs(){
     }
   }).catch(function(){});
   fetch('/api/proxy/logs?nocache='+Date.now()+'&r='+Math.random(),{cache:'no-store',headers:Object.assign({'Cache-Control':'no-cache','Pragma':'no-cache'},_authHdr)}).then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
-  .then(function(logs){renderLogs(logs,tbody,summary);})
+  .then(function(logs){processUsageLogs(logs,tbody,summary);})
   .catch(function(){
-    try{var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');renderLogs(logs,tbody,summary);}
+    try{var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');processUsageLogs(logs,tbody,summary);}
     catch(e){tbody.innerHTML='<tr><td colspan="5" style="color:#dc2626">Error: '+e.message+'</td></tr>';}
   });
+}
 
-function renderLogs(logs,tbody,summary){
-  var totalEl=document.getElementById('usageTotalCount');
-  var todayEl=document.getElementById('usageTodayCount');
+// ── Classification: separate real business usage from internal/testing accounts ──
+// Domain rule catches any current or future Fyxo dev-team member automatically.
+var USAGE_TEST_DOMAINS = ['fyxoinc.com'];
+// Explicit list for known testers who don't have a distinguishing domain.
+var USAGE_TEST_NAMES = ['Michika Perera (Alex)', 'Michika Perera', 'Michika', 'Kavin', 'Kavin Perera', 'Kavin Perera (Fyxo)',
+  'Gama Arachchige Dilan Piyananda Gamaarachchi', 'Thilini Silva'];
+// Known email/casing variants -> canonical display name. Add a line here whenever a new mismatch shows up.
+var USAGE_NAME_MAP = {
+  'p.bhalla@sheffieldhaworth.com': 'Payal Bhalla',
+  's.gaikwad@sheffieldhaworth.com': 'Sonali Gaikwad',
+  'mp.singh@sheffieldhaworth.com': 'Mahinder Singh',
+  'Mahinder Pal Singh': 'Mahinder Singh',
+  'd.sharma@sheffieldhaworth.com': 'Divya Sharma',
+  'Divya Sharma (US WAM)': 'Divya Sharma',
+  'henaff@sheffieldhaworth.com': 'Florence Henaff',
+  'Florence henaff': 'Florence Henaff',
+  'florence henaff': 'Florence Henaff',
+  's.chua@sheffieldhaworth.com': 'Stephy Chua',
+  's.donald@sheffieldhaworth.com': 'Sophia Donald',
+  'm.fischer@sheffieldhaworth.com': 'Mel Fischer',
+  'k.dean@sheffieldhaworth.com': 'Katie Dean',
+  't.ranasinghe@sheffieldhaworth.com': 'Thilini Ranasinghe',
+  'L.Zhu@sheffieldhaworth.com': 'Lois Zhu',
+  'Lois': 'Lois Zhu',
+  'R.Gillespie@sheffieldhaworth.com': 'Ryan Gillespie',
+  'A.Shamim@sheffieldhaworth.com': 'Amber Shamim',
+  'Kavin@fyxoinc.com': 'Kavin Perera (Fyxo)',
+  'dilan@fyxoinc.com': 'Dilan (Fyxo)',
+  'thilini@fyxoinc.com': 'Thilini Silva (Fyxo)',
+  'Renuja@fyxoinc.com': 'Renuja (Fyxo)'
+};
+function classifyUsageUser(raw){
+  var name = (raw||'').trim();
+  if (!name || name === 'Unknown') return { name:'Unknown', category:'unknown' };
+  var mapped = USAGE_NAME_MAP[name] || name;
+  var domainMatch = name.match(/@([^\s@]+)$/);
+  if (domainMatch && USAGE_TEST_DOMAINS.indexOf(domainMatch[1].toLowerCase()) !== -1) return { name:mapped, category:'test' };
+  if (USAGE_TEST_NAMES.indexOf(name) !== -1 || USAGE_TEST_NAMES.indexOf(mapped) !== -1) return { name:mapped, category:'test' };
+  return { name:mapped, category:'real' };
+}
 
-  // Normalise each log entry — handle both object and array formats
+// ── Main processing: normalise, classify, store globally, then render ──
+function processUsageLogs(logs, tbody, summary){
   var norm = logs.map(function(r){
-    if(Array.isArray(r)) return {user:r[1]||'',template:r[2]||'',inputMethod:r[3]||'',status:r[4]||'',timestamp:r[7]||r[5]||''};
-    return {
-      user: r.user||r.userName||'',
-      template: r.template||'',
-      inputMethod: r.inputMethod||r.input_method||r.source||'',
-      status: r.status||'',
-      timestamp: r.timestamp||r.ts||''
-    };
-  });
+    var raw;
+    if(Array.isArray(r)) raw = { user:r[1]||'', template:r[2]||'', inputMethod:r[3]||'', status:r[4]||'', timestamp:r[7]||r[5]||'' };
+    else raw = { user:r.user||r.userName||'', template:r.template||'', inputMethod:r.inputMethod||r.input_method||r.source||'', status:r.status||'', timestamp:r.timestamp||r.ts||'' };
+    var cls = classifyUsageUser(raw.user);
+    raw.canonicalUser = cls.name;
+    raw.category = cls.category; // 'real' | 'test' | 'unknown'
+    return raw;
+  }).filter(function(r){ return r.status !== 'started'; });
 
-  // Stats
-  var now = new Date();
-  var today = new Date().toISOString().substring(0,10);
-  var todayCount = norm.filter(function(r){ var d=r.timestamp ? r.timestamp.substring(0,10) : ''; return d === today; }).length;
-  var dedupAll = norm;
-  var thisMonth = norm.filter(function(r){ var d=new Date(r.timestamp); return !isNaN(d) && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); });
+  window._usageLogsAll = norm;
+  window._usageTbody = tbody;
+  window._usageSummaryEl = summary;
+  renderUsageDashboard();
+}
 
-  // Cost estimate: ~$0.015 per generation
-  var COST_PER_GEN = 0.015;
-  var costMonth = (thisMonth.length * COST_PER_GEN).toFixed(2);
-  var costAll   = (dedupAll.length * COST_PER_GEN).toFixed(2);
+function _usageMonthKey(ts){ var d=new Date(ts); return isNaN(d) ? '' : d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function _usageMonthLabel(key){
+  if(!key) return '';
+  var parts=key.split('-'); var d=new Date(parseInt(parts[0]),parseInt(parts[1])-1,1);
+  return d.toLocaleString('en-GB',{month:'long',year:'numeric'});
+}
 
-  if(totalEl) totalEl.textContent = norm.length;
-  if(todayEl) todayEl.textContent = todayCount;
+function renderUsageDashboard(){
+  var norm = window._usageLogsAll || [];
+  var tbody = window._usageTbody;
+  var summary = window._usageSummaryEl;
+  if(!tbody) return;
 
-  // Render stat cards in summary area
-  if(summary){
-    var userCounts={};
-    norm.forEach(function(r){ var n=r.user||'Unknown'; userCounts[n]=(userCounts[n]||0)+1; });
-    var topUsers = Object.keys(userCounts).sort(function(a,b){return userCounts[b]-userCounts[a];}).slice(0,8)
-      .map(function(n){ return '<span style="background:rgba(255,255,255,.15);border-radius:12px;padding:3px 10px;font-size:11px;"><b>'+n+'</b> '+userCounts[n]+'</span>'; }).join('');
+  // ---- Build/populate month selector (only once per data load) ----
+  var monthSel = document.getElementById('usageMonthSel');
+  var allMonths = Array.from(new Set(norm.map(function(r){return _usageMonthKey(r.timestamp);}).filter(Boolean))).sort().reverse();
+  var currentMonthKey = _usageMonthKey(new Date().toISOString());
+  if (allMonths.indexOf(currentMonthKey) === -1) allMonths.unshift(currentMonthKey);
+  if (monthSel && monthSel.dataset.built !== allMonths.join(',')) {
+    monthSel.innerHTML = allMonths.map(function(m){ return '<option value="'+m+'">'+_usageMonthLabel(m)+'</option>'; }).join('');
+    monthSel.value = currentMonthKey;
+    monthSel.dataset.built = allMonths.join(',');
+  }
+  var selectedMonth = (monthSel && monthSel.value) || currentMonthKey;
+  var selIdx = allMonths.indexOf(selectedMonth);
+  var prevMonthKey = selIdx >= 0 && selIdx+1 < allMonths.length ? allMonths[selIdx+1] : null;
 
-    summary.innerHTML =
-      '<div style="display:flex;flex-wrap:wrap;gap:10px;width:100%;margin-bottom:10px;">' +
-        '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
-          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Today</div>' +
-          '<div style="font-size:22px;font-weight:700;">'+todayCount+'</div>' +
-          '<div style="font-size:10px;opacity:.6;">generations</div>' +
-        '</div>' +
-        '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
-          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">This Month</div>' +
-          '<div style="font-size:22px;font-weight:700;">'+thisMonth.length+'</div>' +
-          '<div style="font-size:10px;opacity:.6;">generations</div>' +
-        '</div>' +
-        '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
-          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">All Time</div>' +
-          '<div style="font-size:22px;font-weight:700;">'+dedupAll.length+'</div>' +
-          '<div style="font-size:10px;opacity:.6;">generations</div>' +
-        '</div>' +
-        '<div style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.3);border-radius:10px;padding:10px 16px;min-width:120px;">' +
-          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Est. Cost This Month</div>' +
-          '<div style="font-size:22px;font-weight:700;">$'+costMonth+'</div>' +
-          '<div style="font-size:10px;opacity:.6;">'+thisMonth.length+' successful</div>' +
-        '</div>' +
-        '<div style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.3);border-radius:10px;padding:10px 16px;min-width:120px;">' +
-          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Est. Cost All Time</div>' +
-          '<div style="font-size:22px;font-weight:700;">$'+costAll+'</div>' +
-          '<div style="font-size:10px;opacity:.6;">'+dedupAll.length+' successful</div>' +
-        '</div>' +
-        '<div style="flex:1;min-width:200px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;">' + topUsers + '</div>' +
-      '</div>';
+  var todayStr = new Date().toISOString().substring(0,10);
+  var monthRows = norm.filter(function(r){ return _usageMonthKey(r.timestamp) === selectedMonth; });
+  var todayCount = norm.filter(function(r){ return (r.timestamp||'').substring(0,10) === todayStr && r.category!=='test'; }).length;
+  var allTimeReal = norm.filter(function(r){ return r.category !== 'test'; });
+
+  var monthReal = monthRows.filter(function(r){ return r.category==='real'; });
+  var monthUnknown = monthRows.filter(function(r){ return r.category==='unknown'; });
+  var monthBusiness = monthReal.concat(monthUnknown); // real business usage total for the month
+  var monthTestCount = monthRows.filter(function(r){ return r.category==='test'; }).length;
+
+  var COST_PER_GEN = 0.04;
+  var costMonth = (monthBusiness.length * COST_PER_GEN).toFixed(2);
+  var costAll   = (allTimeReal.length * COST_PER_GEN).toFixed(2);
+
+  // ---- Comparison vs previous month ----
+  var compareEl = document.getElementById('usageCompareBadge');
+  if (compareEl) {
+    if (prevMonthKey) {
+      var prevRows = norm.filter(function(r){ return _usageMonthKey(r.timestamp) === prevMonthKey && r.category !== 'test'; });
+      var prevCount = prevRows.length;
+      if (prevCount > 0) {
+        var diff = monthBusiness.length - prevCount;
+        var pct = Math.round((diff/prevCount)*100);
+        var arrow = diff >= 0 ? '▲' : '▼';
+        compareEl.textContent = arrow + ' ' + Math.abs(pct) + '% vs ' + _usageMonthLabel(prevMonthKey);
+        compareEl.style.background = diff >= 0 ? 'rgba(34,197,94,.18)' : 'rgba(239,68,68,.18)';
+        compareEl.style.color = diff >= 0 ? '#4ade80' : '#f87171';
+      } else { compareEl.textContent = ''; }
+    } else { compareEl.textContent = '— no prior month to compare'; }
   }
 
-  if(!norm.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">No usage data yet</td></tr>';return;}
-  var sorted = dedupAll.slice().reverse();
-  tbody.innerHTML = sorted.filter(function(r){ return r.status !== "started"; }).map(function(r){
+  // ---- Stat cards ----
+  if(summary){
+    summary.innerHTML =
+      '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
+        '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Today</div>' +
+        '<div style="font-size:22px;font-weight:700;">'+todayCount+'</div>' +
+        '<div style="font-size:10px;opacity:.6;">generations</div></div>' +
+      '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
+        '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">'+_usageMonthLabel(selectedMonth)+'</div>' +
+        '<div style="font-size:22px;font-weight:700;">'+monthBusiness.length+'</div>' +
+        '<div style="font-size:10px;opacity:.6;">real usage</div></div>' +
+      '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
+        '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">All Time</div>' +
+        '<div style="font-size:22px;font-weight:700;">'+allTimeReal.length+'</div>' +
+        '<div style="font-size:10px;opacity:.6;">generations</div></div>' +
+      '<div style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.3);border-radius:10px;padding:10px 16px;min-width:120px;">' +
+        '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Est. Cost, Selected</div>' +
+        '<div style="font-size:22px;font-weight:700;">$'+costMonth+'</div>' +
+        '<div style="font-size:10px;opacity:.6;">'+monthBusiness.length+' successful</div></div>' +
+      '<div style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.3);border-radius:10px;padding:10px 16px;min-width:120px;">' +
+        '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Est. Cost, All Time</div>' +
+        '<div style="font-size:22px;font-weight:700;">$'+costAll+'</div>' +
+        '<div style="font-size:10px;opacity:.6;">'+allTimeReal.length+' successful</div></div>';
+  }
+
+  // ---- Known/unknown attribution breakdown ----
+  var attrEl = document.getElementById('usageAttribution');
+  if (attrEl) {
+    var uniqueUsers = new Set(monthReal.map(function(r){return r.canonicalUser;})).size;
+    attrEl.innerHTML =
+      '<div style="flex:1;min-width:200px;background:rgba(255,255,255,.08);border-radius:8px;padding:8px 12px;font-size:12px;">' +
+        '<b>'+monthReal.length+' attributed</b> to '+uniqueUsers+' named users</div>' +
+      (monthUnknown.length ? '<div style="flex:1;min-width:200px;background:rgba(201,162,39,.12);border-radius:8px;padding:8px 12px;font-size:12px;">' +
+        '<b>'+monthUnknown.length+' unattributed</b> (logging defect)</div>' : '') +
+      (monthTestCount ? '<div style="flex:1;min-width:200px;background:rgba(255,255,255,.05);border-radius:8px;padding:8px 12px;font-size:12px;opacity:.7;">' +
+        monthTestCount+' internal/testing generations excluded</div>' : '');
+  }
+
+  // ---- Top users (clickable, filters the chart) + top templates ----
+  var userCounts = {};
+  monthReal.forEach(function(r){ userCounts[r.canonicalUser] = (userCounts[r.canonicalUser]||0)+1; });
+  var topUsersSorted = Object.keys(userCounts).sort(function(a,b){return userCounts[b]-userCounts[a];});
+  var topUsersEl = document.getElementById('usageTopUsers');
+  var userSel = document.getElementById('usageUserSel');
+  var activeUserFilter = (userSel && userSel.value) || 'all';
+  if (topUsersEl) {
+    topUsersEl.innerHTML = topUsersSorted.slice(0,8).map(function(n){
+      var active = n === activeUserFilter;
+      return '<div onclick="setUsageUserFilter(\''+n.replace(/'/g,"\\'")+'\')" style="cursor:pointer;background:rgba(255,255,255,.1);border:1.5px solid '+(active?'#147689':'transparent')+';border-radius:8px;padding:6px 12px;font-size:12px;">' +
+        '<b>'+n+'</b> <span style="color:#7fd6c9;font-weight:700;">'+userCounts[n]+'</span></div>';
+    }).join('');
+  }
+  if (userSel && userSel.dataset.built !== topUsersSorted.join(',')) {
+    userSel.innerHTML = '<option value="all">All users (aggregate)</option>' +
+      topUsersSorted.map(function(n){ return '<option value="'+n.replace(/"/g,'&quot;')+'">'+n+'</option>'; }).join('');
+    userSel.value = activeUserFilter;
+    userSel.dataset.built = topUsersSorted.join(',');
+  }
+
+  var tplCounts = {};
+  monthReal.concat(monthUnknown).forEach(function(r){
+    var lbl=(typeof TEMPLATES!=='undefined'&&TEMPLATES[r.template])?TEMPLATES[r.template].label:(r.template||'Unknown');
+    tplCounts[lbl] = (tplCounts[lbl]||0)+1;
+  });
+  var topTplSorted = Object.keys(tplCounts).sort(function(a,b){return tplCounts[b]-tplCounts[a];});
+  var topTplEl = document.getElementById('usageTopTemplates');
+  if (topTplEl) {
+    var tplTotal = monthBusiness.length || 1;
+    topTplEl.innerHTML = topTplSorted.slice(0,6).map(function(n){
+      var pct = Math.round((tplCounts[n]/tplTotal)*100);
+      return '<div style="background:rgba(255,255,255,.1);border-radius:8px;padding:6px 12px;font-size:12px;"><b>'+n+'</b> <span style="color:#7fd6c9;font-weight:700;">'+tplCounts[n]+'</span> · '+pct+'%</div>';
+    }).join('');
+  }
+
+  // ---- Comparison chart: last 3 months, respecting user filter ----
+  var chartTitleEl = document.getElementById('usageChartTitle');
+  var chartBarsEl = document.getElementById('usageChartBars');
+  var last3 = allMonths.slice().sort().slice(-3); // chronological, oldest first, up to 3
+  if (last3.indexOf(selectedMonth) === -1) last3 = allMonths.slice(0,3).sort();
+  if (chartTitleEl) chartTitleEl.textContent = 'USAGE COMPARISON — LAST ' + last3.length + ' MONTHS' + (activeUserFilter!=='all' ? ' (' + activeUserFilter.toUpperCase() + ')' : ' (ALL USERS)');
+  if (chartBarsEl) {
+    var vals = last3.map(function(m){
+      return norm.filter(function(r){
+        if (_usageMonthKey(r.timestamp) !== m) return false;
+        if (r.category === 'test') return false;
+        if (activeUserFilter !== 'all' && r.canonicalUser !== activeUserFilter) return false;
+        return true;
+      }).length;
+    });
+    var maxV = Math.max.apply(null, vals.concat([1]));
+    var colors = ['#9fd6c9','#147689','#C9A227'];
+    chartBarsEl.innerHTML = last3.map(function(m,i){
+      var h = Math.max(6, Math.round((vals[i]/maxV)*80));
+      var lbl = _usageMonthLabel(m).split(' ')[0].slice(0,3);
+      return '<div style="display:flex;flex-direction:column;align-items:center;flex:1;">' +
+        '<div style="font-size:12px;font-weight:700;margin-bottom:4px;">'+vals[i]+'</div>' +
+        '<div style="width:100%;max-width:60px;height:'+h+'px;background:'+colors[i%3]+';border-radius:4px 4px 0 0;"></div>' +
+        '<div style="font-size:10px;opacity:.7;margin-top:6px;">'+lbl+'</div></div>';
+    }).join('');
+  }
+
+  // ---- Table: apply search + status filter, on top of the selected month's business rows ----
+  var searchBox = document.getElementById('usageSearchBox');
+  var statusFilter = document.getElementById('usageStatusFilter');
+  var q = (searchBox && searchBox.value || '').toLowerCase();
+  var stF = (statusFilter && statusFilter.value) || '';
+  var tableRows = monthBusiness.slice().reverse().filter(function(r){
+    if (stF && r.status !== stF) return false;
+    if (q) {
+      var tplLabel=(typeof TEMPLATES!=='undefined'&&TEMPLATES[r.template])?TEMPLATES[r.template].label:r.template;
+      var hay = (r.canonicalUser+' '+tplLabel).toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+
+  if(!tableRows.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">No usage data for this filter</td></tr>';return;}
+  tbody.innerHTML = tableRows.map(function(r){
     var tplLabel=(typeof TEMPLATES!=='undefined'&&TEMPLATES[r.template])?TEMPLATES[r.template].label:r.template;
     var d=new Date(r.timestamp);
     var date=isNaN(d)?r.timestamp:d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
     var inp = r.inputMethod || '—';
     var st  = r.status || '—';
-    var stClass = st==='success'||st==='completed' ? 'completed' : st==='failed' ? 'failed' : st==='started' ? 'attempted' : '';
-    return '<tr><td>'+r.user+'</td><td style="font-size:11px">'+tplLabel+'</td><td>'+inp+'</td><td class="status-'+stClass+'">'+st+'</td><td>'+date+'</td></tr>';
+    var stClass = st==='success'||st==='completed' ? 'completed' : st==='failed' ? 'failed' : '';
+    var uName = r.canonicalUser === 'Unknown' ? '<span style="opacity:.6">Unknown</span>' : r.canonicalUser;
+    return '<tr><td>'+uName+'</td><td style="font-size:11px">'+tplLabel+'</td><td>'+inp+'</td><td class="status-'+stClass+'">'+st+'</td><td>'+date+'</td></tr>';
   }).join('');
+}
+
+function onUsageMonthChange(){ renderUsageDashboard(); }
+function onUsageUserFilterChange(){ renderUsageDashboard(); }
+function onUsageSearchChange(){ renderUsageDashboard(); }
+function setUsageUserFilter(name){
+  var sel = document.getElementById('usageUserSel');
+  if (sel) { sel.value = name; renderUsageDashboard(); }
 }
 async function exportUsageLogs(){
   var notifyFn = window._safeNotify || notify;
@@ -7518,7 +7726,6 @@ function clearUsageLogs(){
   localStorage.removeItem('sh_usage_logs');
   loadUsageLogs();
   (window._safeNotify || notify)('✓ Local logs cleared');
-}
 }
 
 // Safe notify wrapper
