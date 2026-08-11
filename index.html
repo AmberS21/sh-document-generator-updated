@@ -3408,10 +3408,17 @@ SEARCH_TITLE: Always "".
 MONTH_YEAR: "` + _ei2M2[_ei2Now2.getMonth()] + ' ' + _ei2Now2.getFullYear() + `"
 
 SUMMARY: Extract the candidate's opening prose paragraphs VERBATIM — ONLY if they appear BEFORE the Business Experience / Work History section begins, as a genuine document-level introduction to the whole candidate (often under a heading like "Profile", "Summary", or with no heading at all, but always positioned before any specific employer is mentioned). Separate each paragraph with a newline character \n. Do NOT include bullet points or skills lists — prose only.
-CRITICAL — LABELED-BULLET CONTENT DOES NOT BELONG IN SUMMARY, EVEN IF IT LOOKS LIKE PROSE: some CVs have a block of items positioned after the true summary paragraph, where EACH item starts with a short bold-style label followed by a colon (e.g. "Strategic Leadership: Developed long-term security strategies...", "Regulated Industries: Developed security programs to meet..."). This is a SKILLS/COMPETENCIES bullet list, not prose — regardless of whether the source formats it as bullet points or as plain-looking paragraphs. NEVER put this labeled-item content into SUMMARY. It belongs in SUMMARY_BULLETS instead (see below) — one item per label, each item's full text starting with its label. If you see a run of 3+ consecutive sentences/lines that each begin with a short label + colon, that is SUMMARY_BULLETS content, not SUMMARY prose, even with zero bullet-point punctuation in the source.
+CRITICAL — LABELED-BULLET CONTENT DOES NOT BELONG IN SUMMARY, EVEN IF IT LOOKS LIKE PROSE: some CVs have a block of items positioned after the true summary paragraph, where EACH item starts with a short bold-style label followed by a colon. This is SUMMARY_BULLETS content (see below) — it must be extracted, not skipped, and must not be merged into SUMMARY. This content ALWAYS exists somewhere in your output when the source has it — never drop it because you're unsure which field it belongs in; when unsure, it belongs in SUMMARY_BULLETS.
+LITERAL WORKED EXAMPLE — if the source text (after the true intro paragraph, before Business Experience) reads exactly like this:
+  Strategic Leadership: Developed long-term security strategies and roadmaps for prominent global organizations (Capital Group, GE Capital, FactSet, Cencora, and Cboe).
+  Public Company Board Interaction: Developed strong working relations with the Board of Directors of public companies.
+  Regulated Industries: Developed security programs to meet industry regulatory requirements SOX, PCI DSS, HIPAA/HITRUST.
+Then your JSON output for this part MUST be exactly:
+  "SUMMARY_BULLETS": "Strategic Leadership: Developed long-term security strategies and roadmaps for prominent global organizations (Capital Group, GE Capital, FactSet, Cencora, and Cboe).|Public Company Board Interaction: Developed strong working relations with the Board of Directors of public companies.|Regulated Industries: Developed security programs to meet industry regulatory requirements SOX, PCI DSS, HIPAA/HITRUST."
+Every single one of these labeled items must appear in the pipe-separated string — do not truncate, do not summarize, do not select only some of them, and do not leave SUMMARY_BULLETS empty when this pattern is present in the source.
 
-SUMMARY_BULLETS: Extract the candidate's main skills/competencies section (e.g. "Core Leadership Strengths", "Key Skills", "Core Competencies") — this is the labeled-item block described in the CRITICAL rule above. Return as a pipe-separated string of items exactly as written, one full item per pipe-delimited segment (each item keeps its own leading label, e.g. "Strategic Leadership: Developed long-term security strategies..."). If no such section exists, leave "".
-CRITICAL — DO NOT CONFUSE WITH ROLE-SPECIFIC OVERVIEW CONTENT: many CVs have an "Overview:" bullet list positioned INSIDE a specific role's own entry (e.g. directly under a job title, describing that particular tenure) — this is NOT a candidate-level summary and must NEVER be extracted into SUMMARY. It belongs to that role's own content only (see role.bullets below). If the CV has no genuine document-level intro before Business Experience starts, leave SUMMARY as "" — do not synthesize one from a role's own overview bullets, and do not leave this section populated with content that isn't truly there. When in doubt, check position: content appearing after a company/employer name has already been introduced belongs to that role, not to SUMMARY.
+SUMMARY_BULLETS: Extract the candidate's main skills/competencies section (e.g. "Core Leadership Strengths", "Key Skills", "Core Competencies") — this is the labeled-item block described in the CRITICAL rule and literal example above. Return as a pipe-separated string of items exactly as written, one full item per pipe-delimited segment (each item keeps its own leading label). If no such section exists, leave "".
+CRITICAL — DO NOT CONFUSE WITH ROLE-SPECIFIC OVERVIEW CONTENT: many CVs have an "Overview:" bullet list positioned INSIDE a specific role's own entry (e.g. directly under a job title, describing that particular tenure) — this is NOT a candidate-level summary and must NEVER be extracted into SUMMARY_BULLETS or SUMMARY. It belongs to that role's own content only (see role.bullets below). If the CV has no genuine document-level intro before Business Experience starts, leave SUMMARY as "" — do not synthesize one from a role's own overview bullets. When in doubt, check position: content appearing after a company/employer name has already been introduced belongs to that role, not to SUMMARY or SUMMARY_BULLETS.
 
 
 SUMMARY_SECTIONS: Some CVs have multiple named subsections after the prose summary, each with a heading and bullet points (e.g. "Enterprise AI Leadership", "Enterprise AI Impact", "Enterprise AI Platforms Built and Operated"). Extract each as an array of objects with "heading" and "items" (pipe-separated). Example:
@@ -3471,14 +3478,22 @@ Preserve the CV's original chronological order in the output array — the earli
   [second paragraph, still about the overall role, not any one title]
 Then: roles = [{role:"Vice President, Global Privacy", role_dates:"2025 – Present", bullets:[]}, {role:"Chief Privacy Officer", role_dates:"2022 – 2025", bullets:[]}, {role:"Senior Director", role_dates:"2021 – 2022", bullets:[]}], and company.overview_bullets = ["[paragraph 1 verbatim]", "[paragraph 2 verbatim]"].
 - If instead each specific title/role has its OWN distinct bullets that clearly only describe that one role, use role.bullets per role as normal and leave company.overview_bullets as [].
-- role.bullets: Capture ALL content under the role VERBATIM and in order (only when NOT using company.overview_bullets — see above). CRITICAL — if the CV has sub-headings within a role (e.g. "Key Achievements & Responsibilities", "Operational Risk Management", "Business Continuity & Operational Resilience" etc.), include them as bullet items with ">>" prefix so they are identifiable as headings. E.g. if CV has:
+- role.bullets: Capture ALL content under the role VERBATIM and in order (only when NOT using company.overview_bullets — see above). CRITICAL — if the CV has BARE sub-headings within a role (a short label with NO content of its own on that line — just introducing the list that follows, e.g. "Key Achievements & Responsibilities", "Operational Risk Management", "Accomplishments"), include them as bullet items with ">>" prefix so they render as a plain (non-bulleted) heading. E.g. if CV has:
   Key Achievements & Responsibilities
     • Bullet one
     • Bullet two
   Business Continuity
     • Bullet three
 Then bullets array should be: [">> Key Achievements & Responsibilities", "Bullet one", "Bullet two", ">> Business Continuity", "Bullet three"]
-If the role has an italic overview/intro line before the bullets, include it as the first item with ">>" prefix too.
+CRITICAL DISTINCTION — a label is only a ">>" bare heading if it has NO substantive content immediately after it on the same line/item. If a label is immediately followed by its own sentence on the same bullet (e.g. "Challenge: Hired by the Chief Executive Officer and Chief Technology Officer following the Scattered Spider cyber incident..."), that whole thing is a REGULAR BULLET — do NOT give it the ">>" prefix, and do NOT strip the "Challenge:" label off it. Keep the label attached to its sentence as one normal bullet item, exactly as it appears in the source. Only the BARE word/phrase with nothing following it on that line (like "Accomplishments" by itself, immediately before a list starts) gets the ">>" treatment.
+WORKED EXAMPLE matching this exact pattern — if the CV has:
+  Challenge: Hired by the Chief Executive Officer and Chief Technology Officer following the Scattered Spider cyber incident to rebuild trust with the Board of Directors and Business Leaders.
+  Accomplishments:
+    • Quickly built trust with the Board and Executive Management.
+    • Established Key Performance Indicators (KPIs).
+Then bullets array should be: ["Challenge: Hired by the Chief Executive Officer and Chief Technology Officer following the Scattered Spider cyber incident to rebuild trust with the Board of Directors and Business Leaders.", ">> Accomplishments", "Quickly built trust with the Board and Executive Management.", "Established Key Performance Indicators (KPIs)."]
+Notice "Challenge: ..." has NO ">>" prefix (it's a real bullet with content), while "Accomplishments" alone gets ">>" (it's a bare heading with nothing on its own line).
+Separately — if a role has a plain UNLABELED italic overview/intro sentence before its bullets (no leading label like "Challenge:", just descriptive prose, e.g. "Independent strategic and corporate finance advisor to..."), include that as the first bullet item with ">>" prefix, since it functions as a heading-style intro rather than an accomplishment. This is different from a labeled item like "Challenge: ..." which stays as a normal bullet per the rule above.
 Capture every single bullet and sub-heading. Do NOT flatten or skip headings.
 - IMPORTANT: If the CV has a short "Summary of Key Responsibilities" recap that appears immediately after a specific role's own bullets and clearly continues describing that same role, attach it to that role's bullets using ">>" prefix for the heading. 
 - CRITICAL EXCEPTION — DO NOT apply the rule above to a TRULY STANDALONE deal list. This exception is about POSITION, not phrasing — a deal list can be called "Selected Transaction Experience" whether it's standalone or nested inside a role, so judge by where it sits, not what it's called:
@@ -6443,8 +6458,9 @@ async function downloadHistory(index) {
             return;
           }
           var _AS_HEAD_PPR = '<w:pPr><w:pStyle w:val="SHSubHeading"/><w:spacing w:before="200" w:after="120"/></w:pPr>';
-          var _AS_SUB_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:before="160" w:after="60"/></w:pPr>';
+          var _AS_SUB_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="2127"/><w:spacing w:before="160" w:after="60"/></w:pPr>';
           var _AS_SUB_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          var _AS_BUL_PPR = '<w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="2127"/></w:pPr>';
           var _asXml = '';
           _as.forEach(function(sec){
             if (!sec) return;
@@ -6461,7 +6477,7 @@ async function downloadHistory(index) {
                 var sub = line.substring(2).trim();
                 _asXml += '<w:p>' + _AS_SUB_PPR + '<w:r>' + _AS_SUB_RPR + '<w:t xml:space="preserve">' + _xa(sub) + '</w:t></w:r></w:p>';
               } else {
-                _asXml += '<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr><w:r><w:t xml:space="preserve">' + _xa(line) + '</w:t></w:r></w:p>';
+                _asXml += '<w:p>' + _AS_BUL_PPR + '<w:r><w:t xml:space="preserve">' + _xa(line) + '</w:t></w:r></w:p>';
               }
             });
           });
