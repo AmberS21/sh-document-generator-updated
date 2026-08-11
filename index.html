@@ -2184,8 +2184,8 @@ function buildEaIndiaRegBizExp(companies) {
   var TAB_STOP  = '<w:tabs><w:tab w:val="right" w:pos="9900"/></w:tabs>';
   var CO_PPR    = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
   var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
-  var ROL_PPR_D = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
-  var ROL_PPR_P = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
+  var ROL_PPR_D = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="120"/>' + TAB_STOP + '</w:pPr>';
+  var ROL_PPR_P = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="120"/></w:pPr>';
   var ROL_RPR   = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
   var BUL_RPR   = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/><w:lang w:eastAsia="en-US"/></w:rPr>';
   var BUL_PPR   = '<w:pStyle w:val="SHBullets"/>';
@@ -3391,7 +3391,7 @@ var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var isAdvisorProfile = (tpl === 'advisor-profile');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","overview_bullets":[""],"roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE_HEADING":"","TRANSACTION_EXPERIENCE":[{"subheading":"","items":[""]}],"TRANSACTION_EXPERIENCE_NOTE":"","AFFILIATIONS":[{"organization":"","role":"","dates":""}]}';
+var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","overview_bullets":[""],"roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_HEADING":"","PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"ADDITIONAL_SECTIONS":[{"heading":"","content":[""]}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE_HEADING":"","TRANSACTION_EXPERIENCE":[{"subheading":"","items":[""]}],"TRANSACTION_EXPERIENCE_NOTE":"","AFFILIATIONS":[{"organization":"","role":"","dates":""}]}';
 var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
@@ -3407,10 +3407,24 @@ CLIENT_COMPANY: Always "".
 SEARCH_TITLE: Always "".
 MONTH_YEAR: "` + _ei2M2[_ei2Now2.getMonth()] + ' ' + _ei2Now2.getFullYear() + `"
 
-SUMMARY: Extract the candidate's opening prose paragraphs VERBATIM — ONLY if they appear BEFORE the Business Experience / Work History section begins, as a genuine document-level introduction to the whole candidate (often under a heading like "Profile", "Summary", or with no heading at all, but always positioned before any specific employer is mentioned). Separate each paragraph with a newline character \n. Do NOT include bullet points or skills lists — prose only.
-CRITICAL — DO NOT CONFUSE WITH ROLE-SPECIFIC OVERVIEW CONTENT: many CVs have an "Overview:" bullet list positioned INSIDE a specific role's own entry (e.g. directly under a job title, describing that particular tenure) — this is NOT a candidate-level summary and must NEVER be extracted into SUMMARY. It belongs to that role's own content only (see role.bullets below). If the CV has no genuine document-level intro before Business Experience starts, leave SUMMARY as "" — do not synthesize one from a role's own overview bullets, and do not leave this section populated with content that isn't truly there. When in doubt, check position: content appearing after a company/employer name has already been introduced belongs to that role, not to SUMMARY.
+SUMMARY and SUMMARY_BULLETS together — read this as one unit, they are two halves of the same source section:
+Many CVs open with a two-part intro before Business Experience begins: FIRST a short prose paragraph (sometimes under a heading like "Summary", "Profile", "Key Value Offering", "Executive Summary", or a styled callout box — the heading wording varies a lot, treat ANY heading in this position as equivalent), THEN a block of labeled items where each item starts with a short bold-style label followed by a colon (e.g. "Strategic Leadership: Developed long-term security strategies...", "Regulated Industries: Developed security programs to meet..."). These are TWO SEPARATE fields — the prose paragraph goes in SUMMARY, the labeled items go in SUMMARY_BULLETS — and BOTH must be captured when both are present. Capturing one does not excuse missing the other.
+COMPLETE LITERAL WORKED EXAMPLE — if the source (in any heading/box style) reads exactly like this:
+  Key Value Offering
+  Transformational security leader with proven track record of delivering business results by turning strategy into action, driving technology transformation, and managing cyber risk. Trusted by boards, executives, and key stakeholders to align security program with business strategy and improve system resilience, scalability, and value.
+  Strategic Leadership: Developed long-term security strategies and roadmaps for prominent global organizations (Capital Group, GE Capital, FactSet, Cencora, and Cboe).
+  Public Company Board Interaction: Developed strong working relations with the Board of Directors of public companies.
+  Regulated Industries: Developed security programs to meet industry regulatory requirements SOX, PCI DSS, HIPAA/HITRUST.
+Then your JSON output for this part MUST be exactly:
+  "SUMMARY": "Transformational security leader with proven track record of delivering business results by turning strategy into action, driving technology transformation, and managing cyber risk. Trusted by boards, executives, and key stakeholders to align security program with business strategy and improve system resilience, scalability, and value."
+  "SUMMARY_BULLETS": "Strategic Leadership: Developed long-term security strategies and roadmaps for prominent global organizations (Capital Group, GE Capital, FactSet, Cencora, and Cboe).|Public Company Board Interaction: Developed strong working relations with the Board of Directors of public companies.|Regulated Industries: Developed security programs to meet industry regulatory requirements SOX, PCI DSS, HIPAA/HITRUST."
+Notice: the first paragraph (no label, no colon-prefix) went to SUMMARY as plain prose. Every labeled item after it went to SUMMARY_BULLETS, one per pipe, keeping its own label attached. Neither field is left empty here — both are populated from this one source block. Do not skip the prose paragraph just because labeled items follow it, and do not skip the labeled items just because a prose paragraph preceded them.
 
-SUMMARY_BULLETS: Extract the candidate's main skills/competencies section (e.g. "Core Leadership Strengths", "Key Skills", "Core Competencies"). Return as a pipe-separated string of items exactly as written. If no such section exists, leave "".
+SUMMARY: The prose paragraph(s) described above, copied VERBATIM, one paragraph per \n. Leave "" only if the CV genuinely has no such intro paragraph before Business Experience begins (i.e. it jumps straight from a bare heading into labeled items or straight into Business Experience with no introductory sentence at all).
+CRITICAL — DO NOT CONFUSE WITH ROLE-SPECIFIC OVERVIEW CONTENT: many CVs ALSO have an "Overview:" bullet list positioned INSIDE a specific role's own entry further down (e.g. directly under a job title, describing that particular tenure) — that is NOT this field. It belongs to that role's own content only (see role.bullets below) and must never be pulled up into SUMMARY.
+
+SUMMARY_BULLETS: The labeled-item block described above, e.g. under a heading like "Core Leadership Strengths", "Key Skills", "Core Competencies" (or with no sub-heading of its own at all — it directly follows the prose paragraph). Return as a pipe-separated string, one full item per pipe-delimited segment, each item keeping its own leading label. Leave "" only if the CV genuinely has no such labeled-item block.
+
 
 SUMMARY_SECTIONS: Some CVs have multiple named subsections after the prose summary, each with a heading and bullet points (e.g. "Enterprise AI Leadership", "Enterprise AI Impact", "Enterprise AI Platforms Built and Operated"). Extract each as an array of objects with "heading" and "items" (pipe-separated). Example:
 [
@@ -3422,6 +3436,31 @@ If no such subsections exist, return [].
 IMPORTANT: If SUMMARY_SECTIONS is populated, leave SUMMARY_BULLETS as "" to avoid duplication.
 
 COMPANIES ARRAY:
+CRITICAL — COMPANY BOUNDARY DETECTION (read this before anything else below): the company name and its descriptive blurb (industry description, ticker symbol, "an S&P 500 company", etc.) do NOT always appear BEFORE the role and its bullets. In many CVs, the company name/blurb instead appears AFTER a role's bullets have ended — as a trailing tag closing out that section, right before the NEXT role's title begins. Do NOT assume company boundaries by "a company name appeared, so a new company must be starting" — that heuristic is WRONG for this pattern and will scramble the whole document if you follow it.
+The RELIABLE signal for "a new company/role has started" is the appearance of a NEW JOB TITLE (optionally followed by "Challenge:"/"Accomplishments:"-style structure), NOT the appearance of a company name. A trailing company blurb belongs to the role and bullets that came BEFORE it, never to the role that comes after it.
+WORKED EXAMPLE — if the CV is structured like this:
+  Chief Information Security Officer          Nov 2024 – Nov 2025
+  Challenge: [text]
+  Accomplishments:
+  - [bullet 1] ... [bullet N]
+  FactSet (Ticker: FDS) - FactSet, an S&P 500 company, is a global provider...
+  Global Chief Information Security Officer    Jan 2021 – Jun 2024
+  Challenge: [text]
+  Accomplishments:
+  - [bullet 1] ... [bullet N]
+  Chicago Board of Options Exchange (Ticker: CBOE) - World's leading derivatives...
+  Vice President, Deputy CISO & Chief Data Protection Officer    Aug 2016 – Aug 2020
+  Challenge: [text]
+  Accomplishments:
+  - [bullet 1] ... [bullet N]
+  Cencora (Ticker: COR | Fortune 10 Company) - Cencora, formerly AmerisourceBergen...
+Then the correct extraction is THREE separate companies, each with its OWN role and its OWN full set of bullets:
+  1. company.name="FactSet", company.dates="Nov 2024 – Nov 2025", company.description="FactSet (Ticker: FDS) - FactSet, an S&P 500 company, is a global provider...", role="Chief Information Security Officer", role_dates="Nov 2024 – Nov 2025", bullets=[ALL the Challenge + Accomplishments bullets that came BEFORE the FactSet blurb]
+  2. company.name="Chicago Board of Options Exchange", company.dates="Jan 2021 – Jun 2024", company.description="Chicago Board of Options Exchange (Ticker: CBOE) - World's leading derivatives...", role="Global Chief Information Security Officer", role_dates="Jan 2021 – Jun 2024", bullets=[ALL the Challenge + Accomplishments bullets that came BEFORE the CBOE blurb]
+  3. company.name="Cencora", company.dates="Aug 2016 – Aug 2020", company.description="Cencora (Ticker: COR | Fortune 10 Company) - Cencora, formerly AmerisourceBergen...", role="Vice President, Deputy CISO & Chief Data Protection Officer", role_dates="Aug 2016 – Aug 2020", bullets=[ALL the Challenge + Accomplishments bullets that came BEFORE the Cencora blurb]
+The trailing blurb after each block of bullets tells you which company that block belongs to — use it to correctly LABEL the block you just finished reading, then continue to the next role title as the start of the next entry. Never let a trailing blurb's company name attach to the bullets that follow it, and never let the dates of one company bleed into another company's date field.
+CRITICAL — DO NOT DROP ANY BULLET BLOCK: this trailing-blurb pattern is the single most common cause of entire accomplishment blocks going missing. Before finalizing your output, count the number of distinct "Challenge:"/"Accomplishments:"-style blocks in the source and confirm your companies array has the SAME number of role entries with non-empty bullets — a company block with a role title, a Challenge line, and Accomplishments bullets in the source must NEVER end up with bullets=[] in your output. If you find yourself about to output a role with an empty bullets array despite the source clearly having Challenge/Accomplishments text for it, STOP and re-scan the source — you have almost certainly mis-attributed that block's bullets to the wrong company.
+- company.description: The company's descriptive blurb (ticker, industry description, "an S&P 500 company" etc.), captured VERBATIM, regardless of whether it appeared before or after the role's bullets in the source. Leave "" if the CV has none.
 CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same company back-to-back with NO other employer in between, ALL those roles must go under ONE company entry. Judge by company name only — ignore location differences. For example, if the CV lists "Barclays Bank | London" and "Barclays Bank | London / India" and "Barclays Bank | London" as consecutive, back-to-back entries — these are the same company "Barclays Bank" and must be grouped into one entry with multiple roles.
 CRITICAL EXCEPTION — REJOINING: If the candidate worked at a company, then left to work somewhere ELSE, then LATER rejoined the SAME company — this is TWO SEPARATE company entries at their correct chronological positions, NOT one merged entry. Never merge across a gap where a different employer appears in between, even if the company name is identical.
 HOW TO CHECK THIS: process the CV's work history in strict chronological order, one entry at a time, exactly as the CV lists it. Before grouping a role into an existing company entry, check whether a DIFFERENT employer appears anywhere between this role and that company's most recent previously-seen role. If yes, this is a NEW, separate company entry — do not merge it backward into the earlier one.
@@ -3431,8 +3470,8 @@ WORKED EXAMPLE — if the CV lists, in this order:
   Company A                              2011 – 2015
 Company B sits BETWEEN the two Company A stints, so this is NOT one merged "Company A 2011-2020" entry. It is THREE separate company array entries in exactly this order: Company A (2017-2020), then Company B (2015-2017), then Company A (2011-2015) again. The output array order must follow the CV's chronological listing, not be grouped alphabetically or by company name.
 Preserve the CV's original chronological order in the output array — the earlier stint and the later stint of a re-joined company must each appear in their own correct position relative to the employer(s) in between, exactly as the CV lists them.
-- company.name: Company name only — no location, no punctuation added.
-- company.dates: The OVERALL tenure across ALL roles at this company — earliest start date to latest end date. ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Dec 2005 – Oct 2025". Never use full month names or "Sept".
+- company.name: Company name only — no location, no punctuation added, and NEVER include a ticker symbol or parenthetical like "(Ticker: CBOE)" or "(Ticker: FDS)" in this field — those belong ONLY in company.description, never in company.name. E.g. if the source reads "Chicago Board of Options Exchange (Ticker: CBOE)", company.name = "Chicago Board of Options Exchange" and the "(Ticker: CBOE)" part goes into company.description along with the rest of the blurb.
+- company.dates: The OVERALL tenure across ALL roles at THIS company only — earliest start date to latest end date AMONG THIS COMPANY'S OWN ROLES. CRITICAL: never borrow or carry over a date from a different, adjacent company entry — each company's dates must come exclusively from that company's own role_dates values, computed independently of whatever company came before or after it in the list. If a company has only one role, company.dates MUST exactly equal that role's own role_dates — do not widen it using any other company's dates. ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Dec 2005 – Oct 2025". Never use full month names or "Sept".
 - company.location: City/Country of the company headquarters or primary location. Leave "" if not stated. Normalize "USA" to "US" — always write "US", never "USA", regardless of how the source CV writes it.
 - role.role: Exact job title. If that specific role was in a different location, append it after a comma e.g. "Programme Manager — Group Risk, London / India".
 - role.role_dates: Dates for this role only. REQUIRED when company has 2 or more roles. Leave "" only if company has exactly ONE role.
@@ -3444,14 +3483,22 @@ Preserve the CV's original chronological order in the output array — the earli
   [second paragraph, still about the overall role, not any one title]
 Then: roles = [{role:"Vice President, Global Privacy", role_dates:"2025 – Present", bullets:[]}, {role:"Chief Privacy Officer", role_dates:"2022 – 2025", bullets:[]}, {role:"Senior Director", role_dates:"2021 – 2022", bullets:[]}], and company.overview_bullets = ["[paragraph 1 verbatim]", "[paragraph 2 verbatim]"].
 - If instead each specific title/role has its OWN distinct bullets that clearly only describe that one role, use role.bullets per role as normal and leave company.overview_bullets as [].
-- role.bullets: Capture ALL content under the role VERBATIM and in order (only when NOT using company.overview_bullets — see above). CRITICAL — if the CV has sub-headings within a role (e.g. "Key Achievements & Responsibilities", "Operational Risk Management", "Business Continuity & Operational Resilience" etc.), include them as bullet items with ">>" prefix so they are identifiable as headings. E.g. if CV has:
+- role.bullets: Capture ALL content under the role VERBATIM and in order (only when NOT using company.overview_bullets — see above). CRITICAL — if the CV has BARE sub-headings within a role (a short label with NO content of its own on that line — just introducing the list that follows, e.g. "Key Achievements & Responsibilities", "Operational Risk Management", "Accomplishments"), include them as bullet items with ">>" prefix so they render as a plain (non-bulleted) heading. E.g. if CV has:
   Key Achievements & Responsibilities
     • Bullet one
     • Bullet two
   Business Continuity
     • Bullet three
 Then bullets array should be: [">> Key Achievements & Responsibilities", "Bullet one", "Bullet two", ">> Business Continuity", "Bullet three"]
-If the role has an italic overview/intro line before the bullets, include it as the first item with ">>" prefix too.
+CRITICAL DISTINCTION — a label is only a ">>" bare heading if it has NO substantive content immediately after it on the same line/item. If a label is immediately followed by its own sentence on the same bullet (e.g. "Challenge: Hired by the Chief Executive Officer and Chief Technology Officer following the Scattered Spider cyber incident..."), that whole thing is a REGULAR BULLET — do NOT give it the ">>" prefix, and do NOT strip the "Challenge:" label off it. Keep the label attached to its sentence as one normal bullet item, exactly as it appears in the source. Only the BARE word/phrase with nothing following it on that line (like "Accomplishments" by itself, immediately before a list starts) gets the ">>" treatment.
+WORKED EXAMPLE matching this exact pattern — if the CV has:
+  Challenge: Hired by the Chief Executive Officer and Chief Technology Officer following the Scattered Spider cyber incident to rebuild trust with the Board of Directors and Business Leaders.
+  Accomplishments:
+    • Quickly built trust with the Board and Executive Management.
+    • Established Key Performance Indicators (KPIs).
+Then bullets array should be: ["Challenge: Hired by the Chief Executive Officer and Chief Technology Officer following the Scattered Spider cyber incident to rebuild trust with the Board of Directors and Business Leaders.", ">> Accomplishments", "Quickly built trust with the Board and Executive Management.", "Established Key Performance Indicators (KPIs)."]
+Notice "Challenge: ..." has NO ">>" prefix (it's a real bullet with content), while "Accomplishments" alone gets ">>" (it's a bare heading with nothing on its own line).
+Separately — if a role has a plain UNLABELED italic overview/intro sentence before its bullets (no leading label like "Challenge:", just descriptive prose, e.g. "Independent strategic and corporate finance advisor to..."), include that as the first bullet item with ">>" prefix, since it functions as a heading-style intro rather than an accomplishment. This is different from a labeled item like "Challenge: ..." which stays as a normal bullet per the rule above.
 Capture every single bullet and sub-heading. Do NOT flatten or skip headings.
 - IMPORTANT: If the CV has a short "Summary of Key Responsibilities" recap that appears immediately after a specific role's own bullets and clearly continues describing that same role, attach it to that role's bullets using ">>" prefix for the heading. 
 - CRITICAL EXCEPTION — DO NOT apply the rule above to a TRULY STANDALONE deal list. This exception is about POSITION, not phrasing — a deal list can be called "Selected Transaction Experience" whether it's standalone or nested inside a role, so judge by where it sits, not what it's called:
@@ -3478,7 +3525,25 @@ EDUCATION:
 - degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = additional lines for this degree (majors, thesis title, specialisation, honours, semester-abroad notes, etc.) — if the CV lists these as multiple separate lines, PRESERVE them as separate lines by joining with a newline character \n between each one (do NOT merge them into a single run-on sentence with added periods). Leave "" if no extra lines. Most recent degree first within the array.
 - Most recent institution first.
 
-AFFILIATIONS: Some CVs have a section for board seats, non-profit involvement, or professional body memberships — under headings that vary a lot, e.g. "Board Experience & Non-Profit Roles", "Professional Affiliations", "Board Memberships", "Volunteering", "Committees", etc. Recognize this by MEANING (governance/advisory/volunteer roles at organisations, distinct from paid employment history) rather than by matching one exact heading name. These will be listed together with PROFESSIONAL_QUALS in the profile's "Professional Qualifications" section — no separate heading is created for them.
+QUAL_HEADING: Copy the CV's own literal heading for its qualifications/achievements/recognition section VERBATIM, exactly as written (e.g. "Industry Recognition", "Achievements", "Awards", "Professional Qualifications", "Certifications"). Do not substitute a generic label. Leave "" if no such section exists (fallback will use "Professional Qualifications").
+PROFESSIONAL_QUALS: Array of {year, qualification} for the section named in QUAL_HEADING above — this covers certifications, professional designations, AND career awards/recognitions (e.g. "Awarded Top Global CISO for 2023, 2024, 2025", "Northeast People's Choice Award for 2019") if the CV groups them together; only use this for items under a genuinely separate qualifications/recognition heading (see the EDUCATION rule above for the exception where they belong in education[] instead).
+- year: the year(s) exactly as written next to that entry (e.g. "2023, 2024, 2025", "2019"). If the entry has NO year at all in the source, leave year as "" — do not invent one.
+- qualification: the qualification/award text VERBATIM. CRITICAL — do NOT repeat the year inside this text if it's already captured in the year field (e.g. if the CV says "Awarded Top Global CISO for 2023, 2024, 2025" and you've put "2023, 2024, 2025" in year, the qualification text should just be "Awarded Top Global CISO" — do not duplicate the year twice).
+- If an item in this section has extra explanatory text with no year (e.g. a sentence describing a speaking engagement or contribution), still include it as its own entry with year="" and the full text in qualification — never drop it just because it lacks a year.
+
+ADDITIONAL_SECTIONS: CRITICAL SAFETY NET — many CVs have one or more extra named sections that don't match any field above (e.g. "Thought Leadership Articles", "Publications", "Patents", "Speaking Engagements", "Volunteer Work" that isn't board-type affiliations, etc). NEVER silently drop a section just because it doesn't fit elsewhere — capture it here instead so nothing is lost. Return an array of {heading, content}:
+- heading: the CV's own literal heading for that section, VERBATIM.
+- content: an array of strings, one per line/item, VERBATIM and in the CV's original order. If the section has its own sub-groupings (e.g. "LinkedIn Articles" / "Forbes article" / "SC Magazine" each with their own list of titles underneath), preserve the sub-group name as its own line prefixed with ">> " (matching the same convention used for role sub-headings), followed by that sub-group's items as normal lines. Example — if the CV has:
+  Thought Leadership Articles
+  LinkedIn Articles
+  – Modular Security Stack
+  – Building purpose driven security organization
+  Forbes article
+  – Building Modern Cyber Commander Centers
+Then: {"heading": "Thought Leadership Articles", "content": [">> LinkedIn Articles", "Modular Security Stack", "Building purpose driven security organization", ">> Forbes article", "Building Modern Cyber Commander Centers"]}
+Leave ADDITIONAL_SECTIONS as [] if every section in the CV is already covered by one of the other fields above — do not duplicate content that's already been placed elsewhere.
+
+AFFILIATIONS: Some CVs have a section for board seats, non-profit involvement, or professional body memberships — under headings that vary a lot, e.g. "Board Experience & Non-Profit Roles", "Professional Affiliations", "Board Memberships", "Volunteering", "Committees", etc. Recognize this by MEANING (governance/advisory/volunteer roles at organisations, distinct from paid employment history) rather than by matching one exact heading name. These will be listed together with PROFESSIONAL_QUALS in the profile's qualifications section — no separate heading is created for them.
 - AFFILIATIONS: array of {organization, role, dates}. organization = the body/company name. role = the position held there (e.g. "Board Member", "Chair, Risk Committee", "Canadian Advisory Board Member") — if a candidate holds multiple roles at the same organisation (e.g. Board Member AND Chair of a committee), create one array entry per role, repeating the organization name for each, in the CV's own order. dates = as written (e.g. "2023 – Present", "2020 – 2023"). Leave [] if no such section exists — do not invent this section if the CV doesn't have one.
 
 TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single comma-separated string, e.g. "Microsoft Office, FactSet, CapitalIQ, Bloomberg, Pitchbook" — regardless of what separator the CV itself uses (commas, pipes, or line breaks), always join with ", " in your output. Leave "" if none.
@@ -6083,7 +6148,9 @@ async function downloadHistory(index) {
         // Split SUMMARY into: prose paragraphs ({{SUMMARY}}) + bullet list ({{SUMMARY_BULLETS}})
         (function() {
           var _s = (_ei2Cv.SUMMARY || '').trim();
-          if (!_s) return;
+          var _hasBullets = !!(_ei2Cv.SUMMARY_BULLETS || '').trim();
+          var _hasSections = Array.isArray(_ei2Cv.SUMMARY_SECTIONS) && _ei2Cv.SUMMARY_SECTIONS.length > 0;
+          if (!_s && !_hasBullets && !_hasSections) return;
           function _x(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
           // Find split point: 'Core Leadership Strengths', 'Key Skills', 'KEY ', 'CORE ' etc
@@ -6183,6 +6250,7 @@ async function downloadHistory(index) {
           EDU_1_DEGREE:      '',
           QUAL_YEAR:         '',
           QUAL_1:            '',
+          QUAL_HEADING:      (_ei2Cv.QUAL_HEADING || '').trim() || 'Professional Qualifications',
           NATIONALITY:       _ei2Cv.NATIONALITY || '',
           LANGUAGES:         '',
           ADDITIONAL_INFO:   _ei2Cv.ADDITIONAL_INFO || '',
@@ -6288,11 +6356,18 @@ async function downloadHistory(index) {
           _pq.forEach(function(q, qi){
             if (!q.qualification) return;
             if (qi > 0) { _qualXml += _QSPACER; }
-            _qualXml += '<w:p>' + _PP2
-              + '<w:r>' + _B2 + '<w:t xml:space="preserve">' + _xq(q.year||'') + ':</w:t></w:r>'
-              + '<w:r><w:tab/></w:r>'
-              + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(q.qualification) + '</w:t></w:r>'
-              + '</w:p>';
+            var _year = (q.year || '').trim();
+            if (_year) {
+              _qualXml += '<w:p>' + _PP2
+                + '<w:r>' + _B2 + '<w:t xml:space="preserve">' + _xq(_year) + ':</w:t></w:r>'
+                + '<w:r><w:tab/></w:r>'
+                + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(q.qualification) + '</w:t></w:r>'
+                + '</w:p>';
+            } else {
+              _qualXml += '<w:p>' + _PP2
+                + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(q.qualification) + '</w:t></w:r>'
+                + '</w:p>';
+            }
           });
           _aff.forEach(function(a, ai){
             if (!a.organization && !a.role) return;
@@ -6368,6 +6443,52 @@ async function downloadHistory(index) {
             });
           });
           _ei2DocXml = _ei2DocXml.substring(0, _txPStart) + _txXml + _ei2DocXml.substring(_txPEnd);
+        })();
+
+        // ── Additional Sections (catch-all safety net): replace {{ADDITIONAL_SECTIONS_BLOCK}} ──
+        (function(){
+          var _as = _ei2Cv.ADDITIONAL_SECTIONS || [];
+          var _asIdx = _ei2DocXml.indexOf('{{ADDITIONAL_SECTIONS_BLOCK}}');
+          if (_asIdx === -1) return;
+          function _xa(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+          var _asPStart = _asIdx, _asSearch = _asIdx;
+          while (_asSearch > 0) {
+            var _asC = _ei2DocXml.lastIndexOf('<w:p', _asSearch - 1);
+            if (_asC < 0) break;
+            var _asN = _ei2DocXml.charAt(_asC + 4);
+            if (_asN === '>' || _asN === ' ') { _asPStart = _asC; break; }
+            _asSearch = _asC;
+          }
+          var _asPEnd = _ei2DocXml.indexOf('</w:p>', _asIdx) + 6;
+          if (!Array.isArray(_as) || _as.length === 0) {
+            _ei2DocXml = _ei2DocXml.substring(0, _asPStart) + _ei2DocXml.substring(_asPEnd);
+            return;
+          }
+          var _AS_HEAD_PPR = '<w:pPr><w:pStyle w:val="SHSubHeading"/><w:spacing w:before="200" w:after="120"/></w:pPr>';
+          var _AS_SUB_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="2127"/><w:spacing w:before="160" w:after="60"/></w:pPr>';
+          var _AS_SUB_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          var _AS_BUL_PPR = '<w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="2127"/></w:pPr>';
+          var _asXml = '';
+          _as.forEach(function(sec){
+            if (!sec) return;
+            var heading = (sec.heading || '').trim();
+            var content = Array.isArray(sec.content) ? sec.content : [];
+            if (!heading && !content.length) return;
+            if (heading) {
+              _asXml += '<w:p>' + _AS_HEAD_PPR + '<w:r><w:t xml:space="preserve">' + _xa(heading) + '</w:t></w:r></w:p>';
+            }
+            content.forEach(function(line){
+              line = (line || '').trim();
+              if (!line) return;
+              if (line.indexOf('>>') === 0) {
+                var sub = line.substring(2).trim();
+                _asXml += '<w:p>' + _AS_SUB_PPR + '<w:r>' + _AS_SUB_RPR + '<w:t xml:space="preserve">' + _xa(sub) + '</w:t></w:r></w:p>';
+              } else {
+                _asXml += '<w:p>' + _AS_BUL_PPR + '<w:r><w:t xml:space="preserve">' + _xa(line) + '</w:t></w:r></w:p>';
+              }
+            });
+          });
+          _ei2DocXml = _ei2DocXml.substring(0, _asPStart) + _asXml + _ei2DocXml.substring(_asPEnd);
         })();
 
         try {
