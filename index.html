@@ -6143,7 +6143,9 @@ async function downloadHistory(index) {
         // Split SUMMARY into: prose paragraphs ({{SUMMARY}}) + bullet list ({{SUMMARY_BULLETS}})
         (function() {
           var _s = (_ei2Cv.SUMMARY || '').trim();
-          if (!_s) return;
+          var _hasBullets = !!(_ei2Cv.SUMMARY_BULLETS || '').trim();
+          var _hasSections = Array.isArray(_ei2Cv.SUMMARY_SECTIONS) && _ei2Cv.SUMMARY_SECTIONS.length > 0;
+          if (!_s && !_hasBullets && !_hasSections) return;
           function _x(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
           // Find split point: 'Core Leadership Strengths', 'Key Skills', 'KEY ', 'CORE ' etc
