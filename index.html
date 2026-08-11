@@ -3391,7 +3391,7 @@ var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var isAdvisorProfile = (tpl === 'advisor-profile');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","overview_bullets":[""],"roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE_HEADING":"","TRANSACTION_EXPERIENCE":[{"subheading":"","items":[""]}],"TRANSACTION_EXPERIENCE_NOTE":"","AFFILIATIONS":[{"organization":"","role":"","dates":""}]}';
+var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","overview_bullets":[""],"roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_HEADING":"","PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"ADDITIONAL_SECTIONS":[{"heading":"","content":[""]}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE_HEADING":"","TRANSACTION_EXPERIENCE":[{"subheading":"","items":[""]}],"TRANSACTION_EXPERIENCE_NOTE":"","AFFILIATIONS":[{"organization":"","role":"","dates":""}]}';
 var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
@@ -3422,6 +3422,24 @@ If no such subsections exist, return [].
 IMPORTANT: If SUMMARY_SECTIONS is populated, leave SUMMARY_BULLETS as "" to avoid duplication.
 
 COMPANIES ARRAY:
+CRITICAL — COMPANY BOUNDARY DETECTION (read this before anything else below): the company name and its descriptive blurb (industry description, ticker symbol, "an S&P 500 company", etc.) do NOT always appear BEFORE the role and its bullets. In many CVs, the company name/blurb instead appears AFTER a role's bullets have ended — as a trailing tag closing out that section, right before the NEXT role's title begins. Do NOT assume company boundaries by "a company name appeared, so a new company must be starting" — that heuristic is WRONG for this pattern and will scramble the whole document if you follow it.
+The RELIABLE signal for "a new company/role has started" is the appearance of a NEW JOB TITLE (optionally followed by "Challenge:"/"Accomplishments:"-style structure), NOT the appearance of a company name. A trailing company blurb belongs to the role and bullets that came BEFORE it, never to the role that comes after it.
+WORKED EXAMPLE — if the CV is structured like this:
+  Chief Information Security Officer          Nov 2024 – Nov 2025
+  Challenge: [text]
+  Accomplishments:
+  - [bullet 1] ... [bullet N]
+  FactSet (Ticker: FDS) - FactSet, an S&P 500 company, is a global provider...
+  Global Chief Information Security Officer    Jan 2021 – Jun 2024
+  Challenge: [text]
+  Accomplishments:
+  - [bullet 1] ... [bullet N]
+  Chicago Board of Options Exchange (Ticker: CBOE) - World's leading derivatives...
+Then the correct extraction is TWO separate companies:
+  1. company.name="FactSet", company.dates="Nov 2024 – Nov 2025", company.description="FactSet (Ticker: FDS) - FactSet, an S&P 500 company, is a global provider...", role="Chief Information Security Officer", role_dates="Nov 2024 – Nov 2025", bullets=[the Challenge + Accomplishments bullets that came BEFORE the FactSet blurb]
+  2. company.name="Chicago Board of Options Exchange", company.dates="Jan 2021 – Jun 2024", company.description="Chicago Board of Options Exchange (Ticker: CBOE) - World's leading derivatives...", role="Global Chief Information Security Officer", role_dates="Jan 2021 – Jun 2024", bullets=[the Challenge + Accomplishments bullets that came BEFORE the CBOE blurb]
+The trailing blurb after each block of bullets tells you which company that block belongs to — use it to correctly LABEL the block you just finished reading, then continue to the next role title as the start of the next entry. Never let a trailing blurb's company name attach to the bullets that follow it, and never let the dates of one company bleed into another company's date field.
+- company.description: The company's descriptive blurb (ticker, industry description, "an S&P 500 company" etc.), captured VERBATIM, regardless of whether it appeared before or after the role's bullets in the source. Leave "" if the CV has none.
 CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same company back-to-back with NO other employer in between, ALL those roles must go under ONE company entry. Judge by company name only — ignore location differences. For example, if the CV lists "Barclays Bank | London" and "Barclays Bank | London / India" and "Barclays Bank | London" as consecutive, back-to-back entries — these are the same company "Barclays Bank" and must be grouped into one entry with multiple roles.
 CRITICAL EXCEPTION — REJOINING: If the candidate worked at a company, then left to work somewhere ELSE, then LATER rejoined the SAME company — this is TWO SEPARATE company entries at their correct chronological positions, NOT one merged entry. Never merge across a gap where a different employer appears in between, even if the company name is identical.
 HOW TO CHECK THIS: process the CV's work history in strict chronological order, one entry at a time, exactly as the CV lists it. Before grouping a role into an existing company entry, check whether a DIFFERENT employer appears anywhere between this role and that company's most recent previously-seen role. If yes, this is a NEW, separate company entry — do not merge it backward into the earlier one.
@@ -3478,7 +3496,25 @@ EDUCATION:
 - degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = additional lines for this degree (majors, thesis title, specialisation, honours, semester-abroad notes, etc.) — if the CV lists these as multiple separate lines, PRESERVE them as separate lines by joining with a newline character \n between each one (do NOT merge them into a single run-on sentence with added periods). Leave "" if no extra lines. Most recent degree first within the array.
 - Most recent institution first.
 
-AFFILIATIONS: Some CVs have a section for board seats, non-profit involvement, or professional body memberships — under headings that vary a lot, e.g. "Board Experience & Non-Profit Roles", "Professional Affiliations", "Board Memberships", "Volunteering", "Committees", etc. Recognize this by MEANING (governance/advisory/volunteer roles at organisations, distinct from paid employment history) rather than by matching one exact heading name. These will be listed together with PROFESSIONAL_QUALS in the profile's "Professional Qualifications" section — no separate heading is created for them.
+QUAL_HEADING: Copy the CV's own literal heading for its qualifications/achievements/recognition section VERBATIM, exactly as written (e.g. "Industry Recognition", "Achievements", "Awards", "Professional Qualifications", "Certifications"). Do not substitute a generic label. Leave "" if no such section exists (fallback will use "Professional Qualifications").
+PROFESSIONAL_QUALS: Array of {year, qualification} for the section named in QUAL_HEADING above — this covers certifications, professional designations, AND career awards/recognitions (e.g. "Awarded Top Global CISO for 2023, 2024, 2025", "Northeast People's Choice Award for 2019") if the CV groups them together; only use this for items under a genuinely separate qualifications/recognition heading (see the EDUCATION rule above for the exception where they belong in education[] instead).
+- year: the year(s) exactly as written next to that entry (e.g. "2023, 2024, 2025", "2019"). If the entry has NO year at all in the source, leave year as "" — do not invent one.
+- qualification: the qualification/award text VERBATIM. CRITICAL — do NOT repeat the year inside this text if it's already captured in the year field (e.g. if the CV says "Awarded Top Global CISO for 2023, 2024, 2025" and you've put "2023, 2024, 2025" in year, the qualification text should just be "Awarded Top Global CISO" — do not duplicate the year twice).
+- If an item in this section has extra explanatory text with no year (e.g. a sentence describing a speaking engagement or contribution), still include it as its own entry with year="" and the full text in qualification — never drop it just because it lacks a year.
+
+ADDITIONAL_SECTIONS: CRITICAL SAFETY NET — many CVs have one or more extra named sections that don't match any field above (e.g. "Thought Leadership Articles", "Publications", "Patents", "Speaking Engagements", "Volunteer Work" that isn't board-type affiliations, etc). NEVER silently drop a section just because it doesn't fit elsewhere — capture it here instead so nothing is lost. Return an array of {heading, content}:
+- heading: the CV's own literal heading for that section, VERBATIM.
+- content: an array of strings, one per line/item, VERBATIM and in the CV's original order. If the section has its own sub-groupings (e.g. "LinkedIn Articles" / "Forbes article" / "SC Magazine" each with their own list of titles underneath), preserve the sub-group name as its own line prefixed with ">> " (matching the same convention used for role sub-headings), followed by that sub-group's items as normal lines. Example — if the CV has:
+  Thought Leadership Articles
+  LinkedIn Articles
+  – Modular Security Stack
+  – Building purpose driven security organization
+  Forbes article
+  – Building Modern Cyber Commander Centers
+Then: {"heading": "Thought Leadership Articles", "content": [">> LinkedIn Articles", "Modular Security Stack", "Building purpose driven security organization", ">> Forbes article", "Building Modern Cyber Commander Centers"]}
+Leave ADDITIONAL_SECTIONS as [] if every section in the CV is already covered by one of the other fields above — do not duplicate content that's already been placed elsewhere.
+
+AFFILIATIONS: Some CVs have a section for board seats, non-profit involvement, or professional body memberships — under headings that vary a lot, e.g. "Board Experience & Non-Profit Roles", "Professional Affiliations", "Board Memberships", "Volunteering", "Committees", etc. Recognize this by MEANING (governance/advisory/volunteer roles at organisations, distinct from paid employment history) rather than by matching one exact heading name. These will be listed together with PROFESSIONAL_QUALS in the profile's qualifications section — no separate heading is created for them.
 - AFFILIATIONS: array of {organization, role, dates}. organization = the body/company name. role = the position held there (e.g. "Board Member", "Chair, Risk Committee", "Canadian Advisory Board Member") — if a candidate holds multiple roles at the same organisation (e.g. Board Member AND Chair of a committee), create one array entry per role, repeating the organization name for each, in the CV's own order. dates = as written (e.g. "2023 – Present", "2020 – 2023"). Leave [] if no such section exists — do not invent this section if the CV doesn't have one.
 
 TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single comma-separated string, e.g. "Microsoft Office, FactSet, CapitalIQ, Bloomberg, Pitchbook" — regardless of what separator the CV itself uses (commas, pipes, or line breaks), always join with ", " in your output. Leave "" if none.
@@ -6183,6 +6219,7 @@ async function downloadHistory(index) {
           EDU_1_DEGREE:      '',
           QUAL_YEAR:         '',
           QUAL_1:            '',
+          QUAL_HEADING:      (_ei2Cv.QUAL_HEADING || '').trim() || 'Professional Qualifications',
           NATIONALITY:       _ei2Cv.NATIONALITY || '',
           LANGUAGES:         '',
           ADDITIONAL_INFO:   _ei2Cv.ADDITIONAL_INFO || '',
@@ -6288,11 +6325,18 @@ async function downloadHistory(index) {
           _pq.forEach(function(q, qi){
             if (!q.qualification) return;
             if (qi > 0) { _qualXml += _QSPACER; }
-            _qualXml += '<w:p>' + _PP2
-              + '<w:r>' + _B2 + '<w:t xml:space="preserve">' + _xq(q.year||'') + ':</w:t></w:r>'
-              + '<w:r><w:tab/></w:r>'
-              + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(q.qualification) + '</w:t></w:r>'
-              + '</w:p>';
+            var _year = (q.year || '').trim();
+            if (_year) {
+              _qualXml += '<w:p>' + _PP2
+                + '<w:r>' + _B2 + '<w:t xml:space="preserve">' + _xq(_year) + ':</w:t></w:r>'
+                + '<w:r><w:tab/></w:r>'
+                + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(q.qualification) + '</w:t></w:r>'
+                + '</w:p>';
+            } else {
+              _qualXml += '<w:p>' + _PP2
+                + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(q.qualification) + '</w:t></w:r>'
+                + '</w:p>';
+            }
           });
           _aff.forEach(function(a, ai){
             if (!a.organization && !a.role) return;
@@ -6368,6 +6412,51 @@ async function downloadHistory(index) {
             });
           });
           _ei2DocXml = _ei2DocXml.substring(0, _txPStart) + _txXml + _ei2DocXml.substring(_txPEnd);
+        })();
+
+        // ── Additional Sections (catch-all safety net): replace {{ADDITIONAL_SECTIONS_BLOCK}} ──
+        (function(){
+          var _as = _ei2Cv.ADDITIONAL_SECTIONS || [];
+          var _asIdx = _ei2DocXml.indexOf('{{ADDITIONAL_SECTIONS_BLOCK}}');
+          if (_asIdx === -1) return;
+          function _xa(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+          var _asPStart = _asIdx, _asSearch = _asIdx;
+          while (_asSearch > 0) {
+            var _asC = _ei2DocXml.lastIndexOf('<w:p', _asSearch - 1);
+            if (_asC < 0) break;
+            var _asN = _ei2DocXml.charAt(_asC + 4);
+            if (_asN === '>' || _asN === ' ') { _asPStart = _asC; break; }
+            _asSearch = _asC;
+          }
+          var _asPEnd = _ei2DocXml.indexOf('</w:p>', _asIdx) + 6;
+          if (!Array.isArray(_as) || _as.length === 0) {
+            _ei2DocXml = _ei2DocXml.substring(0, _asPStart) + _ei2DocXml.substring(_asPEnd);
+            return;
+          }
+          var _AS_HEAD_PPR = '<w:pPr><w:pStyle w:val="SHSubHeading"/><w:spacing w:before="200" w:after="120"/></w:pPr>';
+          var _AS_SUB_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:before="160" w:after="60"/></w:pPr>';
+          var _AS_SUB_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          var _asXml = '';
+          _as.forEach(function(sec){
+            if (!sec) return;
+            var heading = (sec.heading || '').trim();
+            var content = Array.isArray(sec.content) ? sec.content : [];
+            if (!heading && !content.length) return;
+            if (heading) {
+              _asXml += '<w:p>' + _AS_HEAD_PPR + '<w:r><w:t xml:space="preserve">' + _xa(heading) + '</w:t></w:r></w:p>';
+            }
+            content.forEach(function(line){
+              line = (line || '').trim();
+              if (!line) return;
+              if (line.indexOf('>>') === 0) {
+                var sub = line.substring(2).trim();
+                _asXml += '<w:p>' + _AS_SUB_PPR + '<w:r>' + _AS_SUB_RPR + '<w:t xml:space="preserve">' + _xa(sub) + '</w:t></w:r></w:p>';
+              } else {
+                _asXml += '<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr><w:r><w:t xml:space="preserve">' + _xa(line) + '</w:t></w:r></w:p>';
+              }
+            });
+          });
+          _ei2DocXml = _ei2DocXml.substring(0, _asPStart) + _asXml + _ei2DocXml.substring(_asPEnd);
         })();
 
         try {
