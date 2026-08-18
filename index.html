@@ -3207,10 +3207,10 @@ async function generate() {
             btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + '...';
             showProgress(fi+1, _totalFiles);
             if (_isCombined) {
-              var _cvOutput = await processOneCV(inputText, tpl, btn, true);
+              var _cvOutput = await processOneCV(inputText, tpl, btn, true, 'file');
               if (_cvOutput) _combinedOutputs.push(_cvOutput);
             } else {
-              await processOneCV(inputText,tpl,btn);
+              await processOneCV(inputText,tpl,btn,false,'file');
             }
           } else {
             notify('Could not extract text from: ' + file.name);
@@ -3242,7 +3242,7 @@ async function generate() {
   }
 
 
-if (activeType === 'file') return;   showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn);
+if (activeType === 'file') return;   showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn, false, activeType);
   logUsage(tpl, activeType, 'success');
   hideProgress('Done! Your profile is ready ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ check My History');
 }
@@ -3369,7 +3369,8 @@ async function convertPdfToWord() {
   }
 }
 
-async function processOneCV(inputText, tpl, btn, returnOnly) {
+async function processOneCV(inputText, tpl, btn, returnOnly, inputMethod) {
+  var _pocvInputMethod = inputMethod || 'text';
   var selChip = document.querySelector('.fmt-chip.on-d,.fmt-chip.on-p,.fmt-chip.on-x,.fmt-chip.on-f');
   var fmt = selChip ? (selChip.className.match(/on-([dpxf])/) ? selChip.className.match(/on-([dpxf])/)[1] : 'd') : 'd';
   var claudeKey = (localStorage.getItem('sh_claudeKey') || '').trim();
@@ -4504,7 +4505,7 @@ try {
     console.error(err);
     btn.classList.remove('loading');
     btn.innerHTML = '\u274c Error \u2014 Try Again';
-    logUsage(tpl, activeType, 'failed');
+    logUsage(tpl, _pocvInputMethod, 'failed');
     notify('Generation failed. Check console.');
   });
 }
