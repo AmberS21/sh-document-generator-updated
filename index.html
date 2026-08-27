@@ -1312,6 +1312,13 @@ const TEMPLATES = {
     file: 'templates/Advisor_Profile_Template_DocGen.pptx',
     isAdvisorProfile: true,
     promptType: 'advisor-profile'
+  },
+
+  'track-record-anonymised': {
+    label: 'Track Record - Anonymised (PowerPoint)',
+    file: 'templates/Track_Record_Anonymised_TEMPLATE.pptx',
+    isTrackRecord: true,
+    promptType: 'track-record'
   }
 
 };
@@ -1340,7 +1347,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
   var sel = document.getElementById('tplSel');
   if (!sel) return;
   var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','candidate-briefing-pack','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile','advisor-profile'];
-  var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update'];
+  var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update','track-record-anonymised'];
 
   var grp1 = document.createElement('optgroup');
   grp1.label = 'PROFILES ──';
@@ -1473,6 +1480,15 @@ var TPL = {
     fmt: 'p',
     reg: 'Global',
     flds: ['Full Name','Email','Phone','Summary','Relevant Engagements (3)','Experience Narrative','Technical Skills (3)','Qualifications (2)']
+  },
+  'track-record-anonymised': {
+    name: 'Track Record - Anonymised',
+    sub: 'Multi-Slide PowerPoint',
+    ico: 'ppt',
+    bg: 'rgba(20,118,137,.15)',
+    fmt: 'p',
+    reg: 'Global',
+    flds: ['Section','Role / Job Title','Client Type (anonymised)','Client Name (internal only, never shown)']
   }
 };
 
@@ -1529,6 +1545,30 @@ function pickTpl(v) {
       if (_isProjRpt && typeof activeType !== 'undefined' && activeType === 'text') setInput('url');
     }
   });
+
+  // Track Record - Anonymised: Paste or Upload File both work (Excel converts to CSV automatically). Ezekia/URL doesn't apply — this isn't a CRM record.
+  var _isTrackRecord = (v === 'track-record-anonymised');
+  document.querySelectorAll('.input-tab, [onclick*="setInput"]').forEach(function(el) {
+    var _label = el.textContent && el.textContent.trim();
+    var _isUrlTab = _label && _label.match(/Ezekia|URL/i);
+    if (_isUrlTab) {
+      el.style.opacity = _isTrackRecord ? '0.4' : '';
+      el.style.pointerEvents = _isTrackRecord ? 'none' : '';
+      el.title = _isTrackRecord ? 'Not applicable for Track Record — use Paste or Upload File instead' : '';
+      if (_isTrackRecord && typeof activeType !== 'undefined' && activeType === 'url') setInput('text');
+    } else {
+      el.style.opacity = '';
+      el.style.pointerEvents = '';
+      el.title = '';
+    }
+  });
+  var _trHint = document.getElementById('textInput');
+  if (_trHint) {
+    if (!_trHint.getAttribute('data-default-placeholder')) _trHint.setAttribute('data-default-placeholder', _trHint.placeholder);
+    _trHint.placeholder = _isTrackRecord
+      ? 'Paste your Excel data here (select the cells in Excel including the header row, then paste) — or use the Upload File tab to upload the .xlsx directly'
+      : _trHint.getAttribute('data-default-placeholder') || _trHint.placeholder;
+  }
 }
 
 function filterTpl(q) {
@@ -3390,6 +3430,7 @@ var isServicesProfile = (tpl === 'services-profile');
 var isEaIndia = (tpl === 'ea-india-profile');
 var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var isAdvisorProfile = (tpl === 'advisor-profile');
+var isTrackRecord = (tpl === 'track-record-anonymised');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","overview_bullets":[""],"roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_HEADING":"","PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"ADDITIONAL_SECTIONS":[{"heading":"","content":[""]}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE_HEADING":"","TRANSACTION_EXPERIENCE":[{"subheading":"","items":[""]}],"TRANSACTION_EXPERIENCE_NOTE":"","AFFILIATIONS":[{"organization":"","role":"","dates":""}]}';
@@ -4156,6 +4197,33 @@ CANDIDATE SOURCE — extract ALL information from this text:
 
 ` + inputText;
 
+var trackRecordPrompt = `You are extracting structured track record data for a Sheffield Haworth "Track Record - Anonymised" PowerPoint deck. The source is tabular data originally from Excel, NOT a CV — it may arrive either tab-separated (pasted directly from Excel) or comma-separated (converted from an uploaded .xlsx file). The FIRST row is column headers, and the data MAY contain many columns you should ignore. Detect the delimiter from the data itself — do not assume one format.
+
+YOUR TASK: identify which columns correspond to the four concepts below (column header wording varies — match by MEANING, not exact text) and extract every data row into a flat array.
+
+COLUMNS TO FIND (by meaning, not exact header text):
+1. SECTION — which practice area / track record category this row belongs to (e.g. "Private Equity, Private Credit & Alternatives", "Real Assets", "Insurance", "Technology Functions"). Look for headers like "Section", "Practice Area", "Category", "Track Record Area", "Division", "Sector". This determines which divider/section of the deck the row belongs to.
+2. ROLE — the job title placed. Look for headers like "Current Job Title", "Job Title", "Role", "Position". Copy VERBATIM — do not rephrase, shorten, or correct the wording.
+3. CLIENT_TYPE — the ANONYMISED description of the client, already de-identified (e.g. "Hedge Fund", "Pension Fund", "Sovereign Wealth Fund", "Asset Manager"). Look for headers like "Company Type", "Client Type", "Client Description". This is what gets shown on the slide — never the real client name.
+4. REAL_CLIENT — the actual, real client/company name. Look for headers like "Assignment Client", "Client Name", "Company", "Client". This is captured for internal reference only (e.g. future logo matching) and is NEVER displayed on any slide.
+
+CRITICAL RULES:
+- Only extract from columns that clearly match one of the four concepts above. Ignore every other column entirely (dates, locations, consultant names, fee amounts, status, etc. — whatever else may be present).
+- Do NOT invent, guess, or hallucinate a section/role/client_type value that isn't actually present in the source data for that row.
+- Preserve the source data's original row order within the output array — do not reorder or group rows yourself; the tool groups by section afterwards.
+- If a row is missing CLIENT_TYPE entirely, still include the row with client_type as "" rather than dropping it.
+- If you cannot confidently identify a SECTION column at all anywhere in the header row, leave section as "" for every row — do not fabricate section names.
+- Copy ROLE and CLIENT_TYPE text VERBATIM as written in the source — do not correct spelling, do not rephrase, do not summarise.
+- Extract EVERY data row — do not skip rows, do not sample, do not truncate for length.
+- Return ONLY valid JSON. No markdown. No code blocks. No explanation.
+
+Return this exact JSON structure:
+{"items": [{"section": "", "role": "", "client_type": "", "real_client": ""}]}
+
+SOURCE DATA — extract every row from this pasted table:
+
+` + inputText;
+
 var prompt = isApacEy
   ? apacEyPrompt
   : isEaIndiaV2
@@ -4328,6 +4396,8 @@ Use this exact JSON structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE ÃÂ
   ? gmBasicPrompt
   : isAdvisorProfile
   ? advisorProfilePrompt
+  : isTrackRecord
+  ? trackRecordPrompt
   : isBriefingPack
   ? briefingPackPrompt
   : isServicesProfile
@@ -5275,6 +5345,233 @@ async function downloadHistory(index) {
         var _a = document.createElement('a');
         _a.href=_url; _a.download=_safeFileName(((_cl?_cl+' - ':'') + (item.name||'Candidate Update Report')), 'Candidate Update Report')+'.pptx';
         _a.click(); setTimeout(function(){URL.revokeObjectURL(_url);},2000);
+        return;
+      }
+
+// ── Track Record - Anonymised ────────────────────────────────────────
+      if (item.template === 'track-record-anonymised') {
+        var _trContent = item.content;
+        var _trItems = Array.isArray(_trContent.items) ? _trContent.items : [];
+        if (!_trItems.length) throw new Error('No track record rows were extracted — check the pasted data has a header row and at least one data row.');
+
+        function _trXe(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        // Group by section, preserving first-appearance order
+        var _trSectionOrder = [];
+        var _trSections = {};
+        _trItems.forEach(function(it){
+          var sec = (it.section || '').trim() || 'General';
+          if (!_trSections[sec]) { _trSections[sec] = []; _trSectionOrder.push(sec); }
+          _trSections[sec].push({ role: (it.role||'').trim(), client_type: (it.client_type||'').trim() });
+        });
+
+        // Balanced distribution: N items across ceil(N/maxPerSlide) slides, sizes as even as possible
+        var TR_MAX_PER_SLIDE = 30; // 15 left + 15 right
+        var TR_MAX_PER_TABLE = 15;
+        function _trBalancedSizes(n, maxPerSlide){
+          if (n <= 0) return [];
+          var numSlides = Math.ceil(n / maxPerSlide);
+          var base = Math.floor(n / numSlides);
+          var rem = n % numSlides;
+          var sizes = [];
+          for (var i=0;i<numSlides;i++) sizes.push(base + (i < rem ? 1 : 0));
+          return sizes;
+        }
+
+        var _RAW_TR = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+        var _trResp = await fetch(_RAW_TR + 'templates/Track_Record_Anonymised_TEMPLATE.pptx');
+        if (!_trResp.ok) throw new Error('Failed to fetch Track Record template');
+        var _trZip = await JSZip.loadAsync(await _trResp.arrayBuffer());
+
+        // Robust slide detection: identify the divider and content pattern slides BY CONTENT, not by
+        // assumed file number — file numbering does not follow display order in PPTX packages, and any
+        // other slides (cover, etc.) the template author adds should be preserved automatically.
+        var _trPrsXForScan = await _trZip.file('ppt/presentation.xml').async('string');
+        var _trPrsRForScan = await _trZip.file('ppt/_rels/presentation.xml.rels').async('string');
+        var _trOrderedRids = (_trPrsXForScan.match(/<p:sldId[^>]*r:id="(rId\d+)"/g) || []).map(function(s){
+          var m = s.match(/r:id="(rId\d+)"/); return m ? m[1] : null;
+        });
+        var _trRidToFile = {};
+        (_trPrsRForScan.match(/<Relationship[^>]*Target="slides\/slide\d+\.xml"[^>]*\/>/g) || []).forEach(function(rel){
+          var idM = rel.match(/Id="(rId\d+)"/); var tgtM = rel.match(/Target="slides\/(slide\d+\.xml)"/);
+          if (idM && tgtM) _trRidToFile[idM[1]] = tgtM[1];
+        });
+
+        var _trDividerFile = null, _trContentFile = null;
+        for (var _si=0; _si<_trOrderedRids.length; _si++){
+          var _fname = _trRidToFile[_trOrderedRids[_si]];
+          if (!_fname) continue;
+          var _sxml = await _trZip.file('ppt/slides/'+_fname).async('string');
+          if (!_trContentFile && (_sxml.match(/<a:tbl>/g)||[]).length === 2) _trContentFile = _fname;
+          if (!_trDividerFile && _sxml.indexOf('[Section Subtitle]') !== -1) _trDividerFile = _fname;
+        }
+        if (!_trContentFile) throw new Error('Track Record template: could not find the content slide (expected a slide with exactly two tables).');
+        if (!_trDividerFile) throw new Error('Track Record template: could not find the divider slide (expected a slide containing "[Section Subtitle]"). If you\'ve replaced the divider slide, make sure its title and subtitle placeholders still contain the literal text [Section Title] and [Section Subtitle].');
+
+        var _trDividerBase = await _trZip.file('ppt/slides/'+_trDividerFile).async('string');
+        var _trDividerRels = await _trZip.file('ppt/slides/_rels/'+_trDividerFile+'.rels').async('string');
+        var _trContentBase = await _trZip.file('ppt/slides/'+_trContentFile).async('string');
+        var _trContentRels = await _trZip.file('ppt/slides/_rels/'+_trContentFile+'.rels').async('string');
+
+        function _trBuildDivider(sectionName){
+          var xml = _trDividerBase;
+          xml = xml.split('<a:t>[Section Title]</a:t>').join('<a:t>' + _trXe(sectionName) + '</a:t>');
+          xml = xml.split('<a:t>[Section Subtitle]</a:t>').join('<a:t>Track Record</a:t>');
+          return xml;
+        }
+
+        function _trFillTable(tblXml, items){
+          var firstTr = tblXml.indexOf('<a:tr');
+          var prefix = tblXml.substring(0, firstTr);
+          var rows = tblXml.match(/<a:tr[\s\S]*?<\/a:tr>/g) || [];
+          var headerRow = rows[0] || '';
+          var dataRowTemplate = rows[1] || '';
+          var out = headerRow;
+          items.forEach(function(it){
+            var cellIdx = 0;
+            var rowXml = dataRowTemplate.replace(/<a:tc>[\s\S]*?<\/a:tc>/g, function(cell){
+              var val = cellIdx === 0 ? it.role : it.client_type;
+              cellIdx++;
+              return cell.replace(/<a:t>[^<]*<\/a:t>/, '<a:t>' + _trXe(val) + '</a:t>');
+            });
+            out += rowXml;
+          });
+          return prefix + out;
+        }
+
+        function _trBuildContent(sectionName, leftItems, rightItems){
+          var xml = _trContentBase;
+          xml = xml.split('<a:t>Track Record | [Section Title]</a:t>').join('<a:t>Track Record | ' + _trXe(sectionName) + '</a:t>');
+
+          var tblBlocks = [];
+          var searchFrom = 0;
+          while (true){
+            var s = xml.indexOf('<a:tbl>', searchFrom);
+            if (s === -1) break;
+            var e = xml.indexOf('</a:tbl>', s) + '</a:tbl>'.length;
+            tblBlocks.push({start:s, end:e, xml: xml.substring(s+'<a:tbl>'.length, e-'</a:tbl>'.length)});
+            searchFrom = e;
+          }
+          if (tblBlocks.length < 2) throw new Error('Track Record template: expected two tables on the content slide, found ' + tblBlocks.length);
+
+          var newTblB = '<a:tbl>' + _trFillTable(tblBlocks[1].xml, rightItems) + '</a:tbl>';
+          xml = xml.substring(0, tblBlocks[1].start) + newTblB + xml.substring(tblBlocks[1].end);
+          var newTblA = '<a:tbl>' + _trFillTable(tblBlocks[0].xml, leftItems) + '</a:tbl>';
+          xml = xml.substring(0, tblBlocks[0].start) + newTblA + xml.substring(tblBlocks[0].end);
+
+          return xml;
+        }
+
+        // Build all new slide parts (dividers + content slides), one section at a time
+        var _trNewSlideFiles = []; // {num, xml, rels}
+        var _trSlideNum = 100;
+        _trSectionOrder.forEach(function(sec){
+          var items = _trSections[sec];
+          _trSlideNum++;
+          _trNewSlideFiles.push({ num: _trSlideNum, xml: _trBuildDivider(sec), rels: _trDividerRels });
+
+          var sizes = _trBalancedSizes(items.length, TR_MAX_PER_SLIDE);
+          var offset = 0;
+          sizes.forEach(function(size){
+            var slideItems = items.slice(offset, offset + size);
+            offset += size;
+            var leftItems = slideItems.slice(0, TR_MAX_PER_TABLE);
+            var rightItems = slideItems.slice(TR_MAX_PER_TABLE, TR_MAX_PER_TABLE*2);
+            _trSlideNum++;
+            _trNewSlideFiles.push({ num: _trSlideNum, xml: _trBuildContent(sec, leftItems, rightItems), rels: _trContentRels });
+          });
+        });
+
+        // Write new slide parts into the zip
+        _trNewSlideFiles.forEach(function(sf){
+          _trZip.file('ppt/slides/slide' + sf.num + '.xml', sf.xml);
+          _trZip.file('ppt/slides/_rels/slide' + sf.num + '.xml.rels', sf.rels);
+        });
+
+        // Update presentation.xml, its rels, and Content_Types — remove template slides 2 & 3, insert new ones after slide 1
+        var _trPrsX = await _trZip.file('ppt/presentation.xml').async('string');
+        var _trPrsR = await _trZip.file('ppt/_rels/presentation.xml.rels').async('string');
+        var _trCtX  = await _trZip.file('[Content_Types].xml').async('string');
+
+        var _trRidNums = (_trPrsR.match(/Id="rId(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));});
+        var _trMRid = _trRidNums.length ? Math.max.apply(null,_trRidNums) : 10;
+        var _trSidNums = (_trPrsX.match(/id="(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));}).filter(function(n){return n<2000000000;});
+        var _trMSid = _trSidNums.length ? Math.max.apply(null,_trSidNums) : 300;
+
+        // Find rIds for the divider-pattern and content-pattern slides (identified dynamically above) so we can remove them.
+        // Any other slides (cover, etc.) are NEVER touched — they're real, final content, used as-is.
+        var _trDividerRidM = _trPrsR.match(new RegExp('Id="(rId\\d+)"[^>]*Target="slides/' + _trDividerFile.replace('.','\\.') + '"'));
+        var _trContentRidM = _trPrsR.match(new RegExp('Id="(rId\\d+)"[^>]*Target="slides/' + _trContentFile.replace('.','\\.') + '"'));
+        var _trDividerRid = _trDividerRidM ? _trDividerRidM[1] : null;
+        var _trContentRid = _trContentRidM ? _trContentRidM[1] : null;
+
+        var _trAllNewRels = '', _trAllNewSldIds = '', _trAllNewCT = '';
+        _trNewSlideFiles.forEach(function(sf){
+          var nr = 'rId' + (++_trMRid);
+          var ns = ++_trMSid;
+          sf.rid = nr;
+          _trAllNewRels += '<Relationship Id="'+nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+sf.num+'.xml"/>';
+          _trAllNewSldIds += '<p:sldId id="'+ns+'" r:id="'+nr+'"/>';
+          _trAllNewCT += '<Override PartName="/ppt/slides/slide'+sf.num+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>';
+        });
+
+        // Insert new rels/sldIds at whichever pattern slide (divider or content) appears FIRST in display
+        // order — this preserves anything before it (e.g. a cover) and replaces the template pair in place.
+        var _trDividerPos = _trOrderedRids.indexOf(_trDividerRid);
+        var _trContentPos = _trOrderedRids.indexOf(_trContentRid);
+        var _trAnchorRid = (_trContentPos !== -1 && (_trDividerPos === -1 || _trContentPos < _trDividerPos)) ? _trContentRid : _trDividerRid;
+
+        if (_trAnchorRid) {
+          var _trRelIdx = _trPrsR.indexOf('Id="'+_trAnchorRid+'"');
+          var _trTagStart = _trPrsR.lastIndexOf('<Relationship', _trRelIdx);
+          var _trTagEnd = _trPrsR.indexOf('/>', _trRelIdx) + 2;
+          _trPrsR = _trPrsR.substring(0,_trTagStart) + _trAllNewRels + _trPrsR.substring(_trTagEnd);
+
+          var _trSldIdx = _trPrsX.indexOf('r:id="'+_trAnchorRid+'"');
+          var _trSldTagStart = _trPrsX.lastIndexOf('<p:sldId', _trSldIdx);
+          var _trSldTagEnd = _trPrsX.indexOf('/>', _trSldIdx) + 2;
+          _trPrsX = _trPrsX.substring(0,_trSldTagStart) + _trAllNewSldIds + _trPrsX.substring(_trSldTagEnd);
+        } else {
+          _trPrsR = _trPrsR.replace('</Relationships>', _trAllNewRels + '</Relationships>');
+          _trPrsX = _trPrsX.replace('</p:sldIdLst>', _trAllNewSldIds + '</p:sldIdLst>');
+        }
+        // Remove the OTHER pattern slide's now-orphaned rel/sldId entry (the anchor's was already replaced above)
+        var _trOtherRid = (_trAnchorRid === _trContentRid) ? _trDividerRid : _trContentRid;
+        if (_trOtherRid) {
+          var _trRelIdxO = _trPrsR.indexOf('Id="'+_trOtherRid+'"');
+          if (_trRelIdxO >= 0) {
+            var _trTagStartO = _trPrsR.lastIndexOf('<Relationship', _trRelIdxO);
+            var _trTagEndO = _trPrsR.indexOf('/>', _trRelIdxO) + 2;
+            _trPrsR = _trPrsR.substring(0,_trTagStartO) + _trPrsR.substring(_trTagEndO);
+          }
+          var _trSldIdxO = _trPrsX.indexOf('r:id="'+_trOtherRid+'"');
+          if (_trSldIdxO >= 0) {
+            var _trSldTagStartO = _trPrsX.lastIndexOf('<p:sldId', _trSldIdxO);
+            var _trSldTagEndO = _trPrsX.indexOf('/>', _trSldIdxO) + 2;
+            _trPrsX = _trPrsX.substring(0,_trSldTagStartO) + _trPrsX.substring(_trSldTagEndO);
+          }
+        }
+        _trCtX = _trCtX.replace('<Override PartName="/ppt/slides/'+_trContentFile+'" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>', '');
+        _trCtX = _trCtX.replace('<Override PartName="/ppt/slides/'+_trDividerFile+'" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>', '');
+        _trCtX = _trCtX.replace('</Types>', _trAllNewCT + '</Types>');
+
+        _trZip.file('ppt/presentation.xml', _trPrsX);
+        _trZip.file('ppt/_rels/presentation.xml.rels', _trPrsR);
+        _trZip.file('[Content_Types].xml', _trCtX);
+        // The content-pattern and divider-pattern slides are now fully unreferenced — remove them.
+        // Any other slides (e.g. a cover) are deliberately left untouched.
+        _trZip.remove('ppt/slides/'+_trContentFile);
+        _trZip.remove('ppt/slides/_rels/'+_trContentFile+'.rels');
+        _trZip.remove('ppt/slides/'+_trDividerFile);
+        _trZip.remove('ppt/slides/_rels/'+_trDividerFile+'.rels');
+
+        var _trOut = await _trZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+        var _trUrl = URL.createObjectURL(_trOut);
+        var _trA = document.createElement('a');
+        _trA.href = _trUrl;
+        _trA.download = _safeFileName((item.name || 'Track Record - Anonymised'), 'Track Record - Anonymised') + '.pptx';
+        _trA.click();
+        setTimeout(function(){ URL.revokeObjectURL(_trUrl); }, 2000);
         return;
       }
 
