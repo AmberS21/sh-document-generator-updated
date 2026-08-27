@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- DocGen v2.1 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -293,16 +292,42 @@ table.usage tr:last-child td{border-bottom:none;}
 #adminModalBox button{width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:4px;}
 #adminModalBox button:hover{background:#1d4ed8;}
 #adminErrMsg{color:#dc2626;font-size:0.85rem;text-align:center;margin-top:10px;min-height:18px;}
+.corner-frame{position:relative;border:1px solid var(--brd);border-radius:10px;}
+.corner-frame::before,.corner-frame::after{content:"+";position:absolute;font-size:11px;color:var(--mut);line-height:1;pointer-events:none;}
+.corner-frame::before{top:-6px;left:-6px;}
+.corner-frame::after{bottom:-6px;left:-6px;}
+.corner-frame .cf-tr{content:"+";position:absolute;top:-6px;right:-6px;font-size:11px;color:var(--mut);}
+.corner-frame .cf-br{content:"+";position:absolute;bottom:-6px;right:-6px;font-size:11px;color:var(--mut);}
+.usage-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.usage-pill.status-ok{background:rgba(34,197,94,.15);color:#15803d;}
+.usage-pill.status-bad{background:rgba(239,68,68,.1);color:#b91c1c;border:1px solid rgba(239,68,68,.35);}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://unpkg.com/pizzip@3.1.7/dist/pizzip.min.js"></script>
-<script src="https://unpkg.com/docxtemplater@3.47.4/build/docxtemplater.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.7/dist/pizzip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.47.4/build/docxtemplater.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<script src="https://unpkg.com/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script></head>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script>
+(function() {
+  var MSAL_CDNS = [
+    'https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.min.js',
+    'https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js',
+    'https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js'
+  ];
+  function tryLoad(i) {
+    if (i >= MSAL_CDNS.length) return;
+    var s = document.createElement('script');
+    s.src = MSAL_CDNS[i];
+    s.onload = function() { window.__msalLoaded = true; };
+    s.onerror = function() { tryLoad(i + 1); };
+    document.head.appendChild(s);
+  }
+  tryLoad(0);
+})();
+</script></head>
 <body>
 
 <!-- ─────────────────────── AUTH GATE (Microsoft SSO) ─────────────────────── -->
@@ -316,6 +341,7 @@ table.usage tr:last-child td{border-bottom:none;}
 </style>
 <div id="__authGate" style="position:fixed;inset:0;background:linear-gradient(135deg,#06101f 0%,#0c1d4a 55%,#081526 100%);display:flex;align-items:center;justify-content:center;z-index:2147483647">
   <div id="__authCard" style="background:rgba(255,255,255,.07);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,.13);border-radius:22px;padding:48px 40px 40px;display:flex;flex-direction:column;align-items:center;width:360px;max-width:90vw;box-shadow:0 28px 72px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1);font-family:Inter,'Segoe UI',system-ui,sans-serif">
+    <!-- icon -->
     <div style="width:68px;height:68px;border-radius:18px;background:linear-gradient(145deg,#1591d8,#0d7cbd);display:flex;align-items:center;justify-content:center;margin-bottom:28px;box-shadow:0 10px 28px rgba(21,145,216,.4)">
       <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="6" y="3" width="14" height="18" rx="2" fill="white" fill-opacity=".9"/>
@@ -324,8 +350,10 @@ table.usage tr:last-child td{border-bottom:none;}
         <rect x="9" y="24.5" width="6" height="1.5" rx=".75" fill="white" fill-opacity=".5"/>
       </svg>
     </div>
+    <!-- title -->
     <div style="color:#fff;font-size:22px;font-weight:700;letter-spacing:-.3px;text-align:center;margin-bottom:8px">SH Document Generator</div>
     <div style="color:rgba(255,255,255,.48);font-size:13px;text-align:center;letter-spacing:.1px;margin-bottom:36px">Sign in to access your workspace</div>
+    <!-- spinner -->
     <div id="__authSpinner" style="display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.65);font-size:13px">
       <svg style="animation:__spin 1s linear infinite;flex-shrink:0" width="18" height="18" viewBox="0 0 18 18" fill="none">
         <circle cx="9" cy="9" r="7" stroke="rgba(255,255,255,.2)" stroke-width="2"/>
@@ -333,6 +361,7 @@ table.usage tr:last-child td{border-bottom:none;}
       </svg>
       Signing you in…
     </div>
+    <!-- sign-in button -->
     <button id="__authSignIn" style="display:none">
       <svg style="vertical-align:middle;margin-right:10px" width="20" height="20" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
         <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
@@ -341,6 +370,7 @@ table.usage tr:last-child td{border-bottom:none;}
         <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
       </svg>Sign in with Microsoft
     </button>
+    <!-- error -->
     <div id="__authError" style="display:none;max-width:300px;text-align:center;font-size:12px;color:#fca5a5;margin-top:18px;line-height:1.6;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.22);border-radius:10px;padding:10px 16px"></div>
   </div>
 </div>
@@ -365,7 +395,7 @@ table.usage tr:last-child td{border-bottom:none;}
 </div>
 <script>
 (function () {
-  var __auth = window.__auth = { token: null, account: null, msal: null, ready: false };
+  var __auth = window.__auth = { token: null, accessToken: null, idToken: null, account: null, msal: null, ready: false };
   var gate = function(){return document.getElementById('__authGate');};
   var _origFetch = window.fetch.bind(window);
 
@@ -379,7 +409,22 @@ table.usage tr:last-child td{border-bottom:none;}
       if (!h.has('Authorization')) h.set('Authorization', 'Bearer ' + __auth.token);
       init.headers = h;
     }
-    return _origFetch(input, init);
+    return _origFetch(input, init).then(function (resp) {
+      // On 401, attempt one silent token refresh then retry the request once.
+      if (resp.status === 401 && isApi && __auth.msal && __auth.account) {
+        return __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: __auth.account })
+          .then(function (result) {
+            onSignedIn(result);
+            var retryInit = Object.assign({}, init);
+            var rh = new Headers(retryInit.headers || {});
+            rh.set('Authorization', 'Bearer ' + __auth.token);
+            retryInit.headers = rh;
+            return _origFetch(input, retryInit);
+          })
+          .catch(function () { return resp; }); // refresh failed, surface original 401
+      }
+      return resp;
+    });
   };
 
   function showError(msg) {
@@ -390,43 +435,24 @@ table.usage tr:last-child td{border-bottom:none;}
     el.textContent = msg;
   }
 
-  function onSignedIn(result) {
-    __auth.token = result.accessToken;
-    __auth.account = result.account;
-    __auth.ready = true;
-    var _uname = result.account.name || result.account.username || '';
-    try { localStorage.setItem('sh_userName', _uname); } catch(e){}
-    var _unameEl = document.getElementById('userName');
-    if (_unameEl) _unameEl.textContent = _uname;
-    var _nameOv = document.getElementById('namePromptOverlay');
-    if (_nameOv) _nameOv.style.display = 'none';
-    gate().style.display = 'none';
-    var msUntilExpiry = (new Date(result.expiresOn).getTime() - Date.now()) - 60000;
-    if (msUntilExpiry > 0) {
-      setTimeout(function () {
-        __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: __auth.account })
-          .then(onSignedIn).catch(function(){});
-      }, msUntilExpiry);
-    }
-  }
-
-  function wipeStorage(store, aggressive) {
+  // --- MSAL interaction-lock recovery ---------------------------------------
+  // MSAL v2 stores 'msal.interaction.status' in sessionStorage / localStorage
+  // (and cookies when storeAuthStateInCookie is true). If a prior popup was
+  // closed before completing (very common in Edge with tracking prevention or
+  // popup blocking) the lock persists and every subsequent login throws
+  // 'interaction_in_progress'.
+  function _wipeStorage(store, aggressive) {
     try {
       for (var i = store.length - 1; i >= 0; i--) {
         var key = store.key(i);
         if (!key) continue;
-        var isMsal = key.indexOf('msal.') === 0 || key.indexOf('msal.') !== -1;
+        var isMsal = key.indexOf('msal.') !== -1;
         var isInteraction = key.indexOf('interaction') !== -1;
-        // MSAL v2 uses keys like 'msal.<clientId>.interaction.status', plain
-        // 'msal.interaction.status', and various '{...}-login.microsoftonline.com-...' shapes.
         if (isInteraction || (aggressive && isMsal)) store.removeItem(key);
       }
     } catch (e) {}
   }
-
-  function wipeMsalCookies() {
-    // storeAuthStateInCookie writes 'msal.*' cookies (state/nonce). If the redirect
-    // never returned they persist and MSAL keeps thinking an interaction is live.
+  function _wipeMsalCookies() {
     try {
       document.cookie.split(';').forEach(function (c) {
         var name = c.split('=')[0].trim();
@@ -437,28 +463,69 @@ table.usage tr:last-child td{border-bottom:none;}
       });
     } catch (e) {}
   }
-
   function clearStaleInteraction(aggressive) {
-    // MSAL stores an interaction lock; if a previous popup/redirect never completed
-    // (common in Edge with tracking prevention) this key blocks all future logins.
-    wipeStorage(sessionStorage, aggressive);
-    wipeStorage(localStorage, aggressive);
-    if (aggressive) wipeMsalCookies();
+    _wipeStorage(sessionStorage, aggressive);
+    _wipeStorage(localStorage, aggressive);
+    if (aggressive) _wipeMsalCookies();
+  }
+  function hasStuckLock() {
+    try {
+      var stores = [sessionStorage, localStorage];
+      for (var s = 0; s < stores.length; s++) {
+        var st = stores[s];
+        for (var i = 0; i < st.length; i++) {
+          var k = st.key(i);
+          if (k && k.indexOf('interaction') !== -1 &&
+              (st.getItem(k) || '').indexOf('in_progress') !== -1) return true;
+        }
+      }
+    } catch (e) {}
+    return false;
+  }
+  function showResetButton() {
+    var el = document.getElementById('__authError');
+    document.getElementById('__authSpinner').style.display = 'none';
+    var btn = document.getElementById('__authSignIn');
+    btn.style.display = 'inline-block';
+    btn.textContent = 'Reset & Retry';
+    btn.onclick = function () {
+      clearStaleInteraction(true);
+      location.reload();
+    };
+    el.style.display = 'block';
+    el.innerHTML = 'Sign-in is stuck from a previous attempt.<br>Click <strong>Reset &amp; Retry</strong> to clear state and try again.';
   }
 
-  function hardReset() {
-    clearStaleInteraction(true);
-    // Some MSAL builds also key by BroadcastChannel; a full reload guarantees a
-    // fresh PublicClientApplication instance with no in-memory interaction state.
-    location.reload();
+  function onSignedIn(result) {
+    __auth.accessToken = result.accessToken || __auth.accessToken || null;
+    __auth.idToken = result.idToken || __auth.idToken || null;
+    __auth.token = __auth.idToken || __auth.accessToken;
+    __auth.account = result.account;
+    __auth.ready = true;
+    var _uname = result.account.name || result.account.username || '';
+    try { localStorage.setItem('sh_userName', _uname); } catch(e){}
+    var _unameEl = document.getElementById('userName');
+    if (_unameEl) _unameEl.textContent = _uname;
+    var _nameOv = document.getElementById('namePromptOverlay');
+    if (_nameOv) _nameOv.style.display = 'none';
+    gate().style.display = 'none';
+    // Proactive silent refresh a minute before expiry.
+    var _exp = result.expiresOn || result.idTokenExpiresOn;
+    var msUntilExpiry = (new Date(_exp).getTime() - Date.now()) - 60000;
+    if (msUntilExpiry > 0) {
+      setTimeout(function () {
+        __auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: __auth.account })
+          .then(onSignedIn).catch(function(){});
+      }, msUntilExpiry);
+    }
   }
 
-  function doLoginPopup() {
+  function _doLoginPopup() {
     return __auth.msal.loginPopup({ scopes: ['User.Read'], prompt: 'select_account' });
   }
 
   __auth.signIn = function () {
-    doLoginPopup()
+    _doLoginPopup()
       .then(onSignedIn)
       .catch(function (e) {
         var code = (e && (e.errorCode || e.name)) || '';
@@ -466,25 +533,14 @@ table.usage tr:last-child td{border-bottom:none;}
         if (code === 'interaction_in_progress' || /interaction_in_progress/i.test(msg)) {
           // Aggressive purge (both storages + cookies) and one retry.
           clearStaleInteraction(true);
-          return doLoginPopup().then(onSignedIn).catch(function () {
-            // Still stuck \u2014 MSAL's in-memory state is dirty. Only a reload fixes it.
-            showResetError();
+          return _doLoginPopup().then(onSignedIn).catch(function () {
+            // MSAL's in-memory PCA state is dirty; only a reload fixes it.
+            showResetButton();
           });
         }
         showError('Sign-in failed: ' + msg);
       });
   };
-
-  function showResetError() {
-    var el = document.getElementById('__authError');
-    document.getElementById('__authSpinner').style.display = 'none';
-    var btn = document.getElementById('__authSignIn');
-    btn.style.display = 'inline-block';
-    btn.textContent = 'Reset & Retry';
-    btn.onclick = hardReset;
-    el.style.display = 'block';
-    el.innerHTML = 'Sign-in is stuck from a previous attempt.<br>Click <strong>Reset &amp; Retry</strong> to clear state and try again.';
-  }
 
   __auth.signOut = function () {
     try { localStorage.removeItem('sh_userName'); } catch(e){}
@@ -497,27 +553,15 @@ table.usage tr:last-child td{border-bottom:none;}
         if (!r.ok) throw new Error('msalconfig HTTP ' + r.status);
         return r.json();
       });
+      // Wait for msal-browser to be present.
       for (var i = 0; i < 100 && !(window.msal && window.msal.PublicClientApplication); i++) {
         await new Promise(function (r) { setTimeout(r, 50); });
       }
       if (!(window.msal && window.msal.PublicClientApplication)) throw new Error('MSAL library failed to load');
 
-      // Proactively clear any stale interaction lock left behind by a prior page load
-      // (Edge tracking prevention / popup closed mid-flow). We do this BEFORE creating
-      // the PCA so its constructor doesn't inherit the stuck state.
-      var hasStuckLock = false;
-      try {
-        ['sessionStorage','localStorage'].forEach(function (s) {
-          var store = window[s];
-          for (var i = 0; i < store.length; i++) {
-            var k = store.key(i);
-            if (k && k.indexOf('interaction') !== -1 && (store.getItem(k) || '').indexOf('in_progress') !== -1) {
-              hasStuckLock = true; break;
-            }
-          }
-        });
-      } catch (e) {}
-      if (hasStuckLock) clearStaleInteraction(true);
+      // Proactively clear any stale lock BEFORE creating the PCA so the fresh
+      // instance doesn't inherit stuck state from a prior page load.
+      if (hasStuckLock()) clearStaleInteraction(true);
 
       __auth.msal = new msal.PublicClientApplication({
         auth: {
@@ -529,16 +573,15 @@ table.usage tr:last-child td{border-bottom:none;}
       });
       if (__auth.msal.initialize) { await __auth.msal.initialize(); }
 
-      // Always drain any in-flight redirect response before doing anything else.
-      // If this is skipped, MSAL leaves 'interaction_in_progress' set and every
-      // subsequent login attempt throws (very common on Edge).
+      // Must drain any in-flight redirect response before any other interactive
+      // call, otherwise MSAL leaves 'interaction_in_progress' set permanently.
       try {
         var redirectResult = await __auth.msal.handleRedirectPromise();
         if (redirectResult && redirectResult.account) {
           return onSignedIn(redirectResult);
         }
       } catch (e) {
-        clearStaleInteraction();
+        clearStaleInteraction(true);
       }
 
       var accounts = __auth.msal.getAllAccounts();
@@ -801,11 +844,61 @@ table.usage tr:last-child td{border-bottom:none;}
 <div class="page hidden" id="sec-admin">
   <!-- old usage card hidden -->
   <div class="card">
-    <div class="card-title"><div class="step-dot">&#128202;</div> Usage by User</div>
-    <div id="logStorageStatus" style="margin-bottom:8px;padding:6px 12px;background:rgba(0,0,0,.2);border-radius:6px;"></div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;"><div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;"></div><div style="display:flex;gap:8px;"><button onclick="loadUsageLogs()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x21BA; Refresh</button><button onclick="exportUsageLogs()" style="background:#C9A227;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">&#x2193; Export CSV</button><button onclick="clearUsageLogs()" style="background:rgba(220,38,38,.7);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x1F5D1; Clear Local</button></div></div><table class="usage"><thead><tr><th>User</th><th>Template</th><th>Input</th><th>Status</th><th>Date &amp; Time</th></tr></thead><tbody id="usageLogBody">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+      <div>
+        <div class="card-title" style="margin-bottom:2px;"><div class="step-dot">&#128202;</div> Usage by User</div>
+        <div id="logStorageStatus" style="font-size:12px;margin-left:2px;"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <select id="usageMonthSel" onchange="onUsageMonthChange()" style="background:var(--chip);border:1px solid var(--brd);color:var(--txt);padding:6px 10px;border-radius:6px;font-size:12px;"></select>
+        <span id="usageCompareBadge" style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;border:1px solid var(--brd);background:var(--chip);color:var(--txt);"></span>
+      </div>
+    </div>
+    <div id="usageSummary" style="display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 8px;"></div>
+    <div id="usageAttribution" style="font-size:12px;color:var(--mut);margin-bottom:16px;"></div>
+
+    <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:18px;align-items:start;">
+      <div class="corner-frame" style="padding:14px 18px;">
+        <span class="cf-tr"></span><span class="cf-br"></span>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div id="usageChartTitle" style="font-size:11px;font-weight:600;color:var(--mut);letter-spacing:.3px;"></div>
+          <select id="usageUserSel" onchange="onUsageUserFilterChange()" style="background:var(--chip);border:1px solid var(--brd);color:var(--txt);padding:4px 8px;border-radius:6px;font-size:11px;"></select>
+        </div>
+        <div id="usageChartBars" style="display:flex;align-items:flex-end;gap:20px;height:100px;"></div>
+      </div>
+      <div class="corner-frame" style="padding:14px 18px;">
+        <span class="cf-tr"></span><span class="cf-br"></span>
+        <div id="usageTopTemplatesTitle" style="font-size:11px;font-weight:600;color:var(--mut);letter-spacing:.3px;margin-bottom:10px;">TOP TEMPLATES</div>
+        <div id="usageTopTemplates"></div>
+      </div>
+    </div>
+
+    <div style="font-size:11px;font-weight:600;color:var(--mut);letter-spacing:.3px;margin-bottom:8px;">TOP USERS <span style="font-weight:400;">— select to filter the log below</span></div>
+    <div id="usageTopUsers" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;"></div>
+
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+      <div style="position:relative;flex:1;min-width:200px;">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.5;font-size:13px;">&#128269;</span>
+        <input id="usageSearchBox" oninput="onUsageSearchChange()" placeholder="Search by user or template..." style="width:100%;box-sizing:border-box;background:var(--chip);border:1px solid var(--brd);color:var(--txt);padding:7px 10px 7px 30px;border-radius:6px;font-size:12px;">
+      </div>
+      <select id="usageStatusFilter" onchange="onUsageSearchChange()" style="background:var(--chip);border:1px solid var(--brd);color:var(--txt);padding:7px 10px;border-radius:6px;font-size:12px;">
+        <option value="">All statuses</option>
+        <option value="success">Success</option>
+        <option value="failed">Failed</option>
+      </select>
+      <span id="usageEntriesCount" style="font-size:12px;color:var(--mut);white-space:nowrap;"></span>
+    </div>
+
+    <table class="usage"><thead><tr><th>User</th><th>Template</th><th>Input</th><th>Status</th><th>Date &amp; Time</th></tr></thead><tbody id="usageLogBody">
         <tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>
       </tbody>
     </table>
+
+    <div style="display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);">
+      <button onclick="loadUsageLogs()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x21BA; Refresh</button>
+      <button onclick="exportUsageLogs()" style="background:#C9A227;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">&#x2193; Export CSV</button>
+      <button onclick="clearUsageLogs()" style="background:rgba(220,38,38,.7);border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;">&#x1F5D1; Clear Local</button>
+    </div>
   </div>
   <div class="card">
     <div class="card-title"><div class="step-dot">&#128273;</div> Admin Access &#8212; Email List</div>
@@ -1212,6 +1305,20 @@ const TEMPLATES = {
 
     promptType: 'apac-ey'
 
+  },
+
+  'advisor-profile': {
+    label: 'Advisor Profile (PowerPoint)',
+    file: 'templates/Advisor_Profile_Template_DocGen.pptx',
+    isAdvisorProfile: true,
+    promptType: 'advisor-profile'
+  },
+
+  'track-record-anonymised': {
+    label: 'Track Record - Anonymised (PowerPoint)',
+    file: 'templates/Track_Record_Anonymised_TEMPLATE.pptx',
+    isTrackRecord: true,
+    promptType: 'track-record'
   }
 
 };
@@ -1239,8 +1346,8 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
 (function() {
   var sel = document.getElementById('tplSel');
   if (!sel) return;
-  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','candidate-briefing-pack','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile'];
-  var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update'];
+  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','candidate-briefing-pack','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile','advisor-profile'];
+  var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update','track-record-anonymised'];
 
   var grp1 = document.createElement('optgroup');
   grp1.label = 'PROFILES ──';
@@ -1364,6 +1471,24 @@ var TPL = {
     fmt: 'd',
     reg: 'APAC',
     flds: ['Candidate Name','Current Title','Current Employer','Profile Date','Business Experience','Education','Professional Qualifications','Nationality','Languages','Interests','SH Summary (manual)','Assignment Name (manual)','Prepared By (manual)']
+  },
+  'advisor-profile': {
+    name: 'Advisor Profile',
+    sub: 'One-Page PowerPoint',
+    ico: 'ppt',
+    bg: 'rgba(210,71,38,.12)',
+    fmt: 'p',
+    reg: 'Global',
+    flds: ['Full Name','Email','Phone','Summary','Relevant Engagements (3)','Experience Narrative','Technical Skills (3)','Qualifications (2)']
+  },
+  'track-record-anonymised': {
+    name: 'Track Record - Anonymised',
+    sub: 'Multi-Slide PowerPoint',
+    ico: 'ppt',
+    bg: 'rgba(20,118,137,.15)',
+    fmt: 'p',
+    reg: 'Global',
+    flds: ['Section','Role / Job Title','Client Type (anonymised)','Client Name (internal only, never shown)']
   }
 };
 
@@ -1420,6 +1545,30 @@ function pickTpl(v) {
       if (_isProjRpt && typeof activeType !== 'undefined' && activeType === 'text') setInput('url');
     }
   });
+
+  // Track Record - Anonymised: Paste or Upload File both work (Excel converts to CSV automatically). Ezekia/URL doesn't apply — this isn't a CRM record.
+  var _isTrackRecord = (v === 'track-record-anonymised');
+  document.querySelectorAll('.input-tab, [onclick*="setInput"]').forEach(function(el) {
+    var _label = el.textContent && el.textContent.trim();
+    var _isUrlTab = _label && _label.match(/Ezekia|URL/i);
+    if (_isUrlTab) {
+      el.style.opacity = _isTrackRecord ? '0.4' : '';
+      el.style.pointerEvents = _isTrackRecord ? 'none' : '';
+      el.title = _isTrackRecord ? 'Not applicable for Track Record — use Paste or Upload File instead' : '';
+      if (_isTrackRecord && typeof activeType !== 'undefined' && activeType === 'url') setInput('text');
+    } else {
+      el.style.opacity = '';
+      el.style.pointerEvents = '';
+      el.title = '';
+    }
+  });
+  var _trHint = document.getElementById('textInput');
+  if (_trHint) {
+    if (!_trHint.getAttribute('data-default-placeholder')) _trHint.setAttribute('data-default-placeholder', _trHint.placeholder);
+    _trHint.placeholder = _isTrackRecord
+      ? 'Paste your Excel data here (select the cells in Excel including the header row, then paste) — or use the Upload File tab to upload the .xlsx directly'
+      : _trHint.getAttribute('data-default-placeholder') || _trHint.placeholder;
+  }
 }
 
 function filterTpl(q) {
@@ -2075,8 +2224,8 @@ function buildEaIndiaRegBizExp(companies) {
   var TAB_STOP  = '<w:tabs><w:tab w:val="right" w:pos="9900"/></w:tabs>';
   var CO_PPR    = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
   var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
-  var ROL_PPR_D = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
-  var ROL_PPR_P = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
+  var ROL_PPR_D = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="120"/>' + TAB_STOP + '</w:pPr>';
+  var ROL_PPR_P = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="120"/></w:pPr>';
   var ROL_RPR   = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
   var BUL_RPR   = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/><w:lang w:eastAsia="en-US"/></w:rPr>';
   var BUL_PPR   = '<w:pStyle w:val="SHBullets"/>';
@@ -2098,6 +2247,29 @@ function buildEaIndiaRegBizExp(companies) {
       xml += '<w:p>' + DESC_PPR + '<w:r>' + DESC_RPR + '<w:t xml:space="preserve">' + xe(co.description) + '</w:t></w:r></w:p>';
     }
     xml += SPACER;
+    var overviewBullets = co.overview_bullets || [];
+    if (overviewBullets.length > 0) {
+      // Company-level bullets: print ALL role/date lines together first, then the shared bullets once
+      for (var ri0 = 0; ri0 < roles.length; ri0++) {
+        var role0 = roles[ri0];
+        if (!role0 || !role0.role) continue;
+        var roleDates0 = multiRole ? normDateRange(role0.role_dates || '') : '';
+        if (roleDates0) {
+          xml += '<w:p>' + ROL_PPR_D
+              +  '<w:r>' + ROL_RPR + '<w:t xml:space="preserve">' + xe(role0.role) + '</w:t></w:r>'
+              +  '<w:r>' + ROL_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(roleDates0) + '</w:t></w:r>'
+              +  '</w:p>';
+        } else {
+          xml += '<w:p>' + ROL_PPR_P + '<w:r>' + ROL_RPR + '<w:t>' + xe(role0.role) + '</w:t></w:r></w:p>';
+        }
+      }
+      xml += SPACER;
+      for (var oi = 0; oi < overviewBullets.length; oi++) {
+        var ob = (overviewBullets[oi] || '').trim();
+        if (!ob) continue;
+        xml += '<w:p><w:pPr>' + BUL_PPR + '</w:pPr><w:r>' + BUL_RPR + '<w:t xml:space="preserve">' + xe(ob) + '</w:t></w:r></w:p>';
+      }
+    } else {
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
       if (!role || !role.role) continue;
@@ -2110,7 +2282,6 @@ function buildEaIndiaRegBizExp(companies) {
       } else {
         xml += '<w:p>' + ROL_PPR_P + '<w:r>' + ROL_RPR + '<w:t>' + xe(role.role) + '</w:t></w:r></w:p>';
       }
-      xml += SPACER;
       var bullets = role.bullets || [];
       for (var bi = 0; bi < bullets.length; bi++) {
         var b = (bullets[bi] || '').trim();
@@ -2125,6 +2296,7 @@ function buildEaIndiaRegBizExp(companies) {
         }
       }
       if (ri < roles.length - 1) { xml += SPACER; }
+    }
     }
   }
   return xml;
@@ -2561,7 +2733,12 @@ async function generate() {
         var p = personData.data || personData;
         var prof = p.profile || {};
         var lines = [];
-        lines.push('NAME: ' + (p.firstName||'') + ' ' + (p.lastName||''));
+        var _personName = (
+          p.fullName ||
+          p.name ||
+          (((p.firstName || '') + ' ' + (p.lastName || '')).trim())
+        ) || '';
+        lines.push('NAME: ' + _personName);
         // Current employer from first primary position
         var positions = (posData.data || []);
         var primary = positions.find(function(x){ return x.primary; }) || positions[0];
@@ -3070,10 +3247,10 @@ async function generate() {
             btn.innerHTML = 'Generating ' + (fi+1) + '/' + filesToProcess.length + ': ' + file.name.substring(0,20) + '...';
             showProgress(fi+1, _totalFiles);
             if (_isCombined) {
-              var _cvOutput = await processOneCV(inputText, tpl, btn, true);
+              var _cvOutput = await processOneCV(inputText, tpl, btn, true, 'file');
               if (_cvOutput) _combinedOutputs.push(_cvOutput);
             } else {
-              await processOneCV(inputText,tpl,btn);
+              await processOneCV(inputText,tpl,btn,false,'file');
             }
           } else {
             notify('Could not extract text from: ' + file.name);
@@ -3105,7 +3282,7 @@ async function generate() {
   }
 
 
-if (activeType === 'file') return;   showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn);
+if (activeType === 'file') return;   showProgress(1,1,'Processing your profile...');   await processOneCV(inputText, tpl, btn, false, activeType);
   logUsage(tpl, activeType, 'success');
   hideProgress('Done! Your profile is ready ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ check My History');
 }
@@ -3232,7 +3409,8 @@ async function convertPdfToWord() {
   }
 }
 
-async function processOneCV(inputText, tpl, btn, returnOnly) {
+async function processOneCV(inputText, tpl, btn, returnOnly, inputMethod) {
+  var _pocvInputMethod = inputMethod || 'text';
   var selChip = document.querySelector('.fmt-chip.on-d,.fmt-chip.on-p,.fmt-chip.on-x,.fmt-chip.on-f');
   var fmt = selChip ? (selChip.className.match(/on-([dpxf])/) ? selChip.className.match(/on-([dpxf])/)[1] : 'd') : 'd';
   var claudeKey = (localStorage.getItem('sh_claudeKey') || '').trim();
@@ -3251,9 +3429,11 @@ var isBriefingPack = (tpl === 'candidate-briefing-pack');
 var isServicesProfile = (tpl === 'services-profile');
 var isEaIndia = (tpl === 'ea-india-profile');
 var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
+var isAdvisorProfile = (tpl === 'advisor-profile');
+var isTrackRecord = (tpl === 'track-record-anonymised');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":"","ADDITIONAL_INFO":"","INTERESTS":""}';
+var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","overview_bullets":[""],"roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_HEADING":"","PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"ADDITIONAL_SECTIONS":[{"heading":"","content":[""]}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE_HEADING":"","TRANSACTION_EXPERIENCE":[{"subheading":"","items":[""]}],"TRANSACTION_EXPERIENCE_NOTE":"","AFFILIATIONS":[{"organization":"","role":"","dates":""}]}';
 var eaIndiaV2Prompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV below and extract ALL information into a structured JSON object.
 
 ABSOLUTE RULES:
@@ -3269,9 +3449,24 @@ CLIENT_COMPANY: Always "".
 SEARCH_TITLE: Always "".
 MONTH_YEAR: "` + _ei2M2[_ei2Now2.getMonth()] + ' ' + _ei2Now2.getFullYear() + `"
 
-SUMMARY: Extract the candidate's opening prose paragraphs VERBATIM. Separate each paragraph with a newline character \n. Do NOT include bullet points or skills lists — prose only.
+SUMMARY and SUMMARY_BULLETS together — read this as one unit, they are two halves of the same source section:
+Many CVs open with a two-part intro before Business Experience begins: FIRST a short prose paragraph (sometimes under a heading like "Summary", "Profile", "Key Value Offering", "Executive Summary", or a styled callout box — the heading wording varies a lot, treat ANY heading in this position as equivalent), THEN a block of labeled items where each item starts with a short bold-style label followed by a colon (e.g. "Strategic Leadership: Developed long-term security strategies...", "Regulated Industries: Developed security programs to meet..."). These are TWO SEPARATE fields — the prose paragraph goes in SUMMARY, the labeled items go in SUMMARY_BULLETS — and BOTH must be captured when both are present. Capturing one does not excuse missing the other.
+COMPLETE LITERAL WORKED EXAMPLE — if the source (in any heading/box style) reads exactly like this:
+  Key Value Offering
+  Transformational security leader with proven track record of delivering business results by turning strategy into action, driving technology transformation, and managing cyber risk. Trusted by boards, executives, and key stakeholders to align security program with business strategy and improve system resilience, scalability, and value.
+  Strategic Leadership: Developed long-term security strategies and roadmaps for prominent global organizations (Capital Group, GE Capital, FactSet, Cencora, and Cboe).
+  Public Company Board Interaction: Developed strong working relations with the Board of Directors of public companies.
+  Regulated Industries: Developed security programs to meet industry regulatory requirements SOX, PCI DSS, HIPAA/HITRUST.
+Then your JSON output for this part MUST be exactly:
+  "SUMMARY": "Transformational security leader with proven track record of delivering business results by turning strategy into action, driving technology transformation, and managing cyber risk. Trusted by boards, executives, and key stakeholders to align security program with business strategy and improve system resilience, scalability, and value."
+  "SUMMARY_BULLETS": "Strategic Leadership: Developed long-term security strategies and roadmaps for prominent global organizations (Capital Group, GE Capital, FactSet, Cencora, and Cboe).|Public Company Board Interaction: Developed strong working relations with the Board of Directors of public companies.|Regulated Industries: Developed security programs to meet industry regulatory requirements SOX, PCI DSS, HIPAA/HITRUST."
+Notice: the first paragraph (no label, no colon-prefix) went to SUMMARY as plain prose. Every labeled item after it went to SUMMARY_BULLETS, one per pipe, keeping its own label attached. Neither field is left empty here — both are populated from this one source block. Do not skip the prose paragraph just because labeled items follow it, and do not skip the labeled items just because a prose paragraph preceded them.
 
-SUMMARY_BULLETS: Extract the candidate's main skills/competencies section (e.g. "Core Leadership Strengths", "Key Skills", "Core Competencies"). Return as a pipe-separated string of items exactly as written. If no such section exists, leave "".
+SUMMARY: The prose paragraph(s) described above, copied VERBATIM, one paragraph per \n. Leave "" only if the CV genuinely has no such intro paragraph before Business Experience begins (i.e. it jumps straight from a bare heading into labeled items or straight into Business Experience with no introductory sentence at all).
+CRITICAL — DO NOT CONFUSE WITH ROLE-SPECIFIC OVERVIEW CONTENT: many CVs ALSO have an "Overview:" bullet list positioned INSIDE a specific role's own entry further down (e.g. directly under a job title, describing that particular tenure) — that is NOT this field. It belongs to that role's own content only (see role.bullets below) and must never be pulled up into SUMMARY.
+
+SUMMARY_BULLETS: The labeled-item block described above, e.g. under a heading like "Core Leadership Strengths", "Key Skills", "Core Competencies" (or with no sub-heading of its own at all — it directly follows the prose paragraph). Return as a pipe-separated string, one full item per pipe-delimited segment, each item keeping its own leading label. Leave "" only if the CV genuinely has no such labeled-item block.
+
 
 SUMMARY_SECTIONS: Some CVs have multiple named subsections after the prose summary, each with a heading and bullet points (e.g. "Enterprise AI Leadership", "Enterprise AI Impact", "Enterprise AI Platforms Built and Operated"). Extract each as an array of objects with "heading" and "items" (pipe-separated). Example:
 [
@@ -3283,37 +3478,118 @@ If no such subsections exist, return [].
 IMPORTANT: If SUMMARY_SECTIONS is populated, leave SUMMARY_BULLETS as "" to avoid duplication.
 
 COMPANIES ARRAY:
-CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same company (even in different locations or different time periods), ALL those roles must go under ONE company entry. Judge by company name only — ignore location differences. For example, if the CV lists "Barclays Bank | London" and "Barclays Bank | London / India" and "Barclays Bank | London" as separate entries — these are ALL the same company "Barclays Bank" and must be grouped into one entry with multiple roles.
-- company.name: Company name only — no location, no punctuation added.
-- company.dates: The OVERALL tenure across ALL roles at this company — earliest start date to latest end date. ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Dec 2005 – Oct 2025". Never use full month names or "Sept".
-- company.location: City/Country of the company headquarters or primary location. Leave "" if not stated.
+CRITICAL — COMPANY BOUNDARY DETECTION (read this before anything else below): the company name and its descriptive blurb (industry description, ticker symbol, "an S&P 500 company", etc.) do NOT always appear BEFORE the role and its bullets. In many CVs, the company name/blurb instead appears AFTER a role's bullets have ended — as a trailing tag closing out that section, right before the NEXT role's title begins. Do NOT assume company boundaries by "a company name appeared, so a new company must be starting" — that heuristic is WRONG for this pattern and will scramble the whole document if you follow it.
+The RELIABLE signal for "a new company/role has started" is the appearance of a NEW JOB TITLE (optionally followed by "Challenge:"/"Accomplishments:"-style structure), NOT the appearance of a company name. A trailing company blurb belongs to the role and bullets that came BEFORE it, never to the role that comes after it.
+WORKED EXAMPLE — if the CV is structured like this:
+  Chief Information Security Officer          Nov 2024 – Nov 2025
+  Challenge: [text]
+  Accomplishments:
+  - [bullet 1] ... [bullet N]
+  FactSet (Ticker: FDS) - FactSet, an S&P 500 company, is a global provider...
+  Global Chief Information Security Officer    Jan 2021 – Jun 2024
+  Challenge: [text]
+  Accomplishments:
+  - [bullet 1] ... [bullet N]
+  Chicago Board of Options Exchange (Ticker: CBOE) - World's leading derivatives...
+  Vice President, Deputy CISO & Chief Data Protection Officer    Aug 2016 – Aug 2020
+  Challenge: [text]
+  Accomplishments:
+  - [bullet 1] ... [bullet N]
+  Cencora (Ticker: COR | Fortune 10 Company) - Cencora, formerly AmerisourceBergen...
+Then the correct extraction is THREE separate companies, each with its OWN role and its OWN full set of bullets:
+  1. company.name="FactSet", company.dates="Nov 2024 – Nov 2025", company.description="FactSet (Ticker: FDS) - FactSet, an S&P 500 company, is a global provider...", role="Chief Information Security Officer", role_dates="Nov 2024 – Nov 2025", bullets=[ALL the Challenge + Accomplishments bullets that came BEFORE the FactSet blurb]
+  2. company.name="Chicago Board of Options Exchange", company.dates="Jan 2021 – Jun 2024", company.description="Chicago Board of Options Exchange (Ticker: CBOE) - World's leading derivatives...", role="Global Chief Information Security Officer", role_dates="Jan 2021 – Jun 2024", bullets=[ALL the Challenge + Accomplishments bullets that came BEFORE the CBOE blurb]
+  3. company.name="Cencora", company.dates="Aug 2016 – Aug 2020", company.description="Cencora (Ticker: COR | Fortune 10 Company) - Cencora, formerly AmerisourceBergen...", role="Vice President, Deputy CISO & Chief Data Protection Officer", role_dates="Aug 2016 – Aug 2020", bullets=[ALL the Challenge + Accomplishments bullets that came BEFORE the Cencora blurb]
+The trailing blurb after each block of bullets tells you which company that block belongs to — use it to correctly LABEL the block you just finished reading, then continue to the next role title as the start of the next entry. Never let a trailing blurb's company name attach to the bullets that follow it, and never let the dates of one company bleed into another company's date field.
+CRITICAL — DO NOT DROP ANY BULLET BLOCK: this trailing-blurb pattern is the single most common cause of entire accomplishment blocks going missing. Before finalizing your output, count the number of distinct "Challenge:"/"Accomplishments:"-style blocks in the source and confirm your companies array has the SAME number of role entries with non-empty bullets — a company block with a role title, a Challenge line, and Accomplishments bullets in the source must NEVER end up with bullets=[] in your output. If you find yourself about to output a role with an empty bullets array despite the source clearly having Challenge/Accomplishments text for it, STOP and re-scan the source — you have almost certainly mis-attributed that block's bullets to the wrong company.
+- company.description: The company's descriptive blurb (ticker, industry description, "an S&P 500 company" etc.), captured VERBATIM, regardless of whether it appeared before or after the role's bullets in the source. Leave "" if the CV has none.
+CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same company back-to-back with NO other employer in between, ALL those roles must go under ONE company entry. Judge by company name only — ignore location differences. For example, if the CV lists "Barclays Bank | London" and "Barclays Bank | London / India" and "Barclays Bank | London" as consecutive, back-to-back entries — these are the same company "Barclays Bank" and must be grouped into one entry with multiple roles.
+CRITICAL EXCEPTION — REJOINING: If the candidate worked at a company, then left to work somewhere ELSE, then LATER rejoined the SAME company — this is TWO SEPARATE company entries at their correct chronological positions, NOT one merged entry. Never merge across a gap where a different employer appears in between, even if the company name is identical.
+HOW TO CHECK THIS: process the CV's work history in strict chronological order, one entry at a time, exactly as the CV lists it. Before grouping a role into an existing company entry, check whether a DIFFERENT employer appears anywhere between this role and that company's most recent previously-seen role. If yes, this is a NEW, separate company entry — do not merge it backward into the earlier one.
+WORKED EXAMPLE — if the CV lists, in this order:
+  Company A                              2017 – 2020
+  Company B                              2015 – 2017
+  Company A                              2011 – 2015
+Company B sits BETWEEN the two Company A stints, so this is NOT one merged "Company A 2011-2020" entry. It is THREE separate company array entries in exactly this order: Company A (2017-2020), then Company B (2015-2017), then Company A (2011-2015) again. The output array order must follow the CV's chronological listing, not be grouped alphabetically or by company name.
+Preserve the CV's original chronological order in the output array — the earlier stint and the later stint of a re-joined company must each appear in their own correct position relative to the employer(s) in between, exactly as the CV lists them.
+- company.name: Company name only — no location, no punctuation added, and NEVER include a ticker symbol or parenthetical like "(Ticker: CBOE)" or "(Ticker: FDS)" in this field — those belong ONLY in company.description, never in company.name. E.g. if the source reads "Chicago Board of Options Exchange (Ticker: CBOE)", company.name = "Chicago Board of Options Exchange" and the "(Ticker: CBOE)" part goes into company.description along with the rest of the blurb.
+- company.dates: The OVERALL tenure across ALL roles at THIS company only — earliest start date to latest end date AMONG THIS COMPANY'S OWN ROLES. CRITICAL: never borrow or carry over a date from a different, adjacent company entry — each company's dates must come exclusively from that company's own role_dates values, computed independently of whatever company came before or after it in the list. If a company has only one role, company.dates MUST exactly equal that role's own role_dates — do not widen it using any other company's dates. ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Dec 2005 – Oct 2025". Never use full month names or "Sept".
+- company.location: City/Country of the company headquarters or primary location. Leave "" if not stated. Normalize "USA" to "US" — always write "US", never "USA", regardless of how the source CV writes it.
 - role.role: Exact job title. If that specific role was in a different location, append it after a comma e.g. "Programme Manager — Group Risk, London / India".
 - role.role_dates: Dates for this role only. REQUIRED when company has 2 or more roles. Leave "" only if company has exactly ONE role.
-- role.bullets: Capture ALL content under the role VERBATIM and in order. CRITICAL — if the CV has sub-headings within a role (e.g. "Key Achievements & Responsibilities", "Operational Risk Management", "Business Continuity & Operational Resilience" etc.), include them as bullet items with ">>" prefix so they are identifiable as headings. E.g. if CV has:
+- company.overview_bullets: Use this INSTEAD of role.bullets when the CV lists multiple job titles/promotions at ONE company together as a group of title+date lines, followed by paragraph(s) describing responsibilities across that WHOLE progression as a single narrative — not broken out separately under each specific title. In that case: list every role/title with its own role_dates (leave each role's bullets as []), and put the narrative paragraph(s) in company.overview_bullets instead (one array item per paragraph, verbatim). Example — if the CV shows:
+  Vice President, Global Privacy    2025 – Present
+  Chief Privacy Officer             2022 – 2025
+  Senior Director                  2021 – 2022
+  [paragraph describing overall scope across all three roles]
+  [second paragraph, still about the overall role, not any one title]
+Then: roles = [{role:"Vice President, Global Privacy", role_dates:"2025 – Present", bullets:[]}, {role:"Chief Privacy Officer", role_dates:"2022 – 2025", bullets:[]}, {role:"Senior Director", role_dates:"2021 – 2022", bullets:[]}], and company.overview_bullets = ["[paragraph 1 verbatim]", "[paragraph 2 verbatim]"].
+- If instead each specific title/role has its OWN distinct bullets that clearly only describe that one role, use role.bullets per role as normal and leave company.overview_bullets as [].
+- role.bullets: Capture ALL content under the role VERBATIM and in order (only when NOT using company.overview_bullets — see above). CRITICAL — if the CV has BARE sub-headings within a role (a short label with NO content of its own on that line — just introducing the list that follows, e.g. "Key Achievements & Responsibilities", "Operational Risk Management", "Accomplishments"), include them as bullet items with ">>" prefix so they render as a plain (non-bulleted) heading. E.g. if CV has:
   Key Achievements & Responsibilities
     • Bullet one
     • Bullet two
   Business Continuity
     • Bullet three
 Then bullets array should be: [">> Key Achievements & Responsibilities", "Bullet one", "Bullet two", ">> Business Continuity", "Bullet three"]
-If the role has an italic overview/intro line before the bullets, include it as the first item with ">>" prefix too.
+CRITICAL DISTINCTION — a label is only a ">>" bare heading if it has NO substantive content immediately after it on the same line/item. If a label is immediately followed by its own sentence on the same bullet (e.g. "Challenge: Hired by the Chief Executive Officer and Chief Technology Officer following the Scattered Spider cyber incident..."), that whole thing is a REGULAR BULLET — do NOT give it the ">>" prefix, and do NOT strip the "Challenge:" label off it. Keep the label attached to its sentence as one normal bullet item, exactly as it appears in the source. Only the BARE word/phrase with nothing following it on that line (like "Accomplishments" by itself, immediately before a list starts) gets the ">>" treatment.
+WORKED EXAMPLE matching this exact pattern — if the CV has:
+  Challenge: Hired by the Chief Executive Officer and Chief Technology Officer following the Scattered Spider cyber incident to rebuild trust with the Board of Directors and Business Leaders.
+  Accomplishments:
+    • Quickly built trust with the Board and Executive Management.
+    • Established Key Performance Indicators (KPIs).
+Then bullets array should be: ["Challenge: Hired by the Chief Executive Officer and Chief Technology Officer following the Scattered Spider cyber incident to rebuild trust with the Board of Directors and Business Leaders.", ">> Accomplishments", "Quickly built trust with the Board and Executive Management.", "Established Key Performance Indicators (KPIs)."]
+Notice "Challenge: ..." has NO ">>" prefix (it's a real bullet with content), while "Accomplishments" alone gets ">>" (it's a bare heading with nothing on its own line).
+Separately — if a role has a plain UNLABELED italic overview/intro sentence before its bullets (no leading label like "Challenge:", just descriptive prose, e.g. "Independent strategic and corporate finance advisor to..."), include that as the first bullet item with ">>" prefix, since it functions as a heading-style intro rather than an accomplishment. This is different from a labeled item like "Challenge: ..." which stays as a normal bullet per the rule above.
 Capture every single bullet and sub-heading. Do NOT flatten or skip headings.
-- IMPORTANT: If the CV has sections like "Summary of Key Responsibilities" or "Select Deal Experience" or similar summary sections that appear AFTER ALL work histories (i.e. not under a specific role), attach them to the MOST RECENT role as additional bullets using ">>" prefix for the section heading.
+- IMPORTANT: If the CV has a short "Summary of Key Responsibilities" recap that appears immediately after a specific role's own bullets and clearly continues describing that same role, attach it to that role's bullets using ">>" prefix for the heading. 
+- CRITICAL EXCEPTION — DO NOT apply the rule above to a TRULY STANDALONE deal list. This exception is about POSITION, not phrasing — a deal list can be called "Selected Transaction Experience" whether it's standalone or nested inside a role, so judge by where it sits, not what it's called:
+  - If a deal/transaction list appears WITHIN a specific role's own content — positioned directly after that role's other bullets/overview, BEFORE the CV moves on to describe the next role, the next company, or historical job titles — this belongs to THAT ROLE'S bullets (use the ">>" sub-heading convention as normal, e.g. [">> Selected Transaction Experience (out of 50+ completed transactions):", "deal 1", "deal 2", ...]). Do NOT divert this to TRANSACTION_EXPERIENCE just because it lists deals.
+  - Only extract into the separate TRANSACTION_EXPERIENCE field if the deal list is a genuinely SEPARATE section that appears AFTER the entire Business Experience/Work History has already concluded (education, qualifications, or a new page/section may follow it or precede it) — not tied to any one specific role's narrative.
+  - WORKED EXAMPLE: a CV might have "Selected Transaction Experience (out of 50+ completed transactions):" listed directly inside the candidate's current role (right after that role's Overview, before the CV lists earlier job titles at the same company) — this stays in that role's bullets. The SAME CV might separately have a "Selected Deal Experience" section at the very end, after all business experience and education have already been listed, organized into its own M&A/Equity/Debt subsections — THAT is the standalone one that goes into TRANSACTION_EXPERIENCE. Both can exist in the same CV and must be handled differently based on where each one sits.
 - Most recent company first.
 
+TRANSACTION_EXPERIENCE_HEADING: If the CV has a standalone deal/transaction list section (see CRITICAL EXCEPTION above), copy the CV's own literal heading for that section VERBATIM, exactly as written (e.g. "Selected Deal Experience", "Select Deal Experience", "Transaction Experience", "Selected Transactions") — do not substitute a generic title. Leave "" if no such section exists.
+TRANSACTION_EXPERIENCE: If the CV has a standalone deal/transaction list section, extract it as an array of GROUPS: [{"subheading": "", "items": [""]}].
+- If the deal list has its own sub-category headers (e.g. "M&A", "Equity", "Debt"), create ONE group per sub-category, with subheading = that sub-category's heading VERBATIM, and items = the flat list of deals under it, copied VERBATIM in the exact order given.
+- If the deal list has NO sub-category headers — just one continuous flat list — return a SINGLE group with subheading = "" (empty) and items = every deal line VERBATIM in order.
+- Never fold a sub-category heading into the items array as a bullet with any prefix — subheadings are a separate field, not a list item.
+- Do not group by employer, do not reorder, do not summarize, do not skip any deals.
+If the CV has an intro note for this section (e.g. "references can be provided upon request"), put it in TRANSACTION_EXPERIENCE_NOTE exactly as written. Leave TRANSACTION_EXPERIENCE as [] and TRANSACTION_EXPERIENCE_NOTE as "" if no such section exists.
+
 EDUCATION:
-- education[]: Array of {years, institution, location, degrees[]}. ONLY include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc. Do NOT include professional certifications, licences or chartered qualifications (CFA, FRM, CAIA, ACCA, CPA, PRINCE2 etc) — those go in PROFESSIONAL_QUALS only.
+- education[]: Array of {years, institution, location, degrees[]}. Include traditional academic qualifications — university degrees, diplomas, MBAs, BSc, MSc, BA, MA, BComm, BCom, PhD etc.
+- CRITICAL — if the CV's own section heading combines academic degrees together with bar admissions, "Call to the Bar," or similar entry-to-practice legal/professional designations under ONE heading (e.g. "Education & Designations", "Education & Credentials"), include ALL of those entries in education[] together, in the CV's own order — do NOT split bar admissions or designations out into PROFESSIONAL_QUALS just because they involve licensure. Only use PROFESSIONAL_QUALS for items the CV lists under a genuinely SEPARATE "Professional Qualifications" / "Certifications" heading of their own (e.g. CFA, FRM, CAIA, ACCA, CPA, PRINCE2).
 - GROUP multiple degrees from the SAME institution into ONE entry — do NOT create separate entries for the same university.
 - years: Combined date for the institution entry. If multiple degrees at same institution, combine as "May 2000 / Dec 2006" (earlier first) or just use the single year if one degree. Use 3-letter month abbreviations if months given.
-- institution: Full institution name only e.g. "University of Nebraska" — no location in this field.
-- location: City, State/Country as written in CV e.g. "Omaha, NE" or "London, UK". Leave "" if not stated.
-- degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = thesis title, specialisation, honours or any extra line for this specific degree — leave "" if none. Most recent degree first within the array.
+- institution: Full institution name ONLY e.g. "European Business School" — do NOT include location, city, or a dash-separated location here. Location goes only in the location field below, never duplicated into institution.
+- location: City as written in CV e.g. "Oestrich-Winkel" or "Omaha, NE". Leave "" if not stated. Normalize "USA" to "US" — always write "US", never "USA", regardless of how the source CV writes it.
+- degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = additional lines for this degree (majors, thesis title, specialisation, honours, semester-abroad notes, etc.) — if the CV lists these as multiple separate lines, PRESERVE them as separate lines by joining with a newline character \n between each one (do NOT merge them into a single run-on sentence with added periods). Leave "" if no extra lines. Most recent degree first within the array.
 - Most recent institution first.
 
-PROFESSIONAL_QUALS: Extract ONLY professional qualifications and certifications (CFA, FRM, CAIA, ACCA, CPA etc). Format as array of {year, qualification} e.g. [{year:"2026",qualification:"CAIA charterholder, CAIA Association"},{year:"2025",qualification:"Certified FRM, Global Association of Risk Professionals"}]. Most recent first.
-TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single string exactly as written in the CV. Leave "" if none.
-NATIONALITY: Exact nationality. Leave "" if not found.
-LANGUAGES: Languages with levels. Leave "" if not found.
+QUAL_HEADING: Copy the CV's own literal heading for its qualifications/achievements/recognition section VERBATIM, exactly as written (e.g. "Industry Recognition", "Achievements", "Awards", "Professional Qualifications", "Certifications"). Do not substitute a generic label. Leave "" if no such section exists (fallback will use "Professional Qualifications").
+PROFESSIONAL_QUALS: Array of {year, qualification} for the section named in QUAL_HEADING above — this covers certifications, professional designations, AND career awards/recognitions (e.g. "Awarded Top Global CISO for 2023, 2024, 2025", "Northeast People's Choice Award for 2019") if the CV groups them together; only use this for items under a genuinely separate qualifications/recognition heading (see the EDUCATION rule above for the exception where they belong in education[] instead).
+- year: the year(s) exactly as written next to that entry (e.g. "2023, 2024, 2025", "2019"). If the entry has NO year at all in the source, leave year as "" — do not invent one.
+- qualification: the qualification/award text VERBATIM. CRITICAL — do NOT repeat the year inside this text if it's already captured in the year field (e.g. if the CV says "Awarded Top Global CISO for 2023, 2024, 2025" and you've put "2023, 2024, 2025" in year, the qualification text should just be "Awarded Top Global CISO" — do not duplicate the year twice).
+- If an item in this section has extra explanatory text with no year (e.g. a sentence describing a speaking engagement or contribution), still include it as its own entry with year="" and the full text in qualification — never drop it just because it lacks a year.
+
+ADDITIONAL_SECTIONS: CRITICAL SAFETY NET — many CVs have one or more extra named sections that don't match any field above (e.g. "Thought Leadership Articles", "Publications", "Patents", "Speaking Engagements", "Volunteer Work" that isn't board-type affiliations, etc). NEVER silently drop a section just because it doesn't fit elsewhere — capture it here instead so nothing is lost. Return an array of {heading, content}:
+- heading: the CV's own literal heading for that section, VERBATIM.
+- content: an array of strings, one per line/item, VERBATIM and in the CV's original order. If the section has its own sub-groupings (e.g. "LinkedIn Articles" / "Forbes article" / "SC Magazine" each with their own list of titles underneath), preserve the sub-group name as its own line prefixed with ">> " (matching the same convention used for role sub-headings), followed by that sub-group's items as normal lines. Example — if the CV has:
+  Thought Leadership Articles
+  LinkedIn Articles
+  – Modular Security Stack
+  – Building purpose driven security organization
+  Forbes article
+  – Building Modern Cyber Commander Centers
+Then: {"heading": "Thought Leadership Articles", "content": [">> LinkedIn Articles", "Modular Security Stack", "Building purpose driven security organization", ">> Forbes article", "Building Modern Cyber Commander Centers"]}
+Leave ADDITIONAL_SECTIONS as [] if every section in the CV is already covered by one of the other fields above — do not duplicate content that's already been placed elsewhere.
+
+AFFILIATIONS: Some CVs have a section for board seats, non-profit involvement, or professional body memberships — under headings that vary a lot, e.g. "Board Experience & Non-Profit Roles", "Professional Affiliations", "Board Memberships", "Volunteering", "Committees", etc. Recognize this by MEANING (governance/advisory/volunteer roles at organisations, distinct from paid employment history) rather than by matching one exact heading name. These will be listed together with PROFESSIONAL_QUALS in the profile's qualifications section — no separate heading is created for them.
+- AFFILIATIONS: array of {organization, role, dates}. organization = the body/company name. role = the position held there (e.g. "Board Member", "Chair, Risk Committee", "Canadian Advisory Board Member") — if a candidate holds multiple roles at the same organisation (e.g. Board Member AND Chair of a committee), create one array entry per role, repeating the organization name for each, in the CV's own order. dates = as written (e.g. "2023 – Present", "2020 – 2023"). Leave [] if no such section exists — do not invent this section if the CV doesn't have one.
+
+TECH_SKILLS: Extract ONLY technical skills, tools, software, programming languages, frameworks — separate from qualifications. Return as a single comma-separated string, e.g. "Microsoft Office, FactSet, CapitalIQ, Bloomberg, Pitchbook" — regardless of what separator the CV itself uses (commas, pipes, or line breaks), always join with ", " in your output. Leave "" if none.
+LANGUAGES: Extract as an array of objects [{"language":"German","level":"Native"},{"language":"English","level":"Fluent"}, ...], one object per language, in the order listed in the CV. Capitalize the level (Native, Fluent, Conversational, Beginner, Basic etc. — use Title Case). Leave [] if not found.
 ADDITIONAL_INFO: Extract the candidate's leadership character, values, cultural approach, and working style — typically found in a section labelled "Leadership Character" or similar. This is prose about HOW the candidate leads and works (e.g. "Known for collaborative, resilient leadership that builds trust. Committed to developing others..."). Leave "" if not found.
 INTERESTS: Extract ONLY outside-work hobbies, sports, personal interests — found after phrases like "Outside work:" or "Hobbies:" (e.g. "family, sports and ad-hoc challenges - New York Marathon..."). Do NOT put leadership character text here. Leave "" if not found.
 
@@ -3578,34 +3854,43 @@ Extract the following and return ONLY valid JSON, no markdown:
   "ROLE_TITLE": "Short role title e.g. Business Head - EMS",
   "LOCATION": "Short location e.g. New Delhi - India",
   "YEAR": "Current year as 4-digit string",
-  "OVERVIEW_HEADING": "Heading for company overview section e.g. JK Group Overview — leave empty string if no overview",
-  "OVERVIEW_PARAS": [
-    {"text": "First paragraph of company overview"},
-    {"text": "Second paragraph if any"}
-  ],
+  "OVERVIEW_HEADING": "Heading for company overview section — leave empty string if no overview",
+  "OVERVIEW_PARAS": [{"text": "First paragraph of company overview"}],
   "ROLE_FULL": "Full role title exactly as written",
   "ROLE_LOCATION": "Full location e.g. New Delhi, India",
-  "REPORTING_TO": "Reporting line e.g. Managing Director — leave empty string if not stated",
-  "OBJECTIVE_PARAS": [
-    {"text": "First paragraph of role objective"}
-  ],
+  "REPORTING_TO": "Reporting line — leave empty string if not stated",
+  "OBJECTIVE_PARAS": [{"text": "First paragraph of role objective"}],
   "RESP_HEADING": "Heading for responsibilities section e.g. Responsibilities",
   "RESP_GROUPS": [
     {
-      "heading": "Sub-heading if responsibilities are grouped e.g. Client Leadership — leave empty string if no sub-heading",
-      "items": [
-        {"text": "First responsibility bullet"},
-        {"text": "Second responsibility bullet"}
-      ]
+      "heading": "Sub-heading if grouped — leave empty string if no sub-heading",
+      "items": [{"text": "First responsibility bullet"}]
     }
   ],
-  "PROFILE_HEADING": "Heading for candidate profile section e.g. Candidate Profile",
-  "CANDIDATE_PROFILE": [
-    {"text": "First candidate profile bullet"}
+  "HAS_FACILITIES": "true or false — true only if the source describes the company's physical facilities/plants/assets in detail",
+  "FACILITIES_HEADING": "Heading for facilities section e.g. Facilities — leave empty string if not present",
+  "FACILITIES_INTRO_PARAS": [{"text": "Optional intro paragraph before the individual facility descriptions — leave [] if none"}],
+  "FACILITIES_GROUPS": [
+    {
+      "heading": "Name of this facility/asset e.g. 'Direct Reduced Iron (DRI) Plant:'",
+      "paras": [{"text": "Narrative paragraph(s) describing this facility"}],
+      "items": [{"text": "Bullet point if the facility description includes a list, e.g. equipment/process steps — leave [] if the facility is described in prose only"}]
+    }
   ],
-  "QUAL_HEADING": "Heading for qualifications section e.g. Required Qualifications — leave empty string if no qualifications section",
-  "QUALIFICATIONS": [
-    {"text": "First qualification bullet"}
+  "PROFILE_GROUPS": [
+    {
+      "heading": "Section heading exactly as written, e.g. 'Key Requisites for the Incumbent', 'Key Skills and Competencies: Technical', 'Key Skills and Competencies — Behavioural'. Create ONE group per distinctly-headed candidate requirement/skill section found in the source — do NOT merge separately-headed sections into one.",
+      "items": [{"text": "First bullet in this section"}]
+    }
+  ],
+  "NEWS_HEADING": "Heading for latest news section e.g. Latest News Coverage — leave empty string if no news content was pasted",
+  "NEWS_ITEMS": [
+    {
+      "headline": "Article headline exactly as given",
+      "source": "Publication name e.g. Bloomberg",
+      "date": "Date as written e.g. 4th December 2022",
+      "summary": "2-4 sentence factual summary of the article, third person, professional tone"
+    }
   ],
   "CONTACTS": [
     {
@@ -3618,13 +3903,14 @@ Extract the following and return ONLY valid JSON, no markdown:
 }
 
 Rules:
-- OVERVIEW_PARAS: array of paragraph objects — one object per paragraph. Leave [] if no company overview.
-- OBJECTIVE_PARAS: array of paragraph objects. Leave [] if no objective section.
-- RESP_GROUPS: group responsibilities by sub-heading if the JD has sub-headings (e.g. Client Leadership, Audit Delivery). If no sub-headings, use one group with empty heading string.
-- CANDIDATE_PROFILE: bullet points from the candidate profile / experience / skills section.
-- QUALIFICATIONS: bullet points from qualifications / requirements section. Leave [] if none.
-- CONTACTS: only include if consultant contact details are explicitly given in the source. Leave [] if not present.
-- All array fields should be [] if the section does not exist in the source document.
+- OVERVIEW_PARAS: one object per paragraph. Leave [] if no company overview.
+- OBJECTIVE_PARAS: one object per paragraph. Leave [] if no objective section.
+- RESP_GROUPS: group by sub-heading if present. If no sub-headings, use one group with empty heading.
+- FACILITIES_GROUPS: only populate if the source describes distinct physical facilities/plants/assets (common in company overview documents for industrial/manufacturing roles). Each distinctly-named facility becomes its own group. Preserve narrative paragraphs in "paras" and any itemized lists (equipment, process steps) in "items". Leave HAS_FACILITIES false and both arrays [] if the source has no facilities content.
+- PROFILE_GROUPS: create ONE group per distinctly-headed section covering candidate requirements, qualifications, or skills (e.g. a JD may have separate headed sections like "Key Requisites", "Technical Skills", "Behavioural Skills" — these must become THREE separate groups with their original headings preserved, never merged into one list). If the source has only one such section, return a single group.
+- NEWS_ITEMS: only populate if news articles, headlines, or links were pasted alongside the JD in the source material. Summarize each article in your own words — do not copy long verbatim text. Never invent or look up news that wasn't provided. Leave [] if no news content is present in the source.
+- CONTACTS: only include if consultant details explicitly given. Leave [] if not present.
+- All array fields should be [] if section does not exist.
 - Return only the JSON object, nothing else
 
 SOURCE DOCUMENT:
@@ -3854,6 +4140,90 @@ CANDIDATE SOURCE — extract ALL information from this text:
 
 ` + inputText;
 
+var advisorProfilePrompt = `You are producing an executive Advisor Profile suitable for a Sheffield Haworth consulting bench or proposal document — NOT a CV, NOT a LinkedIn summary, and NOT a chronological employment history.
+
+OBJECTIVE
+Position the individual as a senior subject-matter expert whose experience is immediately relevant to client transformation engagements. Emphasize: what they help clients achieve, sectors worked in, strategic programmes led, outcomes delivered, and executive credibility — never a list of job duties.
+
+TAILORING — before writing, identify the individual's domain and emphasize accordingly:
+- Insurance transformation leaders → operating models, entity establishment, underwriting, claims, finance, MGAs, reinsurance.
+- Compliance executives → regulatory transformation, governance, control frameworks, regulatory engagement, compliance technology.
+- Board-level executives → governance, strategy, independent oversight, executive leadership.
+- Strategy leaders → business planning, transformation portfolios, M&A, organisational design, executive advisory.
+
+FIELDS TO PRODUCE:
+
+1. FULL_NAME: the candidate's full name.
+
+2. EMAIL and PHONE: extract only if present in the source. Return "" if not found — never invent.
+
+3. SUMMARY (one paragraph, this is their professional positioning statement, HARD LIMIT 500 characters including spaces): who they are, their specialism, years of experience, and what they help organisations achieve. Explicitly name at least one or two of the most instantly-recognizable prior employers found in the source — these are credibility anchors and must not be dropped in favor of vaguer descriptions like "capital markets" or "consulting." Third person, executive tone.
+   The paragraph MUST end with a closing sentence naming their 3-6 core areas of specialist expertise as a direct list, in this exact pattern: "[Name] brings specialist expertise in [area], [area], [area], [area] and [area]." — e.g. "Eric brings specialist expertise in financial crime, enterprise risk management, digital asset regulation, AML/CFT, governance and regulatory transformation." This closing sentence is not optional and must not be cut for length — trim the earlier identity sentence instead if needed to stay within the character limit.
+
+4. EXPERIENCE_PARA_1/2/3 (exactly 3 short paragraphs, HARD LIMIT 220 characters including spaces EACH — together these form the "why clients engage them" narrative, and must NOT restate or heavily duplicate the SUMMARY):
+   - PARA_1: what has made them distinctive and what value they add — the types of problems they solve and who they advise. Frame notable roles as evidence of influence, not just job titles (e.g. a committee founding membership is evidence of influence, not a line item).
+   - PARA_2: supporting credibility evidence — board/advisory affiliations, recognition, or a notable engagement that broadens their range (e.g. showing expertise extends into adjacent or emerging areas). If the source names a specific board, advisory role, or affiliation, name it explicitly here — do not generalize it away into a vaguer statement.
+   - PARA_3: broader impact themes — the kinds of transformation/outcomes they're known for across their career.
+
+5. ENGAGEMENT_1/2/3/4 (exactly 4 — the "Relevant Experience" section, the most important part of the profile, NOT employment history. HARD LIMIT for DETAIL: 260 characters including spaces EACH):
+   - Each is an engagement summary, not a role listing. COMPANY = organisation name only. DETAIL must begin with the role, then a concise clause covering: why they were engaged, what they delivered, and the business outcome — never a list of responsibilities. Example DETAIL (this length is the target, do not exceed it): "Business Consultant. Led the operating model design for Brit Re's Bermuda reinsurance entity, building governance frameworks to support regulatory approval and operational readiness."
+   - SELECTION PRIORITY (apply in this order when choosing which 4 to feature): (1) the candidate's CURRENT role(s) — if they hold multiple concurrent current roles, combine them into one entry; this must always get its own entry and must never be dropped in favor of an older one; (2) any single role that is uniquely prestigious or credibility-defining on its own (e.g. a regulator, or a notable committee/board founding membership); (3) a mid-career role showing distinct sector or transformation expertise (e.g. a recognized consulting/advisory firm); (4) a dedicated entry merging early-career roles at globally-recognized employers (e.g. major banks) — this merged entry must name those employers explicitly and must NEVER be dropped or absorbed into a different, less-prestigious merge just because it's older. Prestigious legacy employer names are a feature, not something to be pruned for recency.
+   - Never include employment dates anywhere.
+
+HARD CHARACTER LIMITS ARE NON-NEGOTIABLE. These fields sit in fixed-size boxes on a single PowerPoint slide with no room to grow — if a field runs over its limit, the text shrinks to an illegible size or overlaps neighbouring content. Before finalizing each field, count its length and cut it down if it exceeds the limit. Prioritize the single most important fact over completeness — a shorter, punchier sentence is always better than a longer, more complete one here.
+
+6. SKILL_1/2/3 (exactly 3, HARD LIMIT 40 characters EACH — pick the 3 strongest consulting capabilities, not raw keywords): consulting-capability phrases such as Operating Model Design, Regulatory Change, Programme Leadership, Business Transformation, Governance, M&A Integration, Enterprise Risk, Change Management, Target Operating Models, Process Optimisation, Compliance, Strategic Planning. Avoid listing every technology or regulation unless it is central to their profile.
+
+7. QUAL_1/2 (exactly 2, HARD LIMIT 50 characters EACH): only professional qualifications (e.g. ACA, CIMA, CFA, ICAEW, Lean Six Sigma Black Belt, PRINCE2) or relevant academic degrees — never school education. Pick the two most senior/relevant.
+
+WRITING STYLE (apply throughout): executive-level, third person, consulting language, proposal-ready, British English, outcome-focused. Avoid repetition and remove duplicated information across fields. Group similar experience together rather than listing it separately. Avoid CV language such as "responsible for...". Prioritize transformation, governance, operating model, regulatory and strategic work over administrative responsibilities.
+
+Return ONLY valid JSON, no markdown fences, no preamble, in this exact shape:
+{
+  "FULL_NAME": "",
+  "EMAIL": "",
+  "PHONE": "",
+  "SUMMARY": "",
+  "ENGAGEMENT_1_COMPANY": "", "ENGAGEMENT_1_DETAIL": "",
+  "ENGAGEMENT_2_COMPANY": "", "ENGAGEMENT_2_DETAIL": "",
+  "ENGAGEMENT_3_COMPANY": "", "ENGAGEMENT_3_DETAIL": "",
+  "ENGAGEMENT_4_COMPANY": "", "ENGAGEMENT_4_DETAIL": "",
+  "EXPERIENCE_PARA_1": "", "EXPERIENCE_PARA_2": "", "EXPERIENCE_PARA_3": "",
+  "SKILL_1": "", "SKILL_2": "", "SKILL_3": "",
+  "QUAL_1": "", "QUAL_2": ""
+}
+
+CANDIDATE SOURCE — extract ALL information from this text:
+
+` + inputText;
+
+var trackRecordPrompt = `You are extracting structured track record data for a Sheffield Haworth "Track Record - Anonymised" PowerPoint deck. The source is tabular data originally from Excel, NOT a CV — it may arrive either tab-separated (pasted directly from Excel) or comma-separated (converted from an uploaded .xlsx file). The FIRST row is column headers, and the data MAY contain many columns you should ignore. Detect the delimiter from the data itself — do not assume one format.
+
+YOUR TASK: identify which columns correspond to the four concepts below (column header wording varies — match by MEANING, not exact text) and extract every data row into a flat array.
+
+COLUMNS TO FIND (by meaning, not exact header text):
+1. SECTION — which practice area / track record category this row belongs to (e.g. "Private Equity, Private Credit & Alternatives", "Real Assets", "Insurance", "Technology Functions"). Look for headers like "Section", "Practice Area", "Category", "Track Record Area", "Division", "Sector". This determines which divider/section of the deck the row belongs to.
+2. ROLE — the job title placed. Look for headers like "Current Job Title", "Job Title", "Role", "Position". Copy VERBATIM — do not rephrase, shorten, or correct the wording.
+3. CLIENT_TYPE — the ANONYMISED description of the client, already de-identified (e.g. "Hedge Fund", "Pension Fund", "Sovereign Wealth Fund", "Asset Manager"). Look for headers like "Company Type", "Client Type", "Client Description". This is what gets shown on the slide — never the real client name.
+4. REAL_CLIENT — the actual, real client/company name. Look for headers like "Assignment Client", "Client Name", "Company", "Client". This is captured for internal reference only (e.g. future logo matching) and is NEVER displayed on any slide.
+
+CRITICAL RULES:
+- Only extract from columns that clearly match one of the four concepts above. Ignore every other column entirely (dates, locations, consultant names, fee amounts, status, etc. — whatever else may be present).
+- Do NOT invent, guess, or hallucinate a section/role/client_type value that isn't actually present in the source data for that row.
+- Preserve the source data's original row order within the output array — do not reorder or group rows yourself; the tool groups by section afterwards.
+- If a row is missing CLIENT_TYPE entirely, still include the row with client_type as "" rather than dropping it.
+- If you cannot confidently identify a SECTION column at all anywhere in the header row, leave section as "" for every row — do not fabricate section names.
+- Copy ROLE and CLIENT_TYPE text VERBATIM as written in the source — do not correct spelling, do not rephrase, do not summarise.
+- Extract EVERY data row — do not skip rows, do not sample, do not truncate for length.
+- Return ONLY valid JSON. No markdown. No code blocks. No explanation.
+
+Return this exact JSON structure:
+{"items": [{"section": "", "role": "", "client_type": "", "real_client": ""}]}
+
+SOURCE DATA — extract every row from this pasted table:
+
+` + inputText;
+
 var prompt = isApacEy
   ? apacEyPrompt
   : isEaIndiaV2
@@ -4024,6 +4394,10 @@ FORMATTING RULES:
 Use this exact JSON structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ extract ALL information from this text:\n\n' + inputText
   : isGmBasic
   ? gmBasicPrompt
+  : isAdvisorProfile
+  ? advisorProfilePrompt
+  : isTrackRecord
+  ? trackRecordPrompt
   : isBriefingPack
   ? briefingPackPrompt
   : isServicesProfile
@@ -4159,8 +4533,28 @@ try {
           }
         }
         if (returnOnly) { return output; }
+        var _resolvedName = '';
+        if (output && typeof output === 'object' && !Array.isArray(output)) {
+          _resolvedName = (
+            output.CANDIDATE_NAME ||
+            output.FULL_NAME ||
+            output.fullName ||
+            output.fullname ||
+            output.name ||
+            (((output.firstName || '') + ' ' + (output.lastName || '')).trim())
+          ) || '';
+          if (!_resolvedName && isBriefingPack && (output.COMPANY_NAME || output.ROLE_TITLE)) {
+            _resolvedName = 'Candidate Briefing Pack_' +
+              (output.COMPANY_NAME || '') +
+              (output.ROLE_TITLE ? '_' + output.ROLE_TITLE : '') +
+              (output.YEAR ? '_' + output.YEAR : '');
+          }
+        }
+        _resolvedName = String(_resolvedName || '').trim();
+
+        var _nameFromInput = String((inputText.match(/(?:^|\n)\s*NAME\s*:\s*([^\n\r]+)/i) || [,''])[1] || '').trim();
         var item = {
-          name: (output && output.CANDIDATE_NAME) ? output.CANDIDATE_NAME : 'Unknown Candidate',
+          name: _resolvedName || _nameFromInput || 'Unknown Candidate',
           date: new Date().toLocaleString(),
           template: tpl,
           fmt: fmt,
@@ -4181,7 +4575,7 @@ try {
     console.error(err);
     btn.classList.remove('loading');
     btn.innerHTML = '\u274c Error \u2014 Try Again';
-    logUsage(tpl, activeType, 'failed');
+    logUsage(tpl, _pocvInputMethod, 'failed');
     notify('Generation failed. Check console.');
   });
 }
@@ -4212,11 +4606,30 @@ function hideProgress(msg) {
   }
 
   list.innerHTML = history.map(function(item, index) {
+    var _histName = (item && item.name) || '';
+    if ((!_histName || _histName === 'Unknown Candidate') && item && item.content && typeof item.content === 'object' && !Array.isArray(item.content)) {
+      _histName = (
+        item.content.CANDIDATE_NAME ||
+        item.content.FULL_NAME ||
+        item.content.fullName ||
+        item.content.fullname ||
+        item.content.name ||
+        (((item.content.firstName || '') + ' ' + (item.content.lastName || '')).trim())
+      ) || '';
+      if (!_histName && item.template === 'candidate-briefing-pack' && (item.content.COMPANY_NAME || item.content.ROLE_TITLE)) {
+        _histName = 'Candidate Briefing Pack_' +
+          (item.content.COMPANY_NAME || '') +
+          (item.content.ROLE_TITLE ? '_' + item.content.ROLE_TITLE : '') +
+          (item.content.YEAR ? '_' + item.content.YEAR : '');
+      }
+    }
+    _histName = String(_histName || '').trim() || 'Unknown Candidate';
+
     return `
     <div class="hist-row">
       <div class="hist-ico" style="background:${item.type==='combined'?'rgba(245,158,11,.15)':item.fmt==='x'?'rgba(33,115,70,.15)':item.fmt==='p'?'rgba(210,71,38,.15)':item.fmt==='f'?'rgba(210,0,0,.12)':'rgba(43,124,211,.12)'};">${item.type==='combined'?'M':item.fmt==='x'?'E':item.fmt==='p'?'P':item.fmt==='f'?'F':'W'}</div>
       <div style="flex:1;">
-        <div class="hist-name">${item.name}</div>
+        <div class="hist-name">${_histName}</div>
         <div class="hist-meta">${item.date} &middot; ${item.type==='combined'?('Combined ('+item.content.length+' profiles)'):(item.fmt==='x'?'Excel':item.fmt==='p'?'PowerPoint':item.fmt==='f'?'PDF':'Word')}</div>
       </div>
       <span class="badge" style="background:#dcfce7;color:#166534;">Done</span>
@@ -4547,13 +4960,29 @@ async function downloadHistory(index) {
   var history = JSON.parse(localStorage.getItem('sh_history')||'[]');
   var item = history[index];
   if (!item) return;
+
+  function _safeFileName(name, fallback) {
+    var n = String(name || '').trim();
+    // Remove characters that break downloads on Windows/macOS browsers.
+    n = n.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+    return n || (fallback || 'download');
+  }
+
   var fmt = item.fmt || 'd';
   // Override: project-report always downloads as xlsx
   if (item.template === 'project-report' || item.template === 'project-report-ext' || item.template === 'project-report-gb') fmt = 'x';
   var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'global-career-summary-wam-us' ? 'with Career Summary WAM US' : item.template === 'project-report-gb' ? 'GB' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile-v2' ? 'EA India v2' : item.template === 'ea-india-profile' ? 'EA India' : item.template === 'change-consulting-profile' ? 'Change Consulting' : item.template === 'apac-profile-deal-list' ? 'APAC Deal List' : item.template === 'apac-profile-v2' ? 'APAC v2' : item.template === 'apac-ey-profile' ? 'EY Shortlisted' : 'No Scorecard';
   var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : item.template === 'ea-india-profile' ? 'Global' : 'Global';
-  var _candidateLabel = item.type === 'combined' ? 'Multiple Profiles' : ((item.content && !Array.isArray(item.content) && item.content.CANDIDATE_NAME) ? item.content.CANDIDATE_NAME : (item.name || 'Candidate'));
-  var baseName = _profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel;
+  var _candidateLabel = item.type === 'combined'
+    ? 'Multiple Profiles'
+    : ((item.content && !Array.isArray(item.content) && (
+        item.content.CANDIDATE_NAME ||
+        item.content.fullName ||
+        item.content.fullname ||
+        item.content.name ||
+        (((item.content.firstName || '') + ' ' + (item.content.lastName || '')).trim())
+      )) || item.name || 'Candidate');
+  var baseName = _safeFileName(_profilePrefix + ' - ' + _scorecardLabel + ' - ' + _candidateLabel, 'Document');
   try {
       // ── PPT Candidate Update Report ─────────────────────────────
             // ── Candidate Briefing Pack ──────────────────────────────────────────
@@ -4564,21 +4993,21 @@ async function downloadHistory(index) {
         if (!_bpTplResp.ok) throw new Error('Failed to fetch Briefing Pack template');
         var _bpZip = new PizZip(await _bpTplResp.arrayBuffer());
         var _bpDoc = new docxtemplater(_bpZip, {
-          paragraphLoop: true,
-          linebreaks: true,
+          paragraphLoop: true, linebreaks: true,
           delimiters: { start: '{{', end: '}}' },
           nullGetter: function() { return ''; }
         });
-
         var _bpOverviewParas = Array.isArray(_bpCv.OVERVIEW_PARAS) ? _bpCv.OVERVIEW_PARAS : [];
         var _bpObjParas      = Array.isArray(_bpCv.OBJECTIVE_PARAS) ? _bpCv.OBJECTIVE_PARAS : [];
         var _bpRespGroups    = Array.isArray(_bpCv.RESP_GROUPS) ? _bpCv.RESP_GROUPS : [];
-        var _bpProfile       = Array.isArray(_bpCv.CANDIDATE_PROFILE) ? _bpCv.CANDIDATE_PROFILE : [];
-        var _bpQuals         = Array.isArray(_bpCv.QUALIFICATIONS) ? _bpCv.QUALIFICATIONS : [];
+        var _bpFacIntro      = Array.isArray(_bpCv.FACILITIES_INTRO_PARAS) ? _bpCv.FACILITIES_INTRO_PARAS : [];
+        var _bpFacGroups     = Array.isArray(_bpCv.FACILITIES_GROUPS) ? _bpCv.FACILITIES_GROUPS : [];
+        var _bpProfileGroups = Array.isArray(_bpCv.PROFILE_GROUPS) ? _bpCv.PROFILE_GROUPS : [];
+        var _bpNewsItems     = Array.isArray(_bpCv.NEWS_ITEMS) ? _bpCv.NEWS_ITEMS : [];
         var _bpContacts      = Array.isArray(_bpCv.CONTACTS) ? _bpCv.CONTACTS : [];
-
         _bpDoc.render({
           COMPANY_NAME:     _bpCv.COMPANY_NAME   || '',
+          HEADER_TITLE:     _bpCv.ROLE_TITLE     || '',
           ROLE_TITLE:       _bpCv.ROLE_TITLE     || '',
           LOCATION:         _bpCv.LOCATION       || '',
           YEAR:             _bpCv.YEAR           || String(new Date().getFullYear()),
@@ -4593,32 +5022,33 @@ async function downloadHistory(index) {
           HAS_RESP:         _bpRespGroups.length > 0,
           RESP_HEADING:     _bpCv.RESP_HEADING   || 'Responsibilities',
           RESP_GROUPS:      _bpRespGroups.map(function(g) {
+            return { heading: g.heading || '', items: Array.isArray(g.items) ? g.items : [] };
+          }),
+          HAS_PROFILE_GROUPS: _bpProfileGroups.length > 0,
+          PROFILE_GROUPS:   _bpProfileGroups.map(function(g) {
+            return { heading: g.heading || '', items: Array.isArray(g.items) ? g.items : [] };
+          }),
+          HAS_FACILITIES:   _bpFacGroups.length > 0,
+          FACILITIES_HEADING: _bpCv.FACILITIES_HEADING || 'Facilities',
+          FACILITIES_INTRO_PARAS: _bpFacIntro,
+          FACILITIES_GROUPS: _bpFacGroups.map(function(g) {
             return {
               heading: g.heading || '',
+              paras: Array.isArray(g.paras) ? g.paras : [],
               items: Array.isArray(g.items) ? g.items : []
             };
           }),
-          HAS_PROFILE:      _bpProfile.length > 0,
-          PROFILE_HEADING:  _bpCv.PROFILE_HEADING || 'Candidate Profile',
-          CANDIDATE_PROFILE: _bpProfile,
-          HAS_QUAL:         _bpQuals.length > 0,
-          QUAL_HEADING:     _bpCv.QUAL_HEADING   || 'Required Qualifications',
-          QUALIFICATIONS:   _bpQuals,
+          HAS_NEWS:         _bpNewsItems.length > 0,
+          NEWS_HEADING:     _bpCv.NEWS_HEADING   || 'Latest News Coverage',
+          NEWS_ITEMS:       _bpNewsItems.map(function(n) {
+            return { headline: n.headline||'', source: n.source||'', date: n.date||'', summary: n.summary||'' };
+          }),
           HAS_CONTACTS:     _bpContacts.length > 0,
           CONTACTS:         _bpContacts.map(function(c) {
-            return {
-              name:   c.name   || '',
-              title:  c.title  || '',
-              mobile: c.mobile || '',
-              email:  c.email  || ''
-            };
+            return { name: c.name||'', title: c.title||'', mobile: c.mobile||'', email: c.email||'' };
           })
         });
-
-        var _bpOut = _bpDoc.getZip().generate({
-          type: 'blob',
-          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        });
+        var _bpOut = _bpDoc.getZip().generate({ type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
         var _bpUrl = URL.createObjectURL(_bpOut);
         var _bpA = document.createElement('a');
         _bpA.href = _bpUrl;
@@ -4681,9 +5111,60 @@ async function downloadHistory(index) {
         var _gmUrl = URL.createObjectURL(_gmOut);
         var _gmA = document.createElement('a');
         _gmA.href = _gmUrl;
-        _gmA.download = (_gmCv.CANDIDATE_NAME || item.name || 'GM Profile') + '.docx';
+        _gmA.download = _safeFileName((_gmCv.CANDIDATE_NAME || item.name || 'GM Profile'), 'GM Profile') + '.docx';
         _gmA.click();
         setTimeout(function(){ URL.revokeObjectURL(_gmUrl); }, 2000);
+        return;
+      }
+
+      // ── Advisor Profile (PowerPoint) ──────────────────────────────────────
+      if (item.template === 'advisor-profile') {
+        var _apCv = item.content || {};
+        var _apRawBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+        var _apTplResp = await fetch(_apRawBase + 'templates/Advisor_Profile_Template_DocGen.pptx?v=' + Date.now());
+        if (!_apTplResp.ok) throw new Error('Failed to fetch Advisor Profile template');
+        var _apZip = await JSZip.loadAsync(await _apTplResp.arrayBuffer());
+
+        function _apXe(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function _apRep(xml, token, val) { return xml.split(token).join(_apXe(val)); }
+
+        var _apSlidePath = 'ppt/slides/slide1.xml';
+        var _apXml = await _apZip.file(_apSlidePath).async('string');
+
+        var _apTokens = {
+          '{{FULL_NAME}}': _apCv.FULL_NAME,
+          '{{EMAIL}}': _apCv.EMAIL,
+          '{{PHONE}}': _apCv.PHONE,
+          '{{SUMMARY}}': _apCv.SUMMARY,
+          '{{ENGAGEMENT_1_COMPANY}}': _apCv.ENGAGEMENT_1_COMPANY,
+          '{{ENGAGEMENT_1_DETAIL}}': _apCv.ENGAGEMENT_1_DETAIL,
+          '{{ENGAGEMENT_2_COMPANY}}': _apCv.ENGAGEMENT_2_COMPANY,
+          '{{ENGAGEMENT_2_DETAIL}}': _apCv.ENGAGEMENT_2_DETAIL,
+          '{{ENGAGEMENT_3_COMPANY}}': _apCv.ENGAGEMENT_3_COMPANY,
+          '{{ENGAGEMENT_3_DETAIL}}': _apCv.ENGAGEMENT_3_DETAIL,
+          '{{ENGAGEMENT_4_COMPANY}}': _apCv.ENGAGEMENT_4_COMPANY,
+          '{{ENGAGEMENT_4_DETAIL}}': _apCv.ENGAGEMENT_4_DETAIL,
+          '{{EXPERIENCE_PARA_1}}': _apCv.EXPERIENCE_PARA_1,
+          '{{EXPERIENCE_PARA_2}}': _apCv.EXPERIENCE_PARA_2,
+          '{{EXPERIENCE_PARA_3}}': _apCv.EXPERIENCE_PARA_3,
+          '{{SKILL_1}}': _apCv.SKILL_1,
+          '{{SKILL_2}}': _apCv.SKILL_2,
+          '{{SKILL_3}}': _apCv.SKILL_3,
+          '{{QUAL_1}}': _apCv.QUAL_1,
+          '{{QUAL_2}}': _apCv.QUAL_2
+        };
+        Object.keys(_apTokens).forEach(function(tk) {
+          _apXml = _apRep(_apXml, tk, _apTokens[tk]);
+        });
+
+        _apZip.file(_apSlidePath, _apXml);
+        var _apOut = await _apZip.generateAsync({ type: 'blob' });
+        var _apUrl = URL.createObjectURL(_apOut);
+        var _apA = document.createElement('a');
+        _apA.href = _apUrl;
+        _apA.download = _safeFileName((_apCv.FULL_NAME || item.name || 'Advisor Profile'), 'Advisor Profile') + '.pptx';
+        _apA.click();
+        setTimeout(function(){ URL.revokeObjectURL(_apUrl); }, 2000);
         return;
       }
 
@@ -4862,8 +5343,235 @@ async function downloadHistory(index) {
         var _out = await _pptZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
         var _url = URL.createObjectURL(_out);
         var _a = document.createElement('a');
-        _a.href=_url; _a.download=(_cl?_cl+' - ':'')+(item.name||'Candidate Update Report')+'.pptx';
+        _a.href=_url; _a.download=_safeFileName(((_cl?_cl+' - ':'') + (item.name||'Candidate Update Report')), 'Candidate Update Report')+'.pptx';
         _a.click(); setTimeout(function(){URL.revokeObjectURL(_url);},2000);
+        return;
+      }
+
+// ── Track Record - Anonymised ────────────────────────────────────────
+      if (item.template === 'track-record-anonymised') {
+        var _trContent = item.content;
+        var _trItems = Array.isArray(_trContent.items) ? _trContent.items : [];
+        if (!_trItems.length) throw new Error('No track record rows were extracted — check the pasted data has a header row and at least one data row.');
+
+        function _trXe(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        // Group by section, preserving first-appearance order
+        var _trSectionOrder = [];
+        var _trSections = {};
+        _trItems.forEach(function(it){
+          var sec = (it.section || '').trim() || 'General';
+          if (!_trSections[sec]) { _trSections[sec] = []; _trSectionOrder.push(sec); }
+          _trSections[sec].push({ role: (it.role||'').trim(), client_type: (it.client_type||'').trim() });
+        });
+
+        // Balanced distribution: N items across ceil(N/maxPerSlide) slides, sizes as even as possible
+        var TR_MAX_PER_SLIDE = 30; // 15 left + 15 right
+        var TR_MAX_PER_TABLE = 15;
+        function _trBalancedSizes(n, maxPerSlide){
+          if (n <= 0) return [];
+          var numSlides = Math.ceil(n / maxPerSlide);
+          var base = Math.floor(n / numSlides);
+          var rem = n % numSlides;
+          var sizes = [];
+          for (var i=0;i<numSlides;i++) sizes.push(base + (i < rem ? 1 : 0));
+          return sizes;
+        }
+
+        var _RAW_TR = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+        var _trResp = await fetch(_RAW_TR + 'templates/Track_Record_Anonymised_TEMPLATE.pptx');
+        if (!_trResp.ok) throw new Error('Failed to fetch Track Record template');
+        var _trZip = await JSZip.loadAsync(await _trResp.arrayBuffer());
+
+        // Robust slide detection: identify the divider and content pattern slides BY CONTENT, not by
+        // assumed file number — file numbering does not follow display order in PPTX packages, and any
+        // other slides (cover, etc.) the template author adds should be preserved automatically.
+        var _trPrsXForScan = await _trZip.file('ppt/presentation.xml').async('string');
+        var _trPrsRForScan = await _trZip.file('ppt/_rels/presentation.xml.rels').async('string');
+        var _trOrderedRids = (_trPrsXForScan.match(/<p:sldId[^>]*r:id="(rId\d+)"/g) || []).map(function(s){
+          var m = s.match(/r:id="(rId\d+)"/); return m ? m[1] : null;
+        });
+        var _trRidToFile = {};
+        (_trPrsRForScan.match(/<Relationship[^>]*Target="slides\/slide\d+\.xml"[^>]*\/>/g) || []).forEach(function(rel){
+          var idM = rel.match(/Id="(rId\d+)"/); var tgtM = rel.match(/Target="slides\/(slide\d+\.xml)"/);
+          if (idM && tgtM) _trRidToFile[idM[1]] = tgtM[1];
+        });
+
+        var _trDividerFile = null, _trContentFile = null;
+        for (var _si=0; _si<_trOrderedRids.length; _si++){
+          var _fname = _trRidToFile[_trOrderedRids[_si]];
+          if (!_fname) continue;
+          var _sxml = await _trZip.file('ppt/slides/'+_fname).async('string');
+          if (!_trContentFile && (_sxml.match(/<a:tbl>/g)||[]).length === 2) _trContentFile = _fname;
+          if (!_trDividerFile && _sxml.indexOf('[Section Subtitle]') !== -1) _trDividerFile = _fname;
+        }
+        if (!_trContentFile) throw new Error('Track Record template: could not find the content slide (expected a slide with exactly two tables).');
+        if (!_trDividerFile) throw new Error('Track Record template: could not find the divider slide (expected a slide containing "[Section Subtitle]"). If you\'ve replaced the divider slide, make sure its title and subtitle placeholders still contain the literal text [Section Title] and [Section Subtitle].');
+
+        var _trDividerBase = await _trZip.file('ppt/slides/'+_trDividerFile).async('string');
+        var _trDividerRels = await _trZip.file('ppt/slides/_rels/'+_trDividerFile+'.rels').async('string');
+        var _trContentBase = await _trZip.file('ppt/slides/'+_trContentFile).async('string');
+        var _trContentRels = await _trZip.file('ppt/slides/_rels/'+_trContentFile+'.rels').async('string');
+
+        function _trBuildDivider(sectionName){
+          var xml = _trDividerBase;
+          xml = xml.split('<a:t>[Section Title]</a:t>').join('<a:t>' + _trXe(sectionName) + '</a:t>');
+          xml = xml.split('<a:t>[Section Subtitle]</a:t>').join('<a:t>Track Record</a:t>');
+          return xml;
+        }
+
+        function _trFillTable(tblXml, items){
+          var firstTr = tblXml.indexOf('<a:tr');
+          var prefix = tblXml.substring(0, firstTr);
+          var rows = tblXml.match(/<a:tr[\s\S]*?<\/a:tr>/g) || [];
+          var headerRow = rows[0] || '';
+          var dataRowTemplate = rows[1] || '';
+          var out = headerRow;
+          items.forEach(function(it){
+            var cellIdx = 0;
+            var rowXml = dataRowTemplate.replace(/<a:tc>[\s\S]*?<\/a:tc>/g, function(cell){
+              var val = cellIdx === 0 ? it.role : it.client_type;
+              cellIdx++;
+              return cell.replace(/<a:t>[^<]*<\/a:t>/, '<a:t>' + _trXe(val) + '</a:t>');
+            });
+            out += rowXml;
+          });
+          return prefix + out;
+        }
+
+        function _trBuildContent(sectionName, leftItems, rightItems){
+          var xml = _trContentBase;
+          xml = xml.split('<a:t>Track Record | [Section Title]</a:t>').join('<a:t>Track Record | ' + _trXe(sectionName) + '</a:t>');
+
+          var tblBlocks = [];
+          var searchFrom = 0;
+          while (true){
+            var s = xml.indexOf('<a:tbl>', searchFrom);
+            if (s === -1) break;
+            var e = xml.indexOf('</a:tbl>', s) + '</a:tbl>'.length;
+            tblBlocks.push({start:s, end:e, xml: xml.substring(s+'<a:tbl>'.length, e-'</a:tbl>'.length)});
+            searchFrom = e;
+          }
+          if (tblBlocks.length < 2) throw new Error('Track Record template: expected two tables on the content slide, found ' + tblBlocks.length);
+
+          var newTblB = '<a:tbl>' + _trFillTable(tblBlocks[1].xml, rightItems) + '</a:tbl>';
+          xml = xml.substring(0, tblBlocks[1].start) + newTblB + xml.substring(tblBlocks[1].end);
+          var newTblA = '<a:tbl>' + _trFillTable(tblBlocks[0].xml, leftItems) + '</a:tbl>';
+          xml = xml.substring(0, tblBlocks[0].start) + newTblA + xml.substring(tblBlocks[0].end);
+
+          return xml;
+        }
+
+        // Build all new slide parts (dividers + content slides), one section at a time
+        var _trNewSlideFiles = []; // {num, xml, rels}
+        var _trSlideNum = 100;
+        _trSectionOrder.forEach(function(sec){
+          var items = _trSections[sec];
+          _trSlideNum++;
+          _trNewSlideFiles.push({ num: _trSlideNum, xml: _trBuildDivider(sec), rels: _trDividerRels });
+
+          var sizes = _trBalancedSizes(items.length, TR_MAX_PER_SLIDE);
+          var offset = 0;
+          sizes.forEach(function(size){
+            var slideItems = items.slice(offset, offset + size);
+            offset += size;
+            var leftItems = slideItems.slice(0, TR_MAX_PER_TABLE);
+            var rightItems = slideItems.slice(TR_MAX_PER_TABLE, TR_MAX_PER_TABLE*2);
+            _trSlideNum++;
+            _trNewSlideFiles.push({ num: _trSlideNum, xml: _trBuildContent(sec, leftItems, rightItems), rels: _trContentRels });
+          });
+        });
+
+        // Write new slide parts into the zip
+        _trNewSlideFiles.forEach(function(sf){
+          _trZip.file('ppt/slides/slide' + sf.num + '.xml', sf.xml);
+          _trZip.file('ppt/slides/_rels/slide' + sf.num + '.xml.rels', sf.rels);
+        });
+
+        // Update presentation.xml, its rels, and Content_Types — remove template slides 2 & 3, insert new ones after slide 1
+        var _trPrsX = await _trZip.file('ppt/presentation.xml').async('string');
+        var _trPrsR = await _trZip.file('ppt/_rels/presentation.xml.rels').async('string');
+        var _trCtX  = await _trZip.file('[Content_Types].xml').async('string');
+
+        var _trRidNums = (_trPrsR.match(/Id="rId(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));});
+        var _trMRid = _trRidNums.length ? Math.max.apply(null,_trRidNums) : 10;
+        var _trSidNums = (_trPrsX.match(/id="(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));}).filter(function(n){return n<2000000000;});
+        var _trMSid = _trSidNums.length ? Math.max.apply(null,_trSidNums) : 300;
+
+        // Find rIds for the divider-pattern and content-pattern slides (identified dynamically above) so we can remove them.
+        // Any other slides (cover, etc.) are NEVER touched — they're real, final content, used as-is.
+        var _trDividerRidM = _trPrsR.match(new RegExp('Id="(rId\\d+)"[^>]*Target="slides/' + _trDividerFile.replace('.','\\.') + '"'));
+        var _trContentRidM = _trPrsR.match(new RegExp('Id="(rId\\d+)"[^>]*Target="slides/' + _trContentFile.replace('.','\\.') + '"'));
+        var _trDividerRid = _trDividerRidM ? _trDividerRidM[1] : null;
+        var _trContentRid = _trContentRidM ? _trContentRidM[1] : null;
+
+        var _trAllNewRels = '', _trAllNewSldIds = '', _trAllNewCT = '';
+        _trNewSlideFiles.forEach(function(sf){
+          var nr = 'rId' + (++_trMRid);
+          var ns = ++_trMSid;
+          sf.rid = nr;
+          _trAllNewRels += '<Relationship Id="'+nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+sf.num+'.xml"/>';
+          _trAllNewSldIds += '<p:sldId id="'+ns+'" r:id="'+nr+'"/>';
+          _trAllNewCT += '<Override PartName="/ppt/slides/slide'+sf.num+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>';
+        });
+
+        // Insert new rels/sldIds at whichever pattern slide (divider or content) appears FIRST in display
+        // order — this preserves anything before it (e.g. a cover) and replaces the template pair in place.
+        var _trDividerPos = _trOrderedRids.indexOf(_trDividerRid);
+        var _trContentPos = _trOrderedRids.indexOf(_trContentRid);
+        var _trAnchorRid = (_trContentPos !== -1 && (_trDividerPos === -1 || _trContentPos < _trDividerPos)) ? _trContentRid : _trDividerRid;
+
+        if (_trAnchorRid) {
+          var _trRelIdx = _trPrsR.indexOf('Id="'+_trAnchorRid+'"');
+          var _trTagStart = _trPrsR.lastIndexOf('<Relationship', _trRelIdx);
+          var _trTagEnd = _trPrsR.indexOf('/>', _trRelIdx) + 2;
+          _trPrsR = _trPrsR.substring(0,_trTagStart) + _trAllNewRels + _trPrsR.substring(_trTagEnd);
+
+          var _trSldIdx = _trPrsX.indexOf('r:id="'+_trAnchorRid+'"');
+          var _trSldTagStart = _trPrsX.lastIndexOf('<p:sldId', _trSldIdx);
+          var _trSldTagEnd = _trPrsX.indexOf('/>', _trSldIdx) + 2;
+          _trPrsX = _trPrsX.substring(0,_trSldTagStart) + _trAllNewSldIds + _trPrsX.substring(_trSldTagEnd);
+        } else {
+          _trPrsR = _trPrsR.replace('</Relationships>', _trAllNewRels + '</Relationships>');
+          _trPrsX = _trPrsX.replace('</p:sldIdLst>', _trAllNewSldIds + '</p:sldIdLst>');
+        }
+        // Remove the OTHER pattern slide's now-orphaned rel/sldId entry (the anchor's was already replaced above)
+        var _trOtherRid = (_trAnchorRid === _trContentRid) ? _trDividerRid : _trContentRid;
+        if (_trOtherRid) {
+          var _trRelIdxO = _trPrsR.indexOf('Id="'+_trOtherRid+'"');
+          if (_trRelIdxO >= 0) {
+            var _trTagStartO = _trPrsR.lastIndexOf('<Relationship', _trRelIdxO);
+            var _trTagEndO = _trPrsR.indexOf('/>', _trRelIdxO) + 2;
+            _trPrsR = _trPrsR.substring(0,_trTagStartO) + _trPrsR.substring(_trTagEndO);
+          }
+          var _trSldIdxO = _trPrsX.indexOf('r:id="'+_trOtherRid+'"');
+          if (_trSldIdxO >= 0) {
+            var _trSldTagStartO = _trPrsX.lastIndexOf('<p:sldId', _trSldIdxO);
+            var _trSldTagEndO = _trPrsX.indexOf('/>', _trSldIdxO) + 2;
+            _trPrsX = _trPrsX.substring(0,_trSldTagStartO) + _trPrsX.substring(_trSldTagEndO);
+          }
+        }
+        _trCtX = _trCtX.replace('<Override PartName="/ppt/slides/'+_trContentFile+'" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>', '');
+        _trCtX = _trCtX.replace('<Override PartName="/ppt/slides/'+_trDividerFile+'" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>', '');
+        _trCtX = _trCtX.replace('</Types>', _trAllNewCT + '</Types>');
+
+        _trZip.file('ppt/presentation.xml', _trPrsX);
+        _trZip.file('ppt/_rels/presentation.xml.rels', _trPrsR);
+        _trZip.file('[Content_Types].xml', _trCtX);
+        // The content-pattern and divider-pattern slides are now fully unreferenced — remove them.
+        // Any other slides (e.g. a cover) are deliberately left untouched.
+        _trZip.remove('ppt/slides/'+_trContentFile);
+        _trZip.remove('ppt/slides/_rels/'+_trContentFile+'.rels');
+        _trZip.remove('ppt/slides/'+_trDividerFile);
+        _trZip.remove('ppt/slides/_rels/'+_trDividerFile+'.rels');
+
+        var _trOut = await _trZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+        var _trUrl = URL.createObjectURL(_trOut);
+        var _trA = document.createElement('a');
+        _trA.href = _trUrl;
+        _trA.download = _safeFileName((item.name || 'Track Record - Anonymised'), 'Track Record - Anonymised') + '.pptx';
+        _trA.click();
+        setTimeout(function(){ URL.revokeObjectURL(_trUrl); }, 2000);
         return;
       }
 
@@ -5738,7 +6446,9 @@ async function downloadHistory(index) {
         // Split SUMMARY into: prose paragraphs ({{SUMMARY}}) + bullet list ({{SUMMARY_BULLETS}})
         (function() {
           var _s = (_ei2Cv.SUMMARY || '').trim();
-          if (!_s) return;
+          var _hasBullets = !!(_ei2Cv.SUMMARY_BULLETS || '').trim();
+          var _hasSections = Array.isArray(_ei2Cv.SUMMARY_SECTIONS) && _ei2Cv.SUMMARY_SECTIONS.length > 0;
+          if (!_s && !_hasBullets && !_hasSections) return;
           function _x(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
           // Find split point: 'Core Leadership Strengths', 'Key Skills', 'KEY ', 'CORE ' etc
@@ -5838,8 +6548,9 @@ async function downloadHistory(index) {
           EDU_1_DEGREE:      '',
           QUAL_YEAR:         '',
           QUAL_1:            '',
+          QUAL_HEADING:      (_ei2Cv.QUAL_HEADING || '').trim() || 'Professional Qualifications',
           NATIONALITY:       _ei2Cv.NATIONALITY || '',
-          LANGUAGES:         _ei2Cv.LANGUAGES || '',
+          LANGUAGES:         '',
           ADDITIONAL_INFO:   _ei2Cv.ADDITIONAL_INFO || '',
           INTERESTS:         _ei2Cv.INTERESTS || ''
         };
@@ -5853,14 +6564,15 @@ async function downloadHistory(index) {
           var _B  = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _N  = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _TAB = '<w:tabs><w:tab w:val="left" w:pos="2127"/></w:tabs>';
-          var _PP = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB + '</w:pPr>';
+          var _PP_HEAD = '<w:pPr><w:pStyle w:val="SHText"/>' + _TAB + '<w:jc w:val="both"/></w:pPr>';
+          var _PP = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="2127"/><w:jc w:val="both"/></w:pPr>';
           var _eduXml = '';
           var _SP = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
           _edu.forEach(function(e){
             if (!e.institution && !e.degree && !(e.degrees && e.degrees.length)) return;
             if (_eduXml) _eduXml += _SP;
             // Institution header line — bold with location
-            _eduXml += '<w:p>' + _PP
+            _eduXml += '<w:p>' + _PP_HEAD
               + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.years||'') + ':</w:t></w:r>'
               + '<w:r><w:tab/></w:r>'
               + '<w:r>' + _B + '<w:t xml:space="preserve">' + _xe(e.institution||'') + (e.location ? ', ' + _xe(e.location) : '') + '</w:t></w:r>'
@@ -5872,7 +6584,12 @@ async function downloadHistory(index) {
               _eduXml += '<w:p>' + _PP
                 + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(d.degree||'') + '</w:t></w:r>'
                 + '</w:p>';
-              if (d.extra) _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(d.extra) + '</w:t></w:r></w:p>';
+              if (d.extra) {
+                // Preserve each original line as its own paragraph, aligned under the institution name
+                (d.extra || '').split(/\n+/).map(function(l){return l.trim();}).filter(Boolean).forEach(function(line){
+                  _eduXml += '<w:p>' + _PP + '<w:r>' + _N + '<w:t xml:space="preserve">' + _xe(line) + '</w:t></w:r></w:p>';
+                });
+              }
             });
           });
           // Replace P39 start to P40 end using paraId anchors
@@ -5885,11 +6602,48 @@ async function downloadHistory(index) {
           }
         })();
 
-        // ── Quals: replace P46(4BB10D82) with all qual entries + tech skills ──
+        // ── Languages: replace {{LANGUAGES}} with one language per line ──
+        (function(){
+          var _langs = _ei2Cv.LANGUAGES || [];
+          var _liIdx = _ei2DocXml.indexOf('{{LANGUAGES}}');
+          if (_liIdx === -1) return;
+          function _xl(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+          var _liPStart = _liIdx, _liSearch = _liIdx;
+          while (_liSearch > 0) {
+            var _liC = _ei2DocXml.lastIndexOf('<w:p', _liSearch - 1);
+            if (_liC < 0) break;
+            var _liN = _ei2DocXml.charAt(_liC + 4);
+            if (_liN === '>' || _liN === ' ') { _liPStart = _liC; break; }
+            _liSearch = _liC;
+          }
+          var _liPEnd = _ei2DocXml.indexOf('</w:p>', _liIdx) + 6;
+          if (!Array.isArray(_langs) || _langs.length === 0) {
+            _ei2DocXml = _ei2DocXml.substring(0, _liPStart) + _ei2DocXml.substring(_liPEnd);
+            return;
+          }
+          var _LP_FIRST = '<w:pPr><w:pStyle w:val="SHText"/></w:pPr>';
+          var _LP_CONT  = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="1440" w:firstLine="720"/></w:pPr>';
+          function _langLine(l) {
+            var lang = _xl(l.language || '');
+            var lvl = _xl(l.level || '');
+            return lang + (lvl ? ', ' + lvl : '');
+          }
+          var _langXml = '<w:p>' + _LP_FIRST
+            + '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>Languages</w:t></w:r>'
+            + '<w:r><w:tab/></w:r><w:r><w:tab/><w:t xml:space="preserve">' + _langLine(_langs[0]) + '</w:t></w:r>'
+            + '</w:p>';
+          for (var _li = 1; _li < _langs.length; _li++) {
+            _langXml += '<w:p>' + _LP_CONT + '<w:r><w:t xml:space="preserve">' + _langLine(_langs[_li]) + '</w:t></w:r></w:p>';
+          }
+          _ei2DocXml = _ei2DocXml.substring(0, _liPStart) + _langXml + _ei2DocXml.substring(_liPEnd);
+        })();
+
+        // ── Quals: replace P46(4BB10D82) with all qual entries + affiliations + tech skills ──
         (function(){
           var _pq = _ei2Cv.PROFESSIONAL_QUALS || [];
+          var _aff = _ei2Cv.AFFILIATIONS || [];
           var _ts = (_ei2Cv.TECH_SKILLS || '').trim();
-          if (!_pq.length && !_ts) return;
+          if (!_pq.length && !_aff.length && !_ts) return;
           function _xq(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
           var _B2  = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
           var _N2  = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
@@ -5900,29 +6654,38 @@ async function downloadHistory(index) {
           _pq.forEach(function(q, qi){
             if (!q.qualification) return;
             if (qi > 0) { _qualXml += _QSPACER; }
+            var _year = (q.year || '').trim();
+            if (_year) {
+              _qualXml += '<w:p>' + _PP2
+                + '<w:r>' + _B2 + '<w:t xml:space="preserve">' + _xq(_year) + ':</w:t></w:r>'
+                + '<w:r><w:tab/></w:r>'
+                + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(q.qualification) + '</w:t></w:r>'
+                + '</w:p>';
+            } else {
+              _qualXml += '<w:p>' + _PP2
+                + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(q.qualification) + '</w:t></w:r>'
+                + '</w:p>';
+            }
+          });
+          _aff.forEach(function(a, ai){
+            if (!a.organization && !a.role) return;
+            if (_qualXml || ai > 0) { _qualXml += _QSPACER; }
+            var _affText = [a.role, a.organization].filter(Boolean).join(', ');
             _qualXml += '<w:p>' + _PP2
-              + '<w:r>' + _B2 + '<w:t xml:space="preserve">' + _xq(q.year||'') + ':</w:t></w:r>'
+              + '<w:r>' + _B2 + '<w:t xml:space="preserve">' + _xq(a.dates||'') + ':</w:t></w:r>'
               + '<w:r><w:tab/></w:r>'
-              + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(q.qualification) + '</w:t></w:r>'
+              + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(_affText) + '</w:t></w:r>'
               + '</w:p>';
           });
           if (_ts) {
             _qualXml += '<w:p>' + _PP2 + '</w:p>';
-            var _tsLines = _ts.split('|').map(function(s){ return s.trim(); }).filter(Boolean);
-            _tsLines.forEach(function(tl, ti) {
-              if (ti === 0) {
-                _qualXml += '<w:p>' + _PP2
-                  + '<w:r>' + _B2 + '<w:t xml:space="preserve">Technical Skills:</w:t></w:r>'
-                  + '<w:r><w:tab/></w:r>'
-                  + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(tl) + '</w:t></w:r>'
-                  + '</w:p>';
-              } else {
-                _qualXml += '<w:p>' + _PP2
-                  + '<w:r><w:tab/></w:r>'
-                  + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(tl) + '</w:t></w:r>'
-                  + '</w:p>';
-              }
-            });
+            var _tsItems = _ts.split(/[|,]/).map(function(s){ return s.trim(); }).filter(Boolean);
+            var _tsJoined = _tsItems.join(', ');
+            _qualXml += '<w:p>' + _PP2
+              + '<w:r>' + _B2 + '<w:t xml:space="preserve">Technical Skills:</w:t></w:r>'
+              + '<w:r><w:tab/></w:r>'
+              + '<w:r>' + _N2 + '<w:t xml:space="preserve">' + _xq(_tsJoined) + '</w:t></w:r>'
+              + '</w:p>';
           }
           var _a46 = _ei2DocXml.indexOf('paraId="26D4D308"');
           if (_a46 !== -1) {
@@ -5930,6 +6693,100 @@ async function downloadHistory(index) {
             var _qpe = _ei2DocXml.indexOf('</w:p>', _a46) + 6;
             _ei2DocXml = _ei2DocXml.substring(0, _qps) + _qualXml + _ei2DocXml.substring(_qpe);
           }
+        })();
+
+        // ── Transaction Experience: replace {{TRANSACTION_EXPERIENCE_BLOCK}} ──
+        (function(){
+          var _tx = _ei2Cv.TRANSACTION_EXPERIENCE || [];
+          var _txIdx = _ei2DocXml.indexOf('{{TRANSACTION_EXPERIENCE_BLOCK}}');
+          if (_txIdx === -1) return;
+          function _xt(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+          var _txPStart = _txIdx, _txSearch = _txIdx;
+          while (_txSearch > 0) {
+            var _txC = _ei2DocXml.lastIndexOf('<w:p', _txSearch - 1);
+            if (_txC < 0) break;
+            var _txN = _ei2DocXml.charAt(_txC + 4);
+            if (_txN === '>' || _txN === ' ') { _txPStart = _txC; break; }
+            _txSearch = _txC;
+          }
+          var _txPEnd = _ei2DocXml.indexOf('</w:p>', _txIdx) + 6;
+          if (!Array.isArray(_tx) || _tx.length === 0) {
+            // No transaction data — remove the placeholder paragraph entirely
+            _ei2DocXml = _ei2DocXml.substring(0, _txPStart) + _ei2DocXml.substring(_txPEnd);
+            return;
+          }
+          var _HEAD_PPR = '<w:pPr><w:pStyle w:val="SHSubHeading"/><w:pageBreakBefore/><w:spacing w:after="120"/></w:pPr>';
+          var _HEAD_RPR = '';
+          var _SUB_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:before="200" w:after="80"/></w:pPr>';
+          var _SUB_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          var _NOTE_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="160"/></w:pPr>';
+          var _NOTE_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>';
+          var _txHeading = (_ei2Cv.TRANSACTION_EXPERIENCE_HEADING || '').trim() || 'Transaction Experience';
+          var _txXml = '<w:p>' + _HEAD_PPR + '<w:r>' + _HEAD_RPR + '<w:t xml:space="preserve">' + _xt(_txHeading) + '</w:t></w:r></w:p>';
+          var _txNote = (_ei2Cv.TRANSACTION_EXPERIENCE_NOTE || '').trim();
+          if (_txNote) {
+            _txXml += '<w:p>' + _NOTE_PPR + '<w:r>' + _NOTE_RPR + '<w:t xml:space="preserve">(' + _xt(_txNote) + ')</w:t></w:r></w:p>';
+          }
+          _tx.forEach(function(grp){
+            if (!grp) return;
+            var subheading = (grp.subheading || '').trim();
+            var items = Array.isArray(grp.items) ? grp.items : [];
+            if (subheading) {
+              _txXml += '<w:p>' + _SUB_PPR + '<w:r>' + _SUB_RPR + '<w:t xml:space="preserve">' + _xt(subheading) + '</w:t></w:r></w:p>';
+            }
+            items.forEach(function(t){
+              t = (t || '').trim();
+              if (!t) return;
+              _txXml += '<w:p><w:pPr><w:pStyle w:val="SHBullets"/></w:pPr><w:r><w:t xml:space="preserve">' + _xt(t) + '</w:t></w:r></w:p>';
+            });
+          });
+          _ei2DocXml = _ei2DocXml.substring(0, _txPStart) + _txXml + _ei2DocXml.substring(_txPEnd);
+        })();
+
+        // ── Additional Sections (catch-all safety net): replace {{ADDITIONAL_SECTIONS_BLOCK}} ──
+        (function(){
+          var _as = _ei2Cv.ADDITIONAL_SECTIONS || [];
+          var _asIdx = _ei2DocXml.indexOf('{{ADDITIONAL_SECTIONS_BLOCK}}');
+          if (_asIdx === -1) return;
+          function _xa(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+          var _asPStart = _asIdx, _asSearch = _asIdx;
+          while (_asSearch > 0) {
+            var _asC = _ei2DocXml.lastIndexOf('<w:p', _asSearch - 1);
+            if (_asC < 0) break;
+            var _asN = _ei2DocXml.charAt(_asC + 4);
+            if (_asN === '>' || _asN === ' ') { _asPStart = _asC; break; }
+            _asSearch = _asC;
+          }
+          var _asPEnd = _ei2DocXml.indexOf('</w:p>', _asIdx) + 6;
+          if (!Array.isArray(_as) || _as.length === 0) {
+            _ei2DocXml = _ei2DocXml.substring(0, _asPStart) + _ei2DocXml.substring(_asPEnd);
+            return;
+          }
+          var _AS_HEAD_PPR = '<w:pPr><w:pStyle w:val="SHSubHeading"/><w:spacing w:before="200" w:after="120"/></w:pPr>';
+          var _AS_SUB_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:ind w:left="2127"/><w:spacing w:before="160" w:after="60"/></w:pPr>';
+          var _AS_SUB_RPR = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/><w:color w:val="222229"/></w:rPr>';
+          var _AS_BUL_PPR = '<w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="2127"/></w:pPr>';
+          var _asXml = '';
+          _as.forEach(function(sec){
+            if (!sec) return;
+            var heading = (sec.heading || '').trim();
+            var content = Array.isArray(sec.content) ? sec.content : [];
+            if (!heading && !content.length) return;
+            if (heading) {
+              _asXml += '<w:p>' + _AS_HEAD_PPR + '<w:r><w:t xml:space="preserve">' + _xa(heading) + '</w:t></w:r></w:p>';
+            }
+            content.forEach(function(line){
+              line = (line || '').trim();
+              if (!line) return;
+              if (line.indexOf('>>') === 0) {
+                var sub = line.substring(2).trim();
+                _asXml += '<w:p>' + _AS_SUB_PPR + '<w:r>' + _AS_SUB_RPR + '<w:t xml:space="preserve">' + _xa(sub) + '</w:t></w:r></w:p>';
+              } else {
+                _asXml += '<w:p>' + _AS_BUL_PPR + '<w:r><w:t xml:space="preserve">' + _xa(line) + '</w:t></w:r></w:p>';
+              }
+            });
+          });
+          _ei2DocXml = _ei2DocXml.substring(0, _asPStart) + _asXml + _ei2DocXml.substring(_asPEnd);
         })();
 
         try {
@@ -6705,7 +7562,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Admin auth
 (function(){
-  var ADMIN_HASH = '70602cf6904842c76c32c160c093df0b5239818f6f696e36cf062b964043bdab';
+  var ADMIN_HASH = 'df376b36b9753b00a56678db390c2118cbf251fb5e9899c46d2f695b526c9413';
   var ADMIN_EMAILS = [
     'a.shamim@sheffieldhaworth.com',
     'support@fyxo.global'
@@ -6770,40 +7627,6 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 
 
-function exportUsageLogs(){
-  // Try server CSV, fall back to localStorage
-  fetch('/api/proxy/logs/csv').then(function(r){
-    if(!r.ok) throw new Error('Server unavailable');
-    return r.blob();
-  }).then(function(blob){
-    var a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='SH_DocGen_Usage_'+new Date().toISOString().slice(0,10)+'.csv';
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
-    notify('⬇ Usage report downloaded from server');
-  }).catch(function(){
-    // Fallback: export from localStorage
-    var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');
-    if(!logs.length){notify('No usage data yet');return;}
-    var headers=['ID','User','Template','Input Method','Status','Timestamp'];
-    var _nl='\n';var csv=[headers.join(',')].concat(logs.map(function(r,i){
-      var lbl=(typeof TEMPLATES!=='undefined'&&TEMPLATES[r.template])?TEMPLATES[r.template].label:(r.template||'');
-      return[i+1,r.user||'',lbl,r.inputMethod||'',r.status||'',r.timestamp||''].map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');
-    })).join(_nl);
-    var blob=new Blob([csv],{type:'text/csv'});
-    var a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='SH_DocGen_Usage_'+new Date().toISOString().slice(0,10)+'.csv';
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
-    notify('⬇ Exported '+logs.length+' local log entries');
-  });
-}
-function clearUsageLogs(){
-  if(!confirm('Clear all local log entries? Server logs are unaffected.'))return;
-  localStorage.removeItem('sh_usage_logs');
-  loadUsageLogs();
-  (window._safeNotify || notify)('✓ Local logs cleared');
-}
 // ══════════════════════════════════════════════════════
 // TEMPLATE PREVIEW TAB
 // ══════════════════════════════════════════════════════
@@ -6961,6 +7784,7 @@ function initUserName() {
     var ov = document.getElementById('namePromptOverlay');
     if (ov) ov.style.display = 'none';
   }
+  // If not yet set, the __authGate onSignedIn callback will update #userName on completion.
 }
 function saveUserName(){var inp=document.getElementById('namePromptInput');var name=inp.value.trim();if(!name||name.length<2){inp.style.border='1.5px solid #e74c3c';inp.placeholder='Please enter your name to continue';return;}localStorage.setItem('sh_userName',name);document.getElementById('userName').textContent=name;document.getElementById('namePromptOverlay').style.display='none';notify('Welcome, '+name+'!');}
 
@@ -6984,29 +7808,55 @@ function signOutUser(){
   modal.classList.add('open');
 }
 function logUsage(template,inputMethod,status){
+  var name = localStorage.getItem('sh_userName')||'';
+  if (!name && window.__auth && window.__auth.account) {
+    name = (window.__auth.account.name || window.__auth.account.username || window.__auth.account.preferred_username || '').trim();
+    if (name) { try { localStorage.setItem('sh_userName', name); } catch(e){} }
+  }
   try {
-    var name = localStorage.getItem('sh_userName')||'';
-    if (!name || name === 'Unknown') {
-      // Force name capture before logging
-      document.getElementById('namePromptOverlay').style.display = 'flex';
-      document.getElementById('namePromptInput').focus();
-      name = 'Unknown';
-    }
     var logs = JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');
-    var entry = {id:Date.now(),user:name,template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()};
+    var entry = {id:Date.now(),user:name||'Unknown',template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()};
     logs.push(entry);
     if (logs.length > 2000) logs = logs.slice(-2000);
     localStorage.setItem('sh_usage_logs', JSON.stringify(logs));
   } catch(e){}
-  fetch(SH_LOGGER+'/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userName:localStorage.getItem('sh_userName')||'Unknown',template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()})}).catch(function(){});
+  var _logHeaders = {'Content-Type':'application/json'};
+  var _tok = window.__auth && (window.__auth.accessToken || window.__auth.idToken || window.__auth.token);
+  if (_tok) _logHeaders['Authorization'] = 'Bearer ' + _tok;
+  fetch(SH_LOGGER+'/log',{method:'POST',headers:_logHeaders,body:JSON.stringify({userName:name||'Unknown',template:template,inputMethod:inputMethod,status:status,timestamp:new Date().toISOString()})}).catch(function(){});
 }
-function loadUsageLogs(){
+async function loadUsageLogs(){
   var tbody=document.getElementById('usageLogBody');
   var summary=document.getElementById('usageSummary');
   if(!tbody)return;
   tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">Loading...</td></tr>';
-  // Check storage backend status
-  fetch('/api/proxy/logs/status').then(function(r){return r.json();}).then(function(s){
+
+  // Ensure token exists for protected /api/proxy/logs* endpoints.
+  async function ensureApiToken(){
+    try {
+      if (window.__auth && window.__auth.idToken) return window.__auth.idToken;
+      if (window.__auth && window.__auth.token) return window.__auth.token;
+      if (window.__auth && window.__auth.msal) {
+        var acc = window.__auth.account || (window.__auth.msal.getAllAccounts && window.__auth.msal.getAllAccounts()[0]);
+        if (acc) {
+          var silent = await window.__auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: acc });
+          window.__auth.accessToken = (silent && silent.accessToken) || window.__auth.accessToken || null;
+          window.__auth.idToken = (silent && silent.idToken) || window.__auth.idToken || null;
+          window.__auth.token = window.__auth.accessToken || window.__auth.idToken || window.__auth.token;
+          return window.__auth.idToken || window.__auth.token || '';
+        }
+      }
+    } catch(e) {}
+    return '';
+  }
+
+  var _tok = await ensureApiToken();
+  var _authHdr = _tok ? { 'Authorization': 'Bearer ' + _tok } : {};
+
+  fetch('/api/proxy/logs/status',{headers:_authHdr}).then(function(r){
+    if (r.status === 401 || r.status === 403) { var e = new Error('auth-failed'); e.authFailed = true; throw e; }
+    return r.json();
+  }).then(function(s){
     var statusEl=document.getElementById('logStorageStatus');
     if(statusEl){
       if(s.backend==='azure-table'){
@@ -7015,108 +7865,335 @@ function loadUsageLogs(){
         statusEl.innerHTML='<span style="color:#ef4444;font-size:12px;">&#x26A0; In-memory fallback only — logs lost on restart. Ask Michika to set AZURE_STORAGE_CONNECTION_STRING on the server.</span>';
       }
     }
-  }).catch(function(){});
-  fetch('/api/proxy/logs?nocache='+Date.now()+'&r='+Math.random(),{cache:'no-store',headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}}).then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
-  .then(function(logs){renderLogs(logs,tbody,summary);})
+  }).catch(function(e){
+    var statusEl=document.getElementById('logStorageStatus');
+    if(statusEl && e && e.authFailed){
+      statusEl.innerHTML='<span style="color:#ef4444;font-size:12px;">&#x26A0; Authentication failed (401) — showing this browser\'s local cache only, NOT the real dataset. Known Azure SWA / backend auth issue — see Rocky/Fyxo.</span>';
+    }
+  });
+  fetch('/api/proxy/logs?nocache='+Date.now()+'&r='+Math.random(),{cache:'no-store',headers:Object.assign({'Cache-Control':'no-cache','Pragma':'no-cache'},_authHdr)}).then(function(r){if(!r.ok)throw new Error('unavailable');return r.json();})
+  .then(function(logs){processUsageLogs(logs,tbody,summary);})
   .catch(function(){
-    try{var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');renderLogs(logs,tbody,summary);}
+    try{
+      var logs=JSON.parse(localStorage.getItem('sh_usage_logs')||'[]');
+      processUsageLogs(logs,tbody,summary);
+      var statusEl=document.getElementById('logStorageStatus');
+      if(statusEl){
+        statusEl.innerHTML='<span style="color:#ef4444;font-size:12px;font-weight:600;">&#x26A0; Could not reach the server — showing this browser\'s local cache only. These numbers are NOT the real dataset and should not be relied on. Refresh once the connection/auth issue is resolved.</span>';
+      }
+    }
     catch(e){tbody.innerHTML='<tr><td colspan="5" style="color:#dc2626">Error: '+e.message+'</td></tr>';}
   });
+}
 
-function renderLogs(logs,tbody,summary){
-  var totalEl=document.getElementById('usageTotalCount');
-  var todayEl=document.getElementById('usageTodayCount');
+// ── Classification: separate real business usage from internal/testing accounts ──
+// Domain rule catches any current or future Fyxo dev-team member automatically.
+var USAGE_TEST_DOMAINS = ['fyxoinc.com'];
+// Explicit list for known testers who don't have a distinguishing domain.
+var USAGE_TEST_NAMES = ['Michika Perera (Alex)', 'Michika Perera', 'Michika', 'Kavin', 'Kavin Perera', 'Kavin Perera (Fyxo)',
+  'Gama Arachchige Dilan Piyananda Gamaarachchi', 'Thilini Silva'];
+// Known email/casing variants -> canonical display name. Add a line here whenever a new mismatch shows up.
+var USAGE_NAME_MAP = {
+  'p.bhalla@sheffieldhaworth.com': 'Payal Bhalla',
+  's.gaikwad@sheffieldhaworth.com': 'Sonali Gaikwad',
+  'mp.singh@sheffieldhaworth.com': 'Mahinder Singh',
+  'Mahinder Pal Singh': 'Mahinder Singh',
+  'd.sharma@sheffieldhaworth.com': 'Divya Sharma',
+  'Divya Sharma (US WAM)': 'Divya Sharma',
+  'henaff@sheffieldhaworth.com': 'Florence Henaff',
+  'Florence henaff': 'Florence Henaff',
+  'florence henaff': 'Florence Henaff',
+  's.chua@sheffieldhaworth.com': 'Stephy Chua',
+  's.donald@sheffieldhaworth.com': 'Sophia Donald',
+  'm.fischer@sheffieldhaworth.com': 'Mel Fischer',
+  'k.dean@sheffieldhaworth.com': 'Katie Dean',
+  't.ranasinghe@sheffieldhaworth.com': 'Thilini Ranasinghe',
+  'L.Zhu@sheffieldhaworth.com': 'Lois Zhu',
+  'Lois': 'Lois Zhu',
+  'R.Gillespie@sheffieldhaworth.com': 'Ryan Gillespie',
+  'A.Shamim@sheffieldhaworth.com': 'Amber Shamim',
+  'Kavin@fyxoinc.com': 'Kavin Perera (Fyxo)',
+  'dilan@fyxoinc.com': 'Dilan (Fyxo)',
+  'thilini@fyxoinc.com': 'Thilini Silva (Fyxo)',
+  'Renuja@fyxoinc.com': 'Renuja (Fyxo)'
+};
+function classifyUsageUser(raw){
+  var name = (raw||'').trim();
+  if (!name || name === 'Unknown') return { name:'Unknown', category:'unknown' };
+  var mapped = USAGE_NAME_MAP[name] || name;
+  var domainMatch = name.match(/@([^\s@]+)$/);
+  if (domainMatch && USAGE_TEST_DOMAINS.indexOf(domainMatch[1].toLowerCase()) !== -1) return { name:mapped, category:'test' };
+  if (USAGE_TEST_NAMES.indexOf(name) !== -1 || USAGE_TEST_NAMES.indexOf(mapped) !== -1) return { name:mapped, category:'test' };
+  return { name:mapped, category:'real' };
+}
 
-  // Normalise each log entry — handle both object and array formats
+// ── Main processing: normalise, classify, store globally, then render ──
+function processUsageLogs(logs, tbody, summary){
   var norm = logs.map(function(r){
-    if(Array.isArray(r)) return {user:r[1]||'',template:r[2]||'',inputMethod:r[3]||'',status:r[4]||'',timestamp:r[7]||r[5]||''};
-    return {
-      user: r.user||r.userName||'',
-      template: r.template||'',
-      inputMethod: r.inputMethod||r.input_method||r.source||'',
-      status: r.status||'',
-      timestamp: r.timestamp||r.ts||''
-    };
-  });
+    var raw;
+    if(Array.isArray(r)) raw = { user:r[1]||'', template:r[2]||'', inputMethod:r[3]||'', status:r[4]||'', timestamp:r[7]||r[5]||'' };
+    else raw = { user:r.user||r.userName||'', template:r.template||'', inputMethod:r.inputMethod||r.input_method||r.source||'', status:r.status||'', timestamp:r.timestamp||r.ts||'' };
+    var cls = classifyUsageUser(raw.user);
+    raw.canonicalUser = cls.name;
+    raw.category = cls.category; // 'real' | 'test' | 'unknown'
+    return raw;
+  }).filter(function(r){ return r.status !== 'started'; });
 
-  // Stats
-  var now = new Date();
-  var today = new Date().toISOString().substring(0,10);
-  var todayCount = norm.filter(function(r){ var d=r.timestamp ? r.timestamp.substring(0,10) : ''; return d === today; }).length;
-  var dedupAll = norm;
-  var thisMonth = norm.filter(function(r){ var d=new Date(r.timestamp); return !isNaN(d) && d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); });
+  window._usageLogsAll = norm;
+  window._usageTbody = tbody;
+  window._usageSummaryEl = summary;
+  renderUsageDashboard();
+}
 
-  // Cost estimate: ~$0.015 per generation
-  var COST_PER_GEN = 0.015;
-  var costMonth = (thisMonth.length * COST_PER_GEN).toFixed(2);
-  var costAll   = (dedupAll.length * COST_PER_GEN).toFixed(2);
+function _usageMonthKey(ts){ var d=new Date(ts); return isNaN(d) ? '' : d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function _usageMonthLabel(key){
+  if(!key) return '';
+  var parts=key.split('-'); var d=new Date(parseInt(parts[0]),parseInt(parts[1])-1,1);
+  return d.toLocaleString('en-GB',{month:'long',year:'numeric'});
+}
 
-  if(totalEl) totalEl.textContent = norm.length;
-  if(todayEl) todayEl.textContent = todayCount;
+function renderUsageDashboard(){
+  var norm = window._usageLogsAll || [];
+  var tbody = window._usageTbody;
+  var summary = window._usageSummaryEl;
+  if(!tbody) return;
 
-  // Render stat cards in summary area
-  if(summary){
-    var userCounts={};
-    norm.forEach(function(r){ var n=r.user||'Unknown'; userCounts[n]=(userCounts[n]||0)+1; });
-    var topUsers = Object.keys(userCounts).sort(function(a,b){return userCounts[b]-userCounts[a];}).slice(0,8)
-      .map(function(n){ return '<span style="background:rgba(255,255,255,.15);border-radius:12px;padding:3px 10px;font-size:11px;"><b>'+n+'</b> '+userCounts[n]+'</span>'; }).join('');
+  // ---- Build/populate month selector (only once per data load) ----
+  var monthSel = document.getElementById('usageMonthSel');
+  var allMonths = Array.from(new Set(norm.map(function(r){return _usageMonthKey(r.timestamp);}).filter(Boolean))).sort().reverse();
+  var currentMonthKey = _usageMonthKey(new Date().toISOString());
+  if (allMonths.indexOf(currentMonthKey) === -1) allMonths.unshift(currentMonthKey);
+  if (monthSel && monthSel.dataset.built !== allMonths.join(',')) {
+    monthSel.innerHTML = allMonths.map(function(m){ return '<option value="'+m+'">'+_usageMonthLabel(m)+'</option>'; }).join('');
+    monthSel.value = currentMonthKey;
+    monthSel.dataset.built = allMonths.join(',');
+  }
+  var selectedMonth = (monthSel && monthSel.value) || currentMonthKey;
+  var selIdx = allMonths.indexOf(selectedMonth);
+  var prevMonthKey = selIdx >= 0 && selIdx+1 < allMonths.length ? allMonths[selIdx+1] : null;
 
-    summary.innerHTML =
-      '<div style="display:flex;flex-wrap:wrap;gap:10px;width:100%;margin-bottom:10px;">' +
-        '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
-          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Today</div>' +
-          '<div style="font-size:22px;font-weight:700;">'+todayCount+'</div>' +
-          '<div style="font-size:10px;opacity:.6;">generations</div>' +
-        '</div>' +
-        '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
-          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">This Month</div>' +
-          '<div style="font-size:22px;font-weight:700;">'+thisMonth.length+'</div>' +
-          '<div style="font-size:10px;opacity:.6;">generations</div>' +
-        '</div>' +
-        '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
-          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">All Time</div>' +
-          '<div style="font-size:22px;font-weight:700;">'+dedupAll.length+'</div>' +
-          '<div style="font-size:10px;opacity:.6;">generations</div>' +
-        '</div>' +
-        '<div style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.3);border-radius:10px;padding:10px 16px;min-width:120px;">' +
-          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Est. Cost This Month</div>' +
-          '<div style="font-size:22px;font-weight:700;">$'+costMonth+'</div>' +
-          '<div style="font-size:10px;opacity:.6;">'+thisMonth.length+' successful</div>' +
-        '</div>' +
-        '<div style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.3);border-radius:10px;padding:10px 16px;min-width:120px;">' +
-          '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Est. Cost All Time</div>' +
-          '<div style="font-size:22px;font-weight:700;">$'+costAll+'</div>' +
-          '<div style="font-size:10px;opacity:.6;">'+dedupAll.length+' successful</div>' +
-        '</div>' +
-        '<div style="flex:1;min-width:200px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;">' + topUsers + '</div>' +
-      '</div>';
+  var todayStr = new Date().toISOString().substring(0,10);
+  var monthRows = norm.filter(function(r){ return _usageMonthKey(r.timestamp) === selectedMonth; });
+  var todayCount = norm.filter(function(r){ return (r.timestamp||'').substring(0,10) === todayStr && r.category!=='test'; }).length;
+  var allTimeReal = norm.filter(function(r){ return r.category !== 'test'; });
+
+  var monthReal = monthRows.filter(function(r){ return r.category==='real'; });
+  var monthUnknown = monthRows.filter(function(r){ return r.category==='unknown'; });
+  var monthBusiness = monthReal.concat(monthUnknown); // real business usage total for the month
+  var monthTestCount = monthRows.filter(function(r){ return r.category==='test'; }).length;
+
+  var COST_PER_GEN = 0.04;
+  var costMonth = (monthBusiness.length * COST_PER_GEN).toFixed(2);
+  var costAll   = (allTimeReal.length * COST_PER_GEN).toFixed(2);
+
+  // ---- Comparison vs previous month ----
+  var compareEl = document.getElementById('usageCompareBadge');
+  if (compareEl) {
+    if (prevMonthKey) {
+      var prevRows = norm.filter(function(r){ return _usageMonthKey(r.timestamp) === prevMonthKey && r.category !== 'test'; });
+      var prevCount = prevRows.length;
+      if (prevCount > 0) {
+        var diff = monthBusiness.length - prevCount;
+        var pct = Math.round((diff/prevCount)*100);
+        var arrow = diff >= 0 ? '▲' : '▼';
+        compareEl.textContent = arrow + ' ' + Math.abs(pct) + '% vs ' + _usageMonthLabel(prevMonthKey);
+        compareEl.style.background = diff >= 0 ? 'rgba(34,197,94,.18)' : 'rgba(239,68,68,.18)';
+        compareEl.style.color = diff >= 0 ? '#15803d' : '#b91c1c';
+      } else { compareEl.textContent = ''; }
+    } else { compareEl.textContent = '— no prior month to compare'; }
   }
 
-  if(!norm.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">No usage data yet</td></tr>';return;}
-  var sorted = dedupAll.slice().reverse();
-  tbody.innerHTML = sorted.filter(function(r){ return r.status !== "started"; }).map(function(r){
+  // ---- Stat cards ----
+  if(summary){
+    summary.innerHTML =
+      '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
+        '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Today</div>' +
+        '<div style="font-size:22px;font-weight:700;">'+todayCount+'</div>' +
+        '<div style="font-size:10px;opacity:.6;">generations</div></div>' +
+      '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
+        '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">'+_usageMonthLabel(selectedMonth)+'</div>' +
+        '<div style="font-size:22px;font-weight:700;">'+monthBusiness.length+'</div>' +
+        '<div style="font-size:10px;opacity:.6;">real usage</div></div>' +
+      '<div style="background:rgba(255,255,255,.12);border-radius:10px;padding:10px 16px;min-width:100px;">' +
+        '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">All Time</div>' +
+        '<div style="font-size:22px;font-weight:700;">'+allTimeReal.length+'</div>' +
+        '<div style="font-size:10px;opacity:.6;">generations</div></div>' +
+      '<div style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.3);border-radius:10px;padding:10px 16px;min-width:120px;">' +
+        '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Est. Cost, Selected</div>' +
+        '<div style="font-size:22px;font-weight:700;">$'+costMonth+'</div>' +
+        '<div style="font-size:10px;opacity:.6;">'+monthBusiness.length+' successful</div></div>' +
+      '<div style="background:rgba(201,162,39,.2);border:1px solid rgba(201,162,39,.3);border-radius:10px;padding:10px 16px;min-width:120px;">' +
+        '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Est. Cost, All Time</div>' +
+        '<div style="font-size:22px;font-weight:700;">$'+costAll+'</div>' +
+        '<div style="font-size:10px;opacity:.6;">'+allTimeReal.length+' successful</div></div>';
+  }
+
+  // ---- Known/unknown attribution breakdown (simple text line) ----
+  var attrEl = document.getElementById('usageAttribution');
+  if (attrEl) {
+    var uniqueUsers = new Set(monthReal.map(function(r){return r.canonicalUser;})).size;
+    var attrText = monthBusiness.length + ' generations this month attributed to ' + uniqueUsers + ' named users.';
+    if (monthUnknown.length) attrText += ' ' + monthUnknown.length + ' unattributed (logging defect).';
+    if (monthTestCount) attrText += ' ' + monthTestCount + ' internal/testing generations excluded.';
+    attrEl.textContent = attrText;
+  }
+
+  // ---- Top users (clickable, filters the chart) + top templates ----
+  var userCounts = {};
+  monthReal.forEach(function(r){ userCounts[r.canonicalUser] = (userCounts[r.canonicalUser]||0)+1; });
+  var topUsersSorted = Object.keys(userCounts).sort(function(a,b){return userCounts[b]-userCounts[a];});
+  var topUsersEl = document.getElementById('usageTopUsers');
+  var userSel = document.getElementById('usageUserSel');
+  var activeUserFilter = (userSel && userSel.value) || 'all';
+  if (topUsersEl) {
+    topUsersEl.innerHTML = topUsersSorted.slice(0,8).map(function(n){
+      var active = n === activeUserFilter;
+      return '<div onclick="setUsageUserFilter(\''+n.replace(/'/g,"\\'")+'\')" style="cursor:pointer;background:var(--chip);border:1.5px solid '+(active?'#147689':'var(--brd)')+';border-radius:20px;padding:6px 14px;font-size:12px;">' +
+        n+' <span style="color:#147689;font-weight:700;">'+userCounts[n]+'</span></div>';
+    }).join('');
+  }
+  if (userSel && userSel.dataset.built !== topUsersSorted.join(',')) {
+    userSel.innerHTML = '<option value="all">All users (aggregate)</option>' +
+      topUsersSorted.map(function(n){ return '<option value="'+n.replace(/"/g,'&quot;')+'">'+n+'</option>'; }).join('');
+    userSel.value = activeUserFilter;
+    userSel.dataset.built = topUsersSorted.join(',');
+  }
+
+  var tplCounts = {};
+  monthReal.concat(monthUnknown).forEach(function(r){
+    var lbl=(typeof TEMPLATES!=='undefined'&&TEMPLATES[r.template])?TEMPLATES[r.template].label:(r.template||'Unknown');
+    tplCounts[lbl] = (tplCounts[lbl]||0)+1;
+  });
+  var topTplSorted = Object.keys(tplCounts).sort(function(a,b){return tplCounts[b]-tplCounts[a];});
+  var tplTitleEl = document.getElementById('usageTopTemplatesTitle');
+  if (tplTitleEl) tplTitleEl.textContent = 'TOP TEMPLATES — ' + _usageMonthLabel(selectedMonth).toUpperCase();
+  var topTplEl = document.getElementById('usageTopTemplates');
+  if (topTplEl) {
+    var tplTotal = monthBusiness.length || 1;
+    var tplMax = topTplSorted.length ? tplCounts[topTplSorted[0]] : 1;
+    topTplEl.innerHTML = topTplSorted.slice(0,6).map(function(n){
+      var pct = Math.round((tplCounts[n]/tplTotal)*100);
+      var barPct = Math.round((tplCounts[n]/tplMax)*100);
+      return '<div style="margin-bottom:10px;">' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">' +
+          '<span style="color:#147689;">'+n+'</span>' +
+          '<span style="color:var(--mut);white-space:nowrap;margin-left:8px;">'+tplCounts[n]+' · '+pct+'%</span>' +
+        '</div>' +
+        '<div style="background:var(--brd);border-radius:4px;height:5px;overflow:hidden;">' +
+          '<div style="background:#147689;height:100%;width:'+barPct+'%;border-radius:4px;"></div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  // ---- Comparison chart: last 3 months, respecting user filter ----
+  var chartTitleEl = document.getElementById('usageChartTitle');
+  var chartBarsEl = document.getElementById('usageChartBars');
+  var last3 = allMonths.slice().sort().slice(-3); // chronological, oldest first, up to 3
+  if (last3.indexOf(selectedMonth) === -1) last3 = allMonths.slice(0,3).sort();
+  if (chartTitleEl) chartTitleEl.textContent = 'USAGE COMPARISON — LAST ' + last3.length + ' MONTHS' + (activeUserFilter!=='all' ? ' (' + activeUserFilter.toUpperCase() + ')' : ' (ALL USERS)');
+  if (chartBarsEl) {
+    var vals = last3.map(function(m){
+      return norm.filter(function(r){
+        if (_usageMonthKey(r.timestamp) !== m) return false;
+        if (r.category === 'test') return false;
+        if (activeUserFilter !== 'all' && r.canonicalUser !== activeUserFilter) return false;
+        return true;
+      }).length;
+    });
+    var maxV = Math.max.apply(null, vals.concat([1]));
+    var colors = ['#9fd6c9','#147689','#C9A227'];
+    chartBarsEl.innerHTML = last3.map(function(m,i){
+      var h = Math.max(6, Math.round((vals[i]/maxV)*80));
+      var lbl = _usageMonthLabel(m).split(' ')[0].slice(0,3);
+      return '<div style="display:flex;flex-direction:column;align-items:center;flex:1;">' +
+        '<div style="font-size:12px;font-weight:700;margin-bottom:4px;">'+vals[i]+'</div>' +
+        '<div style="width:100%;max-width:60px;height:'+h+'px;background:'+colors[i%3]+';border-radius:4px 4px 0 0;"></div>' +
+        '<div style="font-size:10px;opacity:.7;margin-top:6px;">'+lbl+'</div></div>';
+    }).join('');
+  }
+
+  // ---- Table: apply search + status filter, on top of the selected month's business rows ----
+  var searchBox = document.getElementById('usageSearchBox');
+  var statusFilter = document.getElementById('usageStatusFilter');
+  var q = (searchBox && searchBox.value || '').toLowerCase();
+  var stF = (statusFilter && statusFilter.value) || '';
+  var tableRows = monthBusiness.slice().reverse().filter(function(r){
+    if (stF && r.status !== stF) return false;
+    if (q) {
+      var tplLabel=(typeof TEMPLATES!=='undefined'&&TEMPLATES[r.template])?TEMPLATES[r.template].label:r.template;
+      var hay = (r.canonicalUser+' '+tplLabel).toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+
+  var entriesEl = document.getElementById('usageEntriesCount');
+  if (entriesEl) entriesEl.textContent = tableRows.length + ' of ' + monthBusiness.length + ' entries';
+
+  if(!tableRows.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;opacity:.5">No usage data for this filter</td></tr>';return;}
+  tbody.innerHTML = tableRows.map(function(r){
     var tplLabel=(typeof TEMPLATES!=='undefined'&&TEMPLATES[r.template])?TEMPLATES[r.template].label:r.template;
     var d=new Date(r.timestamp);
     var date=isNaN(d)?r.timestamp:d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
     var inp = r.inputMethod || '—';
     var st  = r.status || '—';
-    var stClass = st==='success'||st==='completed' ? 'completed' : st==='failed' ? 'failed' : st==='started' ? 'attempted' : '';
-    return '<tr><td>'+r.user+'</td><td style="font-size:11px">'+tplLabel+'</td><td>'+inp+'</td><td class="status-'+stClass+'">'+st+'</td><td>'+date+'</td></tr>';
+    var pillClass = st==='success'||st==='completed' ? 'status-ok' : st==='failed' ? 'status-bad' : '';
+    var stHtml = pillClass ? '<span class="usage-pill '+pillClass+'">'+st+'</span>' : st;
+    var uName = r.canonicalUser === 'Unknown' ? '<span style="opacity:.6">Unknown</span>' : r.canonicalUser;
+    return '<tr><td>'+uName+'</td><td style="font-size:11px;color:#147689;">'+tplLabel+'</td><td>'+inp+'</td><td>'+stHtml+'</td><td>'+date+'</td></tr>';
   }).join('');
 }
-function exportUsageLogs(){
-  var a=document.createElement('a');
-  a.href='/api/proxy/logs/csv';
-  a.download='SH_DocGen_Usage_'+new Date().toISOString().slice(0,10)+'.csv';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  (window._safeNotify || notify)('⬇ Downloading usage report...');
+
+function onUsageMonthChange(){ renderUsageDashboard(); }
+function onUsageUserFilterChange(){ renderUsageDashboard(); }
+function onUsageSearchChange(){ renderUsageDashboard(); }
+function setUsageUserFilter(name){
+  var sel = document.getElementById('usageUserSel');
+  if (sel) { sel.value = name; renderUsageDashboard(); }
+}
+async function exportUsageLogs(){
+  var notifyFn = window._safeNotify || notify;
+  var tok = '';
+  try {
+    if (window.__auth && window.__auth.idToken) tok = window.__auth.idToken;
+    else if (window.__auth && window.__auth.token) tok = window.__auth.token;
+    else if (window.__auth && window.__auth.msal) {
+      var acc = window.__auth.account || (window.__auth.msal.getAllAccounts && window.__auth.msal.getAllAccounts()[0]);
+      if (acc) {
+        var silent = await window.__auth.msal.acquireTokenSilent({ scopes: ['User.Read'], account: acc });
+        tok = (silent && (silent.idToken || silent.accessToken)) || '';
+      }
+    }
+  } catch(e) {}
+  var hdrs = tok ? { 'Authorization': 'Bearer ' + tok } : {};
+  try {
+    // Same endpoint + same auth as the on-screen table, so the export always matches what's displayed.
+    var r = await fetch('/api/proxy/logs?nocache=' + Date.now(), { cache: 'no-store', headers: hdrs });
+    if (!r.ok) throw new Error('Server logs unavailable (status ' + r.status + ')');
+    var logs = await r.json();
+    if (!Array.isArray(logs) || !logs.length) { notifyFn('No usage data yet'); return; }
+    var headers = ['ID','User','Template','Input Method','Status','Timestamp'];
+    var csv = [headers.join(',')].concat(logs.map(function(row, i){
+      var lbl = (typeof TEMPLATES !== 'undefined' && TEMPLATES[row.template]) ? TEMPLATES[row.template].label : (row.template || '');
+      return [i+1, row.user || row.userName || '', lbl, row.inputMethod || '', row.status || '', row.timestamp || '']
+        .map(function(v){ return '"' + String(v||'').replace(/"/g,'""') + '"'; }).join(',');
+    })).join('\n');
+    var blob = new Blob([csv], { type: 'text/csv' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'SH_DocGen_Usage_' + new Date().toISOString().slice(0,10) + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    notifyFn('⬇ Exported ' + logs.length + ' usage log entries');
+  } catch(e) {
+    console.error('[EXPORT] Failed:', e.message);
+    notifyFn('Export failed: ' + e.message);
+  }
 }
 function clearUsageLogs(){
   if(!confirm('Clear all local log entries? Server logs are unaffected.'))return;
   localStorage.removeItem('sh_usage_logs');
   loadUsageLogs();
   (window._safeNotify || notify)('✓ Local logs cleared');
-}
 }
 
 // Safe notify wrapper
