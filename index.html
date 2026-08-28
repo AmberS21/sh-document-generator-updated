@@ -5387,16 +5387,19 @@ async function downloadHistory(index) {
           _trSections[sec].push({ role: (it.role||'').trim(), client_type: (it.client_type||'').trim(), real_client: (it.real_client||'').trim() });
         });
 
-        // Balanced distribution: N items across ceil(N/maxPerSlide) slides, sizes as even as possible
-        var TR_MAX_PER_SLIDE = 30; // 15 left + 15 right
-        var TR_MAX_PER_TABLE = 15;
-        function _trBalancedSizes(n, maxPerSlide){
+        // Fill every slide to full capacity (15+15) before starting a new one — only the final slide of a
+        // section can end up with fewer items, and only it may have an uneven left/right split as a result.
+        var TR_MAX_PER_SLIDE = 32; // 16 left + 16 right
+        var TR_MAX_PER_TABLE = 16;
+        function _trGreedySizes(n, maxPerSlide){
           if (n <= 0) return [];
-          var numSlides = Math.ceil(n / maxPerSlide);
-          var base = Math.floor(n / numSlides);
-          var rem = n % numSlides;
           var sizes = [];
-          for (var i=0;i<numSlides;i++) sizes.push(base + (i < rem ? 1 : 0));
+          var remaining = n;
+          while (remaining > maxPerSlide) {
+            sizes.push(maxPerSlide);
+            remaining -= maxPerSlide;
+          }
+          sizes.push(remaining);
           return sizes;
         }
 
@@ -5451,24 +5454,42 @@ async function downloadHistory(index) {
             .replace('{{SECTION_NAME}}', sectionName)
             .replace('{{SELECT_COUNT}}', String(selectCount))
             .replace('{{CANDIDATE_LIST}}', candidateNames.map(function(n){ return '- ' + n; }).join('\n'));
-          var _trLogoResp = await fetch('/api/proxy', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
-            body: JSON.stringify({
-              model: 'claude-sonnet-4-6',
-              max_tokens: 2000,
-              messages: [{ role: 'user', content: promptText }],
-              system: 'Return ONLY raw JSON. No markdown. No explanations.'
-            })
-          });
-          if (!_trLogoResp.ok) return [];
+          var _trLogoResp;
+          try {
+            _trLogoResp = await fetch('/api/proxy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
+              body: JSON.stringify({
+                model: 'claude-sonnet-4-6',
+                max_tokens: 2000,
+                messages: [{ role: 'user', content: promptText }],
+                system: 'Return ONLY raw JSON. No markdown. No explanations.'
+              })
+            });
+          } catch(_trLogoNetErr) {
+            console.error('[Track Record logos] Network error for section "'+sectionName+'" ('+candidateNames.length+' candidates):', _trLogoNetErr);
+            return [];
+          }
+          if (!_trLogoResp.ok) {
+            var _trLogoErrBody = '';
+            try { _trLogoErrBody = (await _trLogoResp.text()).slice(0, 300); } catch(_e) {}
+            console.error('[Track Record logos] API call failed for section "'+sectionName+'" ('+candidateNames.length+' candidates): HTTP '+_trLogoResp.status+' — '+_trLogoErrBody);
+            return [];
+          }
           var _trLogoData = await _trLogoResp.json();
           var _trLogoRaw = (_trLogoData.content && _trLogoData.content[0] && _trLogoData.content[0].text) ? _trLogoData.content[0].text : '{}';
           try {
             var _trLogoRep = _trLogoRaw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'');
             var _trLogoParsed = JSON.parse(_trLogoRep);
-            return Array.isArray(_trLogoParsed.selected) ? _trLogoParsed.selected : [];
-          } catch(_trLogoParseErr) { return []; }
+            if (!Array.isArray(_trLogoParsed.selected)) {
+              console.error('[Track Record logos] Unexpected response shape for section "'+sectionName+'":', _trLogoRaw.slice(0,300));
+              return [];
+            }
+            return _trLogoParsed.selected;
+          } catch(_trLogoParseErr) {
+            console.error('[Track Record logos] Could not parse response for section "'+sectionName+'":', _trLogoParseErr.message, '— raw response:', _trLogoRaw.slice(0,300));
+            return [];
+          }
         }
 
         // Step 5: for each section, resolve its final logo set (name + matched slug), applying the cap and AI selection.
@@ -5597,7 +5618,16 @@ async function downloadHistory(index) {
             var rowXml = dataRowTemplate.replace(/<a:tc>[\s\S]*?<\/a:tc>/g, function(cell){
               var val = cellIdx === 0 ? it.role : it.client_type;
               cellIdx++;
-              return cell.replace(/<a:t>[^<]*<\/a:t>/, '<a:t>' + _trXe(val) + '</a:t>');
+              cell = cell.replace(/<a:t>[^<]*<\/a:t>/, '<a:t>' + _trXe(val) + '</a:t>');
+              // Explicitly set the data-row text color to match the reference deck exactly (#2C2E82, its
+              // TEXT_2 theme colour) — set here rather than relying on whatever colour the template's own
+              // row happens to carry, since that can silently drift as the template file gets edited.
+              // Normalize self-closing <a:rPr .../> to <a:rPr ...></a:rPr> first, then strip any existing
+              // fill and inject exactly one correct one, so this is safe regardless of template state.
+              cell = cell.replace(/<a:rPr([^>]*)\/>/, '<a:rPr$1></a:rPr>');
+              cell = cell.replace(/(<a:rPr[^>]*>)(<a:solidFill>[\s\S]*?<\/a:solidFill>|<a:noFill\/>)?/,
+                '$1<a:solidFill><a:srgbClr val="2C2E82"/></a:solidFill>');
+              return cell;
             });
             out += rowXml;
           });
@@ -5705,7 +5735,7 @@ async function downloadHistory(index) {
           _trSlideNum++;
           _trNewSlideFiles.push({ num: _trSlideNum, xml: _trBuildDivider(sec), rels: _trDividerRels });
 
-          var sizes = _trBalancedSizes(items.length, TR_MAX_PER_SLIDE);
+          var sizes = _trGreedySizes(items.length, TR_MAX_PER_SLIDE);
           var offset = 0;
           for (var _trSizeIdx = 0; _trSizeIdx < sizes.length; _trSizeIdx++) {
             var size = sizes[_trSizeIdx];
