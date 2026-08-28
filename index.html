@@ -1312,6 +1312,13 @@ const TEMPLATES = {
     file: 'templates/Advisor_Profile_Template_DocGen.pptx',
     isAdvisorProfile: true,
     promptType: 'advisor-profile'
+  },
+
+  'track-record-anonymised': {
+    label: 'Track Record - Anonymised (PowerPoint)',
+    file: 'templates/Track_Record_Anonymised_TEMPLATE.pptx',
+    isTrackRecord: true,
+    promptType: 'track-record'
   }
 
 };
@@ -1340,7 +1347,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
   var sel = document.getElementById('tplSel');
   if (!sel) return;
   var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','candidate-briefing-pack','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile','advisor-profile'];
-  var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update'];
+  var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update','track-record-anonymised'];
 
   var grp1 = document.createElement('optgroup');
   grp1.label = 'PROFILES ──';
@@ -1473,6 +1480,15 @@ var TPL = {
     fmt: 'p',
     reg: 'Global',
     flds: ['Full Name','Email','Phone','Summary','Relevant Engagements (3)','Experience Narrative','Technical Skills (3)','Qualifications (2)']
+  },
+  'track-record-anonymised': {
+    name: 'Track Record - Anonymised',
+    sub: 'Multi-Slide PowerPoint',
+    ico: 'ppt',
+    bg: 'rgba(20,118,137,.15)',
+    fmt: 'p',
+    reg: 'Global',
+    flds: ['Section','Role / Job Title','Client Type (anonymised)','Client Name (internal only, never shown)']
   }
 };
 
@@ -1529,6 +1545,30 @@ function pickTpl(v) {
       if (_isProjRpt && typeof activeType !== 'undefined' && activeType === 'text') setInput('url');
     }
   });
+
+  // Track Record - Anonymised: Paste or Upload File both work (Excel converts to CSV automatically). Ezekia/URL doesn't apply — this isn't a CRM record.
+  var _isTrackRecord = (v === 'track-record-anonymised');
+  document.querySelectorAll('.input-tab, [onclick*="setInput"]').forEach(function(el) {
+    var _label = el.textContent && el.textContent.trim();
+    var _isUrlTab = _label && _label.match(/Ezekia|URL/i);
+    if (_isUrlTab) {
+      el.style.opacity = _isTrackRecord ? '0.4' : '';
+      el.style.pointerEvents = _isTrackRecord ? 'none' : '';
+      el.title = _isTrackRecord ? 'Not applicable for Track Record — use Paste or Upload File instead' : '';
+      if (_isTrackRecord && typeof activeType !== 'undefined' && activeType === 'url') setInput('text');
+    } else {
+      el.style.opacity = '';
+      el.style.pointerEvents = '';
+      el.title = '';
+    }
+  });
+  var _trHint = document.getElementById('textInput');
+  if (_trHint) {
+    if (!_trHint.getAttribute('data-default-placeholder')) _trHint.setAttribute('data-default-placeholder', _trHint.placeholder);
+    _trHint.placeholder = _isTrackRecord
+      ? 'Paste your Excel data here (select the cells in Excel including the header row, then paste) — or use the Upload File tab to upload the .xlsx directly'
+      : _trHint.getAttribute('data-default-placeholder') || _trHint.placeholder;
+  }
 }
 
 function filterTpl(q) {
@@ -3369,6 +3409,26 @@ async function convertPdfToWord() {
   }
 }
 
+var trackRecordLogoPrompt = `You are selecting client logos for one section of a Sheffield Haworth "Track Record - Anonymised" deck. You will be given a section name and a list of real client names that have a matching logo file available. Your job is to select the strongest subset for display, applying strict rules — this is not optional stylistic judgment, it's a compliance-adjacent task.
+
+HARD EXCLUSIONS — remove these from consideration entirely, no exceptions:
+1. Blackstone (in any spelling/capitalisation) — never selected, regardless of prestige.
+2. Any Sovereign Wealth Fund — use your knowledge of major SWFs globally (e.g. entities like Abu Dhabi Investment Authority, Temasek, GIC, Qatar Investment Authority, Kuwait Investment Authority, Norges Bank Investment Management, Mubadala, PIF, and similar state-owned investment vehicles anywhere in the world). If a name is a sovereign wealth fund or is wholly owned/operated by one, exclude it even if it doesn't literally contain the words "sovereign" or "wealth fund".
+
+SELECTION COUNT — you will be told exactly how many to select (already computed for you). Select exactly that many from what remains after exclusions, choosing the most prestigious, highest-profile, most recognisable names — the ones that would most impress a reader glancing at this section. Prestige means genuine institutional reputation and recognisability, not alphabetical order or list position.
+
+CRITICAL — if the exclusion rules remove a name, do NOT substitute a similar-sounding name that wasn't in the provided list. Only select from the exact list of candidate names given to you.
+
+Do your exclusion checking and prestige ranking silently, in your own reasoning — do not write it out. Your visible reply must contain NOTHING except the JSON object below. Not a numbered list of exclusion reasoning, not a sentence of explanation, not a markdown code fence — the very first character of your reply must be "{".
+
+Return ONLY this JSON structure, nothing else:
+{"selected": ["exact candidate name 1", "exact candidate name 2", ...]}
+
+SECTION: {{SECTION_NAME}}
+NUMBER TO SELECT: {{SELECT_COUNT}}
+CANDIDATE NAMES (already confirmed to have a logo available):
+{{CANDIDATE_LIST}}`;
+
 async function processOneCV(inputText, tpl, btn, returnOnly, inputMethod) {
   var _pocvInputMethod = inputMethod || 'text';
   var selChip = document.querySelector('.fmt-chip.on-d,.fmt-chip.on-p,.fmt-chip.on-x,.fmt-chip.on-f');
@@ -3390,6 +3450,7 @@ var isServicesProfile = (tpl === 'services-profile');
 var isEaIndia = (tpl === 'ea-india-profile');
 var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var isAdvisorProfile = (tpl === 'advisor-profile');
+var isTrackRecord = (tpl === 'track-record-anonymised');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","overview_bullets":[""],"roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_HEADING":"","PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"ADDITIONAL_SECTIONS":[{"heading":"","content":[""]}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE_HEADING":"","TRANSACTION_EXPERIENCE":[{"subheading":"","items":[""]}],"TRANSACTION_EXPERIENCE_NOTE":"","AFFILIATIONS":[{"organization":"","role":"","dates":""}]}';
@@ -4156,6 +4217,33 @@ CANDIDATE SOURCE — extract ALL information from this text:
 
 ` + inputText;
 
+var trackRecordPrompt = `You are extracting structured track record data for a Sheffield Haworth "Track Record - Anonymised" PowerPoint deck. The source is tabular data originally from Excel, NOT a CV — it may arrive either tab-separated (pasted directly from Excel) or comma-separated (converted from an uploaded .xlsx file). The FIRST row is column headers, and the data MAY contain many columns you should ignore. Detect the delimiter from the data itself — do not assume one format.
+
+YOUR TASK: identify which columns correspond to the four concepts below (column header wording varies — match by MEANING, not exact text) and extract every data row into a flat array.
+
+COLUMNS TO FIND (by meaning, not exact header text):
+1. SECTION — which practice area / track record category this row belongs to (e.g. "Private Equity, Private Credit & Alternatives", "Real Assets", "Insurance", "Technology Functions"). Look for headers like "Section", "Practice Area", "Category", "Track Record Area", "Division", "Sector". This determines which divider/section of the deck the row belongs to.
+2. ROLE — the job title placed. Look for headers like "Current Job Title", "Job Title", "Role", "Position". Copy VERBATIM — do not rephrase, shorten, or correct the wording.
+3. CLIENT_TYPE — the ANONYMISED description of the client, already de-identified (e.g. "Hedge Fund", "Pension Fund", "Sovereign Wealth Fund", "Asset Manager"). Look for headers like "Company Type", "Client Type", "Client Description". This is what gets shown on the slide — never the real client name.
+4. REAL_CLIENT — the actual, real client/company name. Look for headers like "Assignment Client", "Client Name", "Company", "Client". This is captured for internal reference only (e.g. future logo matching) and is NEVER displayed on any slide.
+
+CRITICAL RULES:
+- Only extract from columns that clearly match one of the four concepts above. Ignore every other column entirely (dates, locations, consultant names, fee amounts, status, etc. — whatever else may be present).
+- Do NOT invent, guess, or hallucinate a section/role/client_type value that isn't actually present in the source data for that row.
+- Preserve the source data's original row order within the output array — do not reorder or group rows yourself; the tool groups by section afterwards.
+- If a row is missing CLIENT_TYPE entirely, still include the row with client_type as "" rather than dropping it.
+- If you cannot confidently identify a SECTION column at all anywhere in the header row, leave section as "" for every row — do not fabricate section names.
+- Copy ROLE and CLIENT_TYPE text VERBATIM as written in the source — do not correct spelling, do not rephrase, do not summarise.
+- Extract EVERY data row — do not skip rows, do not sample, do not truncate for length.
+- Return ONLY valid JSON. No markdown. No code blocks. No explanation.
+
+Return this exact JSON structure:
+{"items": [{"section": "", "role": "", "client_type": "", "real_client": ""}]}
+
+SOURCE DATA — extract every row from this pasted table:
+
+` + inputText;
+
 var prompt = isApacEy
   ? apacEyPrompt
   : isEaIndiaV2
@@ -4328,6 +4416,8 @@ Use this exact JSON structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE ÃÂ
   ? gmBasicPrompt
   : isAdvisorProfile
   ? advisorProfilePrompt
+  : isTrackRecord
+  ? trackRecordPrompt
   : isBriefingPack
   ? briefingPackPrompt
   : isServicesProfile
@@ -4552,6 +4642,10 @@ function hideProgress(msg) {
           (item.content.ROLE_TITLE ? '_' + item.content.ROLE_TITLE : '') +
           (item.content.YEAR ? '_' + item.content.YEAR : '');
       }
+    }
+    if ((!_histName || _histName === 'Unknown Candidate') && item && item.template === 'track-record-anonymised') {
+      var _trHistDate = item.date ? new Date(item.date).toLocaleDateString('en-GB').replace(/\//g,'.') : '';
+      _histName = 'Track Record - Anonymised' + (_trHistDate ? ' - ' + _trHistDate : '');
     }
     _histName = String(_histName || '').trim() || 'Unknown Candidate';
 
@@ -5275,6 +5369,510 @@ async function downloadHistory(index) {
         var _a = document.createElement('a');
         _a.href=_url; _a.download=_safeFileName(((_cl?_cl+' - ':'') + (item.name||'Candidate Update Report')), 'Candidate Update Report')+'.pptx';
         _a.click(); setTimeout(function(){URL.revokeObjectURL(_url);},2000);
+        return;
+      }
+
+// ── Track Record - Anonymised ────────────────────────────────────────
+      if (item.template === 'track-record-anonymised') {
+        var _trContent = item.content;
+        var _trItems = Array.isArray(_trContent.items) ? _trContent.items : [];
+        if (!_trItems.length) throw new Error('No track record rows were extracted — check the pasted data has a header row and at least one data row.');
+
+        function _trXe(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        // Group by section, preserving first-appearance order
+        var _trSectionOrder = [];
+        var _trSections = {};
+        _trItems.forEach(function(it){
+          var sec = (it.section || '').trim() || 'General';
+          if (!_trSections[sec]) { _trSections[sec] = []; _trSectionOrder.push(sec); }
+          _trSections[sec].push({ role: (it.role||'').trim(), client_type: (it.client_type||'').trim(), real_client: (it.real_client||'').trim() });
+        });
+
+        // Fill every slide to full capacity (15+15) before starting a new one — only the final slide of a
+        // section can end up with fewer items, and only it may have an uneven left/right split as a result.
+        var TR_MAX_PER_SLIDE = 32; // 16 left + 16 right
+        var TR_MAX_PER_TABLE = 16;
+        function _trGreedySizes(n, maxPerSlide){
+          if (n <= 0) return [];
+          var sizes = [];
+          var remaining = n;
+          while (remaining > maxPerSlide) {
+            sizes.push(maxPerSlide);
+            remaining -= maxPerSlide;
+          }
+          sizes.push(remaining);
+          return sizes;
+        }
+
+        var _RAW_TR = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+        var _trResp = await fetch(_RAW_TR + 'templates/Track_Record_Anonymised_TEMPLATE.pptx');
+        if (!_trResp.ok) throw new Error('Failed to fetch Track Record template');
+        var _trZip = await JSZip.loadAsync(await _trResp.arrayBuffer());
+
+        // ── Logo selection pipeline ──
+        // Step 1: fetch the manifest of available logo slugs (maintained alongside the logos/ folder in the repo)
+        var _trLogoManifest = [];
+        try {
+          var _trManifestResp = await fetch(_RAW_TR + 'logos/manifest.json');
+          if (_trManifestResp.ok) _trLogoManifest = await _trManifestResp.json();
+        } catch(_trManifestErr) { /* no manifest yet — logo selection simply yields nothing, not an error */ }
+
+        // Step 2: client-side fuzzy matching between a real client name and an available slug.
+        // Handles common variation (Inc/Ltd/LLC suffixes, punctuation, spacing, casing) without needing AI.
+        function _trSlugify(name){
+          return (name||'').toLowerCase()
+            .replace(/\b(inc|incorporated|ltd|limited|llc|llp|plc|corp|corporation|holdings?|the)\b/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .replace(/-+/g, '-');
+        }
+        function _trFindLogoMatch(realClientName){
+          var target = _trSlugify(realClientName);
+          if (!target) return null;
+          for (var i=0;i<_trLogoManifest.length;i++){
+            var slug = _trLogoManifest[i];
+            if (slug === target) return slug;
+          }
+          // Loose containment match as a fallback (e.g. "BlackRock Investment Management" vs "blackrock")
+          for (var j=0;j<_trLogoManifest.length;j++){
+            var s = _trLogoManifest[j];
+            if (target.indexOf(s) !== -1 || s.indexOf(target) !== -1) return s;
+          }
+          return null;
+        }
+
+        // Step 3: the anonymity cap — logos shown must be a clear MINORITY subset of the eligible pool,
+        // so a reader can never assume the shown logos represent the whole client list for that section.
+        function _trLogoCap(eligibleCount){
+          if (eligibleCount <= 3) return 0;
+          return Math.min(7, Math.floor(eligibleCount * 0.6));
+        }
+
+        // Step 4: a standalone Claude call for exclusions (Blackstone, Sovereign Wealth Funds) + prestige ranking.
+        // Separate from the main extraction call — this only runs once real client names are known per section.
+        async function _trCallClaudeForLogos(sectionName, candidateNames, selectCount){
+          var promptText = trackRecordLogoPrompt
+            .replace('{{SECTION_NAME}}', sectionName)
+            .replace('{{SELECT_COUNT}}', String(selectCount))
+            .replace('{{CANDIDATE_LIST}}', candidateNames.map(function(n){ return '- ' + n; }).join('\n'));
+          var _trLogoResp;
+          try {
+            _trLogoResp = await fetch('/api/proxy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
+              body: JSON.stringify({
+                model: 'claude-sonnet-4-6',
+                max_tokens: 2000,
+                messages: [{ role: 'user', content: promptText }],
+                system: 'Return ONLY raw JSON. No markdown. No explanations.'
+              })
+            });
+          } catch(_trLogoNetErr) {
+            console.error('[Track Record logos] Network error for section "'+sectionName+'" ('+candidateNames.length+' candidates):', _trLogoNetErr);
+            return [];
+          }
+          if (!_trLogoResp.ok) {
+            var _trLogoErrBody = '';
+            try { _trLogoErrBody = (await _trLogoResp.text()).slice(0, 300); } catch(_e) {}
+            console.error('[Track Record logos] API call failed for section "'+sectionName+'" ('+candidateNames.length+' candidates): HTTP '+_trLogoResp.status+' — '+_trLogoErrBody);
+            return [];
+          }
+          var _trLogoData = await _trLogoResp.json();
+          var _trLogoRaw = (_trLogoData.content && _trLogoData.content[0] && _trLogoData.content[0].text) ? _trLogoData.content[0].text : '{}';
+
+          function _trExtractLogoJson(raw){
+            var cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'');
+            // Fast path: response is already pure JSON, as instructed.
+            try { return JSON.parse(cleaned); } catch(_e1) {}
+            // Slow path: the model reasoned in prose before answering (happens on judgement-heavy prompts
+            // like this one, despite being told not to) — find the JSON object embedded in the text instead
+            // of giving up. Try from the LAST "{" onward first, since the actual answer usually comes after
+            // any reasoning; fall back to the first "{...}" span found anywhere if that doesn't parse either.
+            var lastBrace = cleaned.lastIndexOf('{');
+            if (lastBrace !== -1) {
+              try { return JSON.parse(cleaned.slice(lastBrace)); } catch(_e2) {}
+            }
+            var firstBrace = cleaned.indexOf('{');
+            var closingBrace = cleaned.lastIndexOf('}');
+            if (firstBrace !== -1 && closingBrace > firstBrace) {
+              try { return JSON.parse(cleaned.slice(firstBrace, closingBrace + 1)); } catch(_e3) {}
+            }
+            return null;
+          }
+
+          var _trLogoParsed = _trExtractLogoJson(_trLogoRaw);
+          if (!_trLogoParsed || !Array.isArray(_trLogoParsed.selected)) {
+            console.error('[Track Record logos] Could not extract a valid selection for section "'+sectionName+'" — raw response:', _trLogoRaw.slice(0,500));
+            return [];
+          }
+          return _trLogoParsed.selected;
+        }
+
+        // Step 5: for each section, resolve its final logo set (name + matched slug), applying the cap and AI selection.
+        // Same set is used on every content slide within that section, per the agreed design.
+        // Compute each section's eligibility synchronously first (cheap, no API calls), THEN fire all
+        // the section-level Claude calls IN PARALLEL rather than one-after-another — with several sections
+        // in a deck, sequential calls stack up real wall-clock time and meaningfully raise timeout risk.
+        var _trSectionPrep = {};
+        for (var _trSecKey in _trSections) {
+          if (!_trSections.hasOwnProperty(_trSecKey)) continue;
+          var _trSecItems = _trSections[_trSecKey];
+          var _trRealNames = [];
+          var _trSeenNames = {};
+          _trSecItems.forEach(function(it){
+            var rn = it.real_client;
+            if (rn && !_trSeenNames[rn.toLowerCase()]) { _trSeenNames[rn.toLowerCase()] = true; _trRealNames.push(rn); }
+          });
+          var _trEligible = [];
+          _trRealNames.forEach(function(name){
+            var slug = _trFindLogoMatch(name);
+            if (slug) _trEligible.push({ name: name, slug: slug });
+          });
+          // The anonymity rule protects against inference from the section's TRUE client count, not from
+          // however many happen to have a logo in today's (still-growing) library — those are two separate
+          // constraints. Compute the target from total distinct clients, then bound it by what's actually available.
+          var _trAnonymityTarget = _trLogoCap(_trRealNames.length);
+          var _trCap = Math.min(_trAnonymityTarget, _trEligible.length);
+          _trSectionPrep[_trSecKey] = { items: _trSecItems, eligible: _trEligible, cap: _trCap };
+        }
+
+        var _trSecKeysNeedingCall = Object.keys(_trSectionPrep).filter(function(k){ return _trSectionPrep[k].cap > 0 && _trSectionPrep[k].eligible.length > 0; });
+        var _trParallelResults = await Promise.all(_trSecKeysNeedingCall.map(function(k){
+          var prep = _trSectionPrep[k];
+          return _trCallClaudeForLogos(k, prep.eligible.map(function(e){return e.name;}), prep.cap);
+        }));
+
+        for (var _trSecKey in _trSectionPrep) {
+          if (!_trSectionPrep.hasOwnProperty(_trSecKey)) continue;
+          var prep2 = _trSectionPrep[_trSecKey];
+          var _trFinalLogos = [];
+          var _trCallIdx = _trSecKeysNeedingCall.indexOf(_trSecKey);
+          if (_trCallIdx !== -1) {
+            var _trSelectedNames = _trParallelResults[_trCallIdx];
+            var _trEligibleByName = {};
+            prep2.eligible.forEach(function(e){ _trEligibleByName[e.name] = e; });
+            _trSelectedNames.forEach(function(n){
+              if (_trEligibleByName[n]) _trFinalLogos.push(_trEligibleByName[n]);
+            });
+          }
+          _trSections[_trSecKey] = { items: prep2.items, logos: _trFinalLogos };
+        }
+        // Restore the plain items arrays for the existing balanced-distribution logic below, keeping logos accessible separately
+        var _trSectionLogos = {};
+        for (var _trSecKey2 in _trSections) {
+          if (!_trSections.hasOwnProperty(_trSecKey2)) continue;
+          _trSectionLogos[_trSecKey2] = _trSections[_trSecKey2].logos;
+          _trSections[_trSecKey2] = _trSections[_trSecKey2].items;
+        }
+
+        // Step 6: PNG dimension reader (from the IHDR chunk) — needed to fit each logo proportionally,
+        // never stretched, within its placeholder slot.
+        function _trPngSize(bytes){
+          var view = new DataView(bytes);
+          var w = view.getUint32(16, false);
+          var h = view.getUint32(20, false);
+          return { w: w, h: h };
+        }
+
+        // Fetch and cache each unique selected logo's image bytes once, even if used across multiple sections
+        var _trLogoImageCache = {};
+        async function _trGetLogoBytes(slug){
+          if (_trLogoImageCache[slug]) return _trLogoImageCache[slug];
+          var resp = await fetch(_RAW_TR + 'logos/' + slug + '.png');
+          if (!resp.ok) return null;
+          var buf = await resp.arrayBuffer();
+          _trLogoImageCache[slug] = buf;
+          return buf;
+        }
+
+        // Robust slide detection: identify the divider and content pattern slides BY CONTENT, not by
+        // assumed file number — file numbering does not follow display order in PPTX packages, and any
+        // other slides (cover, etc.) the template author adds should be preserved automatically.
+        var _trPrsXForScan = await _trZip.file('ppt/presentation.xml').async('string');
+        var _trPrsRForScan = await _trZip.file('ppt/_rels/presentation.xml.rels').async('string');
+        var _trOrderedRids = (_trPrsXForScan.match(/<p:sldId[^>]*r:id="(rId\d+)"/g) || []).map(function(s){
+          var m = s.match(/r:id="(rId\d+)"/); return m ? m[1] : null;
+        });
+        var _trRidToFile = {};
+        (_trPrsRForScan.match(/<Relationship[^>]*Target="slides\/slide\d+\.xml"[^>]*\/>/g) || []).forEach(function(rel){
+          var idM = rel.match(/Id="(rId\d+)"/); var tgtM = rel.match(/Target="slides\/(slide\d+\.xml)"/);
+          if (idM && tgtM) _trRidToFile[idM[1]] = tgtM[1];
+        });
+
+        var _trDividerFile = null, _trContentFile = null;
+        for (var _si=0; _si<_trOrderedRids.length; _si++){
+          var _fname = _trRidToFile[_trOrderedRids[_si]];
+          if (!_fname) continue;
+          var _sxml = await _trZip.file('ppt/slides/'+_fname).async('string');
+          if (!_trContentFile && (_sxml.match(/<a:tbl>/g)||[]).length === 2) _trContentFile = _fname;
+          if (!_trDividerFile && _sxml.indexOf('[Section Subtitle]') !== -1) _trDividerFile = _fname;
+        }
+        if (!_trContentFile) throw new Error('Track Record template: could not find the content slide (expected a slide with exactly two tables).');
+        if (!_trDividerFile) throw new Error('Track Record template: could not find the divider slide (expected a slide containing "[Section Subtitle]"). If you\'ve replaced the divider slide, make sure its title and subtitle placeholders still contain the literal text [Section Title] and [Section Subtitle].');
+
+        var _trDividerBase = await _trZip.file('ppt/slides/'+_trDividerFile).async('string');
+        var _trDividerRels = await _trZip.file('ppt/slides/_rels/'+_trDividerFile+'.rels').async('string');
+        var _trContentBase = await _trZip.file('ppt/slides/'+_trContentFile).async('string');
+        var _trContentRels = await _trZip.file('ppt/slides/_rels/'+_trContentFile+'.rels').async('string');
+
+        function _trBuildDivider(sectionName){
+          var xml = _trDividerBase;
+          xml = xml.split('<a:t>[Section Title]</a:t>').join('<a:t>' + _trXe(sectionName) + '</a:t>');
+          xml = xml.split('<a:t>[Section Subtitle]</a:t>').join('<a:t>Track Record</a:t>');
+          return xml;
+        }
+
+        function _trFillTable(tblXml, items){
+          var firstTr = tblXml.indexOf('<a:tr');
+          var prefix = tblXml.substring(0, firstTr);
+          var rows = tblXml.match(/<a:tr[\s\S]*?<\/a:tr>/g) || [];
+          var headerRow = rows[0] || '';
+          var dataRowTemplate = rows[1] || '';
+          var out = headerRow;
+          items.forEach(function(it){
+            var cellIdx = 0;
+            var rowXml = dataRowTemplate.replace(/<a:tc>[\s\S]*?<\/a:tc>/g, function(cell){
+              var val = cellIdx === 0 ? it.role : it.client_type;
+              cellIdx++;
+              cell = cell.replace(/<a:t>[^<]*<\/a:t>/, '<a:t>' + _trXe(val) + '</a:t>');
+              // Explicitly set the data-row text color to match the reference deck exactly (#2C2E82, its
+              // TEXT_2 theme colour) — set here rather than relying on whatever colour the template's own
+              // row happens to carry, since that can silently drift as the template file gets edited.
+              // Normalize self-closing <a:rPr .../> to <a:rPr ...></a:rPr> first, then strip any existing
+              // fill and inject exactly one correct one, so this is safe regardless of template state.
+              cell = cell.replace(/<a:rPr([^>]*)\/>/, '<a:rPr$1></a:rPr>');
+              cell = cell.replace(/(<a:rPr[^>]*>)(<a:solidFill>[\s\S]*?<\/a:solidFill>|<a:noFill\/>)?/,
+                '$1<a:solidFill><a:srgbClr val="2C2E82"/></a:solidFill>');
+              return cell;
+            });
+            out += rowXml;
+          });
+          return prefix + out;
+        }
+
+        function _trBuildContent(sectionName, leftItems, rightItems){
+          var xml = _trContentBase;
+          xml = xml.split('<a:t>Track Record | [Section Title]</a:t>').join('<a:t>Track Record | ' + _trXe(sectionName) + '</a:t>');
+
+          var tblBlocks = [];
+          var searchFrom = 0;
+          while (true){
+            var s = xml.indexOf('<a:tbl>', searchFrom);
+            if (s === -1) break;
+            var e = xml.indexOf('</a:tbl>', s) + '</a:tbl>'.length;
+            tblBlocks.push({start:s, end:e, xml: xml.substring(s+'<a:tbl>'.length, e-'</a:tbl>'.length)});
+            searchFrom = e;
+          }
+          if (tblBlocks.length < 2) throw new Error('Track Record template: expected two tables on the content slide, found ' + tblBlocks.length);
+
+          var newTblB = '<a:tbl>' + _trFillTable(tblBlocks[1].xml, rightItems) + '</a:tbl>';
+          xml = xml.substring(0, tblBlocks[1].start) + newTblB + xml.substring(tblBlocks[1].end);
+          var newTblA = '<a:tbl>' + _trFillTable(tblBlocks[0].xml, leftItems) + '</a:tbl>';
+          xml = xml.substring(0, tblBlocks[0].start) + newTblA + xml.substring(tblBlocks[0].end);
+
+          return xml;
+        }
+
+        // Step 7: embed the resolved logos into one content slide's XML, replacing "Logo Slot N" placeholder
+        // shapes with actual proportionally-fitted pictures. Unused slots (fewer logos than 7) are removed
+        // entirely rather than left as empty grey boxes. Returns updated {xml, rels} plus any new media files
+        // to add to the zip (as {partName, bytes} — caller adds these once, shared across slides in a section).
+        async function _trEmbedLogos(xml, rels, sectionLogos){
+          var newRels = rels;
+          var maxRid = Math.max.apply(null, (rels.match(/Id="rId(\d+)"/g)||['rId0']).map(function(r){return parseInt(r.replace(/[^\d]/g,''));}));
+          var mediaToAdd = [];
+
+          for (var slotN = 1; slotN <= 7; slotN++) {
+            var marker = 'Logo Slot ' + slotN;
+            var idx = xml.indexOf('name="' + marker + '"');
+            if (idx === -1) continue;
+            var spStart = xml.lastIndexOf('<p:sp>', idx);
+            var spEnd = xml.indexOf('</p:sp>', idx) + '</p:sp>'.length;
+            var shapeXml = xml.substring(spStart, spEnd);
+
+            var logo = sectionLogos[slotN - 1]; // undefined if we have fewer than 7 logos for this section
+            if (!logo) {
+              // Remove this unused slot entirely
+              xml = xml.substring(0, spStart) + xml.substring(spEnd);
+              continue;
+            }
+
+            var bytes = await _trGetLogoBytes(logo.slug);
+            if (!bytes) {
+              xml = xml.substring(0, spStart) + xml.substring(spEnd);
+              continue;
+            }
+
+            // Extract this slot's position/size so the replacement picture aligns exactly where the box was
+            var offM = shapeXml.match(/<a:off x="(-?\d+)" y="(-?\d+)"\/>/);
+            var extM = shapeXml.match(/<a:ext cx="(\d+)" cy="(\d+)"\/>/);
+            var boxX = offM ? parseInt(offM[1]) : 0, boxY = offM ? parseInt(offM[2]) : 0;
+            var boxW = extM ? parseInt(extM[1]) : 1332387, boxH = extM ? parseInt(extM[2]) : 502460;
+
+            var dims = _trPngSize(bytes);
+            // Target consistent VISUAL AREA rather than just height. A near-square logo (e.g. an icon-mark
+            // brand) matched to a wide wordmark's height alone ends up looking tiny — same height, far less
+            // width, so far less visual weight. Area-based scaling keeps perceived prominence consistent
+            // across very different aspect ratios. Bounded on both axes so extreme outliers never overflow.
+            var targetArea = boxW * boxH * 0.30;
+            var scale = Math.sqrt(targetArea / (dims.w * dims.h));
+            var picW = Math.round(dims.w * scale), picH = Math.round(dims.h * scale);
+            var maxW = boxW * 0.92, maxH = boxH * 0.82;
+            if (picW > maxW) { var _s1 = maxW / picW; picW = Math.round(picW*_s1); picH = Math.round(picH*_s1); }
+            if (picH > maxH) { var _s2 = maxH / picH; picW = Math.round(picW*_s2); picH = Math.round(picH*_s2); }
+            var picX = Math.round(boxX + (boxW - picW) / 2), picY = Math.round(boxY + (boxH - picH) / 2);
+
+            maxRid += 1;
+            var rId = 'rId' + maxRid;
+            var mediaFileName = 'logo_' + logo.slug + '.png';
+            mediaToAdd.push({ fileName: mediaFileName, bytes: bytes });
+            newRels = newRels.replace('</Relationships>',
+              '<Relationship Id="' + rId + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/' + mediaFileName + '"/></Relationships>');
+
+            var picXml = '<p:pic><p:nvPicPr><p:cNvPr id="' + (900+slotN) + '" name="' + marker + '" descr="' + logo.name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr>' +
+              '<p:blipFill><a:blip r:embed="' + rId + '"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>' +
+              '<p:spPr><a:xfrm><a:off x="' + picX + '" y="' + picY + '"/><a:ext cx="' + picW + '" cy="' + picH + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
+
+            xml = xml.substring(0, spStart) + picXml + xml.substring(spEnd);
+          }
+
+          return { xml: xml, rels: newRels, media: mediaToAdd };
+        }
+
+        // Build all new slide parts (dividers + content slides), one section at a time.
+        // Async now — logo embedding needs to fetch image bytes per section.
+        var _trNewSlideFiles = []; // {num, xml, rels}
+        var _trAllMedia = []; // {fileName, bytes} collected across all sections, added to the zip once at the end
+        var _trSlideNum = 100;
+        for (var _trSecIdx = 0; _trSecIdx < _trSectionOrder.length; _trSecIdx++) {
+          var sec = _trSectionOrder[_trSecIdx];
+          var items = _trSections[sec];
+          var sectionLogos = _trSectionLogos[sec] || [];
+          _trSlideNum++;
+          _trNewSlideFiles.push({ num: _trSlideNum, xml: _trBuildDivider(sec), rels: _trDividerRels });
+
+          var sizes = _trGreedySizes(items.length, TR_MAX_PER_SLIDE);
+          var offset = 0;
+          for (var _trSizeIdx = 0; _trSizeIdx < sizes.length; _trSizeIdx++) {
+            var size = sizes[_trSizeIdx];
+            var slideItems = items.slice(offset, offset + size);
+            offset += size;
+            var leftItems = slideItems.slice(0, TR_MAX_PER_TABLE);
+            var rightItems = slideItems.slice(TR_MAX_PER_TABLE, TR_MAX_PER_TABLE*2);
+            var contentXml = _trBuildContent(sec, leftItems, rightItems);
+            var embedded = await _trEmbedLogos(contentXml, _trContentRels, sectionLogos);
+            _trAllMedia = _trAllMedia.concat(embedded.media);
+            _trSlideNum++;
+            _trNewSlideFiles.push({ num: _trSlideNum, xml: embedded.xml, rels: embedded.rels });
+          }
+        }
+
+        // Write new slide parts into the zip
+        _trNewSlideFiles.forEach(function(sf){
+          _trZip.file('ppt/slides/slide' + sf.num + '.xml', sf.xml);
+          _trZip.file('ppt/slides/_rels/slide' + sf.num + '.xml.rels', sf.rels);
+        });
+        // Write the collected logo media files, deduplicated by filename (same logo may be reused across sections/slides)
+        var _trWrittenMedia = {};
+        _trAllMedia.forEach(function(m){
+          if (_trWrittenMedia[m.fileName]) return;
+          _trWrittenMedia[m.fileName] = true;
+          _trZip.file('ppt/media/' + m.fileName, m.bytes);
+        });
+        if (_trAllMedia.length > 0) {
+          var _trMediaCt = await _trZip.file('[Content_Types].xml').async('string');
+          if (_trMediaCt.indexOf('Extension="png"') === -1) {
+            _trMediaCt = _trMediaCt.replace('</Types>', '<Default Extension="png" ContentType="image/png"/></Types>');
+            _trZip.file('[Content_Types].xml', _trMediaCt);
+          }
+        }
+
+        // Update presentation.xml, its rels, and Content_Types — remove template slides 2 & 3, insert new ones after slide 1
+        var _trPrsX = await _trZip.file('ppt/presentation.xml').async('string');
+        var _trPrsR = await _trZip.file('ppt/_rels/presentation.xml.rels').async('string');
+        var _trCtX  = await _trZip.file('[Content_Types].xml').async('string');
+
+        var _trRidNums = (_trPrsR.match(/Id="rId(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));});
+        var _trMRid = _trRidNums.length ? Math.max.apply(null,_trRidNums) : 10;
+        var _trSidNums = (_trPrsX.match(/id="(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));}).filter(function(n){return n<2000000000;});
+        var _trMSid = _trSidNums.length ? Math.max.apply(null,_trSidNums) : 300;
+
+        // Find rIds for the divider-pattern and content-pattern slides (identified dynamically above) so we can remove them.
+        // Any other slides (cover, etc.) are NEVER touched — they're real, final content, used as-is.
+        var _trDividerRidM = _trPrsR.match(new RegExp('Id="(rId\\d+)"[^>]*Target="slides/' + _trDividerFile.replace('.','\\.') + '"'));
+        var _trContentRidM = _trPrsR.match(new RegExp('Id="(rId\\d+)"[^>]*Target="slides/' + _trContentFile.replace('.','\\.') + '"'));
+        var _trDividerRid = _trDividerRidM ? _trDividerRidM[1] : null;
+        var _trContentRid = _trContentRidM ? _trContentRidM[1] : null;
+
+        var _trAllNewRels = '', _trAllNewSldIds = '', _trAllNewCT = '';
+        _trNewSlideFiles.forEach(function(sf){
+          var nr = 'rId' + (++_trMRid);
+          var ns = ++_trMSid;
+          sf.rid = nr;
+          _trAllNewRels += '<Relationship Id="'+nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+sf.num+'.xml"/>';
+          _trAllNewSldIds += '<p:sldId id="'+ns+'" r:id="'+nr+'"/>';
+          _trAllNewCT += '<Override PartName="/ppt/slides/slide'+sf.num+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>';
+        });
+
+        // Insert new rels/sldIds at whichever pattern slide (divider or content) appears FIRST in display
+        // order — this preserves anything before it (e.g. a cover) and replaces the template pair in place.
+        var _trDividerPos = _trOrderedRids.indexOf(_trDividerRid);
+        var _trContentPos = _trOrderedRids.indexOf(_trContentRid);
+        var _trAnchorRid = (_trContentPos !== -1 && (_trDividerPos === -1 || _trContentPos < _trDividerPos)) ? _trContentRid : _trDividerRid;
+
+        if (_trAnchorRid) {
+          var _trRelIdx = _trPrsR.indexOf('Id="'+_trAnchorRid+'"');
+          var _trTagStart = _trPrsR.lastIndexOf('<Relationship', _trRelIdx);
+          var _trTagEnd = _trPrsR.indexOf('/>', _trRelIdx) + 2;
+          _trPrsR = _trPrsR.substring(0,_trTagStart) + _trAllNewRels + _trPrsR.substring(_trTagEnd);
+
+          var _trSldIdx = _trPrsX.indexOf('r:id="'+_trAnchorRid+'"');
+          var _trSldTagStart = _trPrsX.lastIndexOf('<p:sldId', _trSldIdx);
+          var _trSldTagEnd = _trPrsX.indexOf('/>', _trSldIdx) + 2;
+          _trPrsX = _trPrsX.substring(0,_trSldTagStart) + _trAllNewSldIds + _trPrsX.substring(_trSldTagEnd);
+        } else {
+          _trPrsR = _trPrsR.replace('</Relationships>', _trAllNewRels + '</Relationships>');
+          _trPrsX = _trPrsX.replace('</p:sldIdLst>', _trAllNewSldIds + '</p:sldIdLst>');
+        }
+        // Remove the OTHER pattern slide's now-orphaned rel/sldId entry (the anchor's was already replaced above)
+        var _trOtherRid = (_trAnchorRid === _trContentRid) ? _trDividerRid : _trContentRid;
+        if (_trOtherRid) {
+          var _trRelIdxO = _trPrsR.indexOf('Id="'+_trOtherRid+'"');
+          if (_trRelIdxO >= 0) {
+            var _trTagStartO = _trPrsR.lastIndexOf('<Relationship', _trRelIdxO);
+            var _trTagEndO = _trPrsR.indexOf('/>', _trRelIdxO) + 2;
+            _trPrsR = _trPrsR.substring(0,_trTagStartO) + _trPrsR.substring(_trTagEndO);
+          }
+          var _trSldIdxO = _trPrsX.indexOf('r:id="'+_trOtherRid+'"');
+          if (_trSldIdxO >= 0) {
+            var _trSldTagStartO = _trPrsX.lastIndexOf('<p:sldId', _trSldIdxO);
+            var _trSldTagEndO = _trPrsX.indexOf('/>', _trSldIdxO) + 2;
+            _trPrsX = _trPrsX.substring(0,_trSldTagStartO) + _trPrsX.substring(_trSldTagEndO);
+          }
+        }
+        _trCtX = _trCtX.replace('<Override PartName="/ppt/slides/'+_trContentFile+'" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>', '');
+        _trCtX = _trCtX.replace('<Override PartName="/ppt/slides/'+_trDividerFile+'" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>', '');
+        _trCtX = _trCtX.replace('</Types>', _trAllNewCT + '</Types>');
+
+        _trZip.file('ppt/presentation.xml', _trPrsX);
+        _trZip.file('ppt/_rels/presentation.xml.rels', _trPrsR);
+        _trZip.file('[Content_Types].xml', _trCtX);
+        // The content-pattern and divider-pattern slides are now fully unreferenced — remove them.
+        // Any other slides (e.g. a cover) are deliberately left untouched.
+        _trZip.remove('ppt/slides/'+_trContentFile);
+        _trZip.remove('ppt/slides/_rels/'+_trContentFile+'.rels');
+        _trZip.remove('ppt/slides/'+_trDividerFile);
+        _trZip.remove('ppt/slides/_rels/'+_trDividerFile+'.rels');
+
+        var _trOut = await _trZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+        var _trUrl = URL.createObjectURL(_trOut);
+        var _trA = document.createElement('a');
+        _trA.href = _trUrl;
+        var _trDateStamp = new Date().toLocaleDateString('en-GB').replace(/\//g, '.');
+        _trA.download = _safeFileName('Track Record - Anonymised - ' + _trDateStamp, 'Track Record - Anonymised') + '.pptx';
+        _trA.click();
+        setTimeout(function(){ URL.revokeObjectURL(_trUrl); }, 2000);
         return;
       }
 
