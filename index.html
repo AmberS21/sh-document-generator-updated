@@ -5487,7 +5487,11 @@ async function downloadHistory(index) {
             var slug = _trFindLogoMatch(name);
             if (slug) _trEligible.push({ name: name, slug: slug });
           });
-          var _trCap = _trLogoCap(_trEligible.length);
+          // The anonymity rule protects against inference from the section's TRUE client count, not from
+          // however many happen to have a logo in today's (still-growing) library — those are two separate
+          // constraints. Compute the target from total distinct clients, then bound it by what's actually available.
+          var _trAnonymityTarget = _trLogoCap(_trRealNames.length);
+          var _trCap = Math.min(_trAnonymityTarget, _trEligible.length);
           var _trFinalLogos = [];
           if (_trCap > 0 && _trEligible.length > 0) {
             var _trSelectedNames = await _trCallClaudeForLogos(_trSecKey, _trEligible.map(function(e){return e.name;}), _trCap);
@@ -5643,8 +5647,18 @@ async function downloadHistory(index) {
             var boxW = extM ? parseInt(extM[1]) : 1332387, boxH = extM ? parseInt(extM[2]) : 502460;
 
             var dims = _trPngSize(bytes);
-            var scale = Math.min(boxW / dims.w, boxH / dims.h) * 0.86; // 0.86 leaves a little breathing room in the slot
-            var picW = Math.round(dims.w * scale), picH = Math.round(dims.h * scale);
+            // Consistent target height for every logo (reads as visually uniform, unlike independent
+            // contain-fit which makes wide wordmarks look small and square icons look big).
+            // Falls back to width-constrained scaling only for outliers that would overflow the slot.
+            var targetH = boxH * 0.62;
+            var scale = targetH / dims.h;
+            var picW = Math.round(dims.w * scale), picH = Math.round(targetH);
+            var maxW = boxW * 0.92;
+            if (picW > maxW) {
+              scale = maxW / dims.w;
+              picW = Math.round(dims.w * scale);
+              picH = Math.round(dims.h * scale);
+            }
             var picX = Math.round(boxX + (boxW - picW) / 2), picY = Math.round(boxY + (boxH - picH) / 2);
 
             maxRid += 1;
