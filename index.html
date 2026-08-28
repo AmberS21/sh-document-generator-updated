@@ -3409,6 +3409,24 @@ async function convertPdfToWord() {
   }
 }
 
+var trackRecordLogoPrompt = `You are selecting client logos for one section of a Sheffield Haworth "Track Record - Anonymised" deck. You will be given a section name and a list of real client names that have a matching logo file available. Your job is to select the strongest subset for display, applying strict rules — this is not optional stylistic judgment, it's a compliance-adjacent task.
+
+HARD EXCLUSIONS — remove these from consideration entirely, no exceptions:
+1. Blackstone (in any spelling/capitalisation) — never selected, regardless of prestige.
+2. Any Sovereign Wealth Fund — use your knowledge of major SWFs globally (e.g. entities like Abu Dhabi Investment Authority, Temasek, GIC, Qatar Investment Authority, Kuwait Investment Authority, Norges Bank Investment Management, Mubadala, PIF, and similar state-owned investment vehicles anywhere in the world). If a name is a sovereign wealth fund or is wholly owned/operated by one, exclude it even if it doesn't literally contain the words "sovereign" or "wealth fund".
+
+SELECTION COUNT — you will be told exactly how many to select (already computed for you). Select exactly that many from what remains after exclusions, choosing the most prestigious, highest-profile, most recognisable names — the ones that would most impress a reader glancing at this section. Prestige means genuine institutional reputation and recognisability, not alphabetical order or list position.
+
+CRITICAL — if the exclusion rules remove a name, do NOT substitute a similar-sounding name that wasn't in the provided list. Only select from the exact list of candidate names given to you.
+
+Return ONLY valid JSON, no markdown, no explanation:
+{"selected": ["exact candidate name 1", "exact candidate name 2", ...]}
+
+SECTION: {{SECTION_NAME}}
+NUMBER TO SELECT: {{SELECT_COUNT}}
+CANDIDATE NAMES (already confirmed to have a logo available):
+{{CANDIDATE_LIST}}`;
+
 async function processOneCV(inputText, tpl, btn, returnOnly, inputMethod) {
   var _pocvInputMethod = inputMethod || 'text';
   var selChip = document.querySelector('.fmt-chip.on-d,.fmt-chip.on-p,.fmt-chip.on-x,.fmt-chip.on-f');
@@ -4223,24 +4241,6 @@ Return this exact JSON structure:
 SOURCE DATA — extract every row from this pasted table:
 
 ` + inputText;
-
-var trackRecordLogoPrompt = `You are selecting client logos for one section of a Sheffield Haworth "Track Record - Anonymised" deck. You will be given a section name and a list of real client names that have a matching logo file available. Your job is to select the strongest subset for display, applying strict rules — this is not optional stylistic judgment, it's a compliance-adjacent task.
-
-HARD EXCLUSIONS — remove these from consideration entirely, no exceptions:
-1. Blackstone (in any spelling/capitalisation) — never selected, regardless of prestige.
-2. Any Sovereign Wealth Fund — use your knowledge of major SWFs globally (e.g. entities like Abu Dhabi Investment Authority, Temasek, GIC, Qatar Investment Authority, Kuwait Investment Authority, Norges Bank Investment Management, Mubadala, PIF, and similar state-owned investment vehicles anywhere in the world). If a name is a sovereign wealth fund or is wholly owned/operated by one, exclude it even if it doesn't literally contain the words "sovereign" or "wealth fund".
-
-SELECTION COUNT — you will be told exactly how many to select (already computed for you). Select exactly that many from what remains after exclusions, choosing the most prestigious, highest-profile, most recognisable names — the ones that would most impress a reader glancing at this section. Prestige means genuine institutional reputation and recognisability, not alphabetical order or list position.
-
-CRITICAL — if the exclusion rules remove a name, do NOT substitute a similar-sounding name that wasn't in the provided list. Only select from the exact list of candidate names given to you.
-
-Return ONLY valid JSON, no markdown, no explanation:
-{"selected": ["exact candidate name 1", "exact candidate name 2", ...]}
-
-SECTION: {{SECTION_NAME}}
-NUMBER TO SELECT: {{SELECT_COUNT}}
-CANDIDATE NAMES (already confirmed to have a logo available):
-{{CANDIDATE_LIST}}`;
 
 var prompt = isApacEy
   ? apacEyPrompt
