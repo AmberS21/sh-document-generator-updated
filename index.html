@@ -3419,7 +3419,9 @@ SELECTION COUNT — you will be told exactly how many to select (already compute
 
 CRITICAL — if the exclusion rules remove a name, do NOT substitute a similar-sounding name that wasn't in the provided list. Only select from the exact list of candidate names given to you.
 
-Return ONLY valid JSON, no markdown, no explanation:
+Do your exclusion checking and prestige ranking silently, in your own reasoning — do not write it out. Your visible reply must contain NOTHING except the JSON object below. Not a numbered list of exclusion reasoning, not a sentence of explanation, not a markdown code fence — the very first character of your reply must be "{".
+
+Return ONLY this JSON structure, nothing else:
 {"selected": ["exact candidate name 1", "exact candidate name 2", ...]}
 
 SECTION: {{SECTION_NAME}}
@@ -5478,18 +5480,33 @@ async function downloadHistory(index) {
           }
           var _trLogoData = await _trLogoResp.json();
           var _trLogoRaw = (_trLogoData.content && _trLogoData.content[0] && _trLogoData.content[0].text) ? _trLogoData.content[0].text : '{}';
-          try {
-            var _trLogoRep = _trLogoRaw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'');
-            var _trLogoParsed = JSON.parse(_trLogoRep);
-            if (!Array.isArray(_trLogoParsed.selected)) {
-              console.error('[Track Record logos] Unexpected response shape for section "'+sectionName+'":', _trLogoRaw.slice(0,300));
-              return [];
+
+          function _trExtractLogoJson(raw){
+            var cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'');
+            // Fast path: response is already pure JSON, as instructed.
+            try { return JSON.parse(cleaned); } catch(_e1) {}
+            // Slow path: the model reasoned in prose before answering (happens on judgement-heavy prompts
+            // like this one, despite being told not to) — find the JSON object embedded in the text instead
+            // of giving up. Try from the LAST "{" onward first, since the actual answer usually comes after
+            // any reasoning; fall back to the first "{...}" span found anywhere if that doesn't parse either.
+            var lastBrace = cleaned.lastIndexOf('{');
+            if (lastBrace !== -1) {
+              try { return JSON.parse(cleaned.slice(lastBrace)); } catch(_e2) {}
             }
-            return _trLogoParsed.selected;
-          } catch(_trLogoParseErr) {
-            console.error('[Track Record logos] Could not parse response for section "'+sectionName+'":', _trLogoParseErr.message, '— raw response:', _trLogoRaw.slice(0,300));
+            var firstBrace = cleaned.indexOf('{');
+            var closingBrace = cleaned.lastIndexOf('}');
+            if (firstBrace !== -1 && closingBrace > firstBrace) {
+              try { return JSON.parse(cleaned.slice(firstBrace, closingBrace + 1)); } catch(_e3) {}
+            }
+            return null;
+          }
+
+          var _trLogoParsed = _trExtractLogoJson(_trLogoRaw);
+          if (!_trLogoParsed || !Array.isArray(_trLogoParsed.selected)) {
+            console.error('[Track Record logos] Could not extract a valid selection for section "'+sectionName+'" — raw response:', _trLogoRaw.slice(0,500));
             return [];
           }
+          return _trLogoParsed.selected;
         }
 
         // Step 5: for each section, resolve its final logo set (name + matched slug), applying the cap and AI selection.
