@@ -5473,6 +5473,10 @@ async function downloadHistory(index) {
 
         // Step 5: for each section, resolve its final logo set (name + matched slug), applying the cap and AI selection.
         // Same set is used on every content slide within that section, per the agreed design.
+        // Compute each section's eligibility synchronously first (cheap, no API calls), THEN fire all
+        // the section-level Claude calls IN PARALLEL rather than one-after-another — with several sections
+        // in a deck, sequential calls stack up real wall-clock time and meaningfully raise timeout risk.
+        var _trSectionPrep = {};
         for (var _trSecKey in _trSections) {
           if (!_trSections.hasOwnProperty(_trSecKey)) continue;
           var _trSecItems = _trSections[_trSecKey];
@@ -5492,16 +5496,29 @@ async function downloadHistory(index) {
           // constraints. Compute the target from total distinct clients, then bound it by what's actually available.
           var _trAnonymityTarget = _trLogoCap(_trRealNames.length);
           var _trCap = Math.min(_trAnonymityTarget, _trEligible.length);
+          _trSectionPrep[_trSecKey] = { items: _trSecItems, eligible: _trEligible, cap: _trCap };
+        }
+
+        var _trSecKeysNeedingCall = Object.keys(_trSectionPrep).filter(function(k){ return _trSectionPrep[k].cap > 0 && _trSectionPrep[k].eligible.length > 0; });
+        var _trParallelResults = await Promise.all(_trSecKeysNeedingCall.map(function(k){
+          var prep = _trSectionPrep[k];
+          return _trCallClaudeForLogos(k, prep.eligible.map(function(e){return e.name;}), prep.cap);
+        }));
+
+        for (var _trSecKey in _trSectionPrep) {
+          if (!_trSectionPrep.hasOwnProperty(_trSecKey)) continue;
+          var prep2 = _trSectionPrep[_trSecKey];
           var _trFinalLogos = [];
-          if (_trCap > 0 && _trEligible.length > 0) {
-            var _trSelectedNames = await _trCallClaudeForLogos(_trSecKey, _trEligible.map(function(e){return e.name;}), _trCap);
+          var _trCallIdx = _trSecKeysNeedingCall.indexOf(_trSecKey);
+          if (_trCallIdx !== -1) {
+            var _trSelectedNames = _trParallelResults[_trCallIdx];
             var _trEligibleByName = {};
-            _trEligible.forEach(function(e){ _trEligibleByName[e.name] = e; });
+            prep2.eligible.forEach(function(e){ _trEligibleByName[e.name] = e; });
             _trSelectedNames.forEach(function(n){
               if (_trEligibleByName[n]) _trFinalLogos.push(_trEligibleByName[n]);
             });
           }
-          _trSections[_trSecKey] = { items: _trSecItems, logos: _trFinalLogos };
+          _trSections[_trSecKey] = { items: prep2.items, logos: _trFinalLogos };
         }
         // Restore the plain items arrays for the existing balanced-distribution logic below, keeping logos accessible separately
         var _trSectionLogos = {};
@@ -5647,18 +5664,16 @@ async function downloadHistory(index) {
             var boxW = extM ? parseInt(extM[1]) : 1332387, boxH = extM ? parseInt(extM[2]) : 502460;
 
             var dims = _trPngSize(bytes);
-            // Consistent target height for every logo (reads as visually uniform, unlike independent
-            // contain-fit which makes wide wordmarks look small and square icons look big).
-            // Falls back to width-constrained scaling only for outliers that would overflow the slot.
-            var targetH = boxH * 0.62;
-            var scale = targetH / dims.h;
-            var picW = Math.round(dims.w * scale), picH = Math.round(targetH);
-            var maxW = boxW * 0.92;
-            if (picW > maxW) {
-              scale = maxW / dims.w;
-              picW = Math.round(dims.w * scale);
-              picH = Math.round(dims.h * scale);
-            }
+            // Target consistent VISUAL AREA rather than just height. A near-square logo (e.g. an icon-mark
+            // brand) matched to a wide wordmark's height alone ends up looking tiny — same height, far less
+            // width, so far less visual weight. Area-based scaling keeps perceived prominence consistent
+            // across very different aspect ratios. Bounded on both axes so extreme outliers never overflow.
+            var targetArea = boxW * boxH * 0.30;
+            var scale = Math.sqrt(targetArea / (dims.w * dims.h));
+            var picW = Math.round(dims.w * scale), picH = Math.round(dims.h * scale);
+            var maxW = boxW * 0.92, maxH = boxH * 0.82;
+            if (picW > maxW) { var _s1 = maxW / picW; picW = Math.round(picW*_s1); picH = Math.round(picH*_s1); }
+            if (picH > maxH) { var _s2 = maxH / picH; picW = Math.round(picW*_s2); picH = Math.round(picH*_s2); }
             var picX = Math.round(boxX + (boxW - picW) / 2), picY = Math.round(boxY + (boxH - picH) / 2);
 
             maxRid += 1;
