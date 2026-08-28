@@ -1319,6 +1319,13 @@ const TEMPLATES = {
     file: 'templates/Track_Record_Anonymised_TEMPLATE.pptx',
     isTrackRecord: true,
     promptType: 'track-record'
+  },
+
+  'track-record-logo': {
+    label: 'Detailed Format (Functions Teams)',
+    file: 'templates/Track_Record_Logo_TEMPLATE.pptx',
+    isTrackRecordLogo: true,
+    promptType: 'track-record-logo'
   }
 
 };
@@ -1347,7 +1354,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
   var sel = document.getElementById('tplSel');
   if (!sel) return;
   var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','candidate-briefing-pack','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile','advisor-profile'];
-  var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update','track-record-anonymised'];
+  var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update','track-record-anonymised','track-record-logo'];
 
   var grp1 = document.createElement('optgroup');
   grp1.label = 'PROFILES ──';
@@ -1489,6 +1496,15 @@ var TPL = {
     fmt: 'p',
     reg: 'Global',
     flds: ['Section','Role / Job Title','Client Type (anonymised)','Client Name (internal only, never shown)']
+  },
+  'track-record-logo': {
+    name: 'Detailed Format (Functions Teams)',
+    sub: 'Multi-Slide PowerPoint',
+    ico: 'ppt',
+    bg: 'rgba(31,36,120,.15)',
+    fmt: 'p',
+    reg: 'Global',
+    flds: ['Sector','Role Category','Role / Job Title','Client Logo (or NDA + category)','Location']
   }
 };
 
@@ -1546,8 +1562,8 @@ function pickTpl(v) {
     }
   });
 
-  // Track Record - Anonymised: Paste or Upload File both work (Excel converts to CSV automatically). Ezekia/URL doesn't apply — this isn't a CRM record.
-  var _isTrackRecord = (v === 'track-record-anonymised');
+  // Track Record templates (both variants): Paste or Upload File both work (Excel converts to CSV automatically). Ezekia/URL doesn't apply — this isn't a CRM record.
+  var _isTrackRecord = (v === 'track-record-anonymised' || v === 'track-record-logo');
   document.querySelectorAll('.input-tab, [onclick*="setInput"]').forEach(function(el) {
     var _label = el.textContent && el.textContent.trim();
     var _isUrlTab = _label && _label.match(/Ezekia|URL/i);
@@ -3451,6 +3467,7 @@ var isEaIndia = (tpl === 'ea-india-profile');
 var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var isAdvisorProfile = (tpl === 'advisor-profile');
 var isTrackRecord = (tpl === 'track-record-anonymised');
+var isTrackRecordLogo = (tpl === 'track-record-logo');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","overview_bullets":[""],"roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_HEADING":"","PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"ADDITIONAL_SECTIONS":[{"heading":"","content":[""]}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE_HEADING":"","TRANSACTION_EXPERIENCE":[{"subheading":"","items":[""]}],"TRANSACTION_EXPERIENCE_NOTE":"","AFFILIATIONS":[{"organization":"","role":"","dates":""}]}';
@@ -4244,6 +4261,33 @@ SOURCE DATA — extract every row from this pasted table:
 
 ` + inputText;
 
+var trackRecordLogoTemplatePrompt = `You are extracting structured track record data for a Sheffield Haworth "Track Record" PowerPoint deck — a variant where client identity is shown as a LOGO directly in the table (or "NDA, [category]" text for confidential clients), not an anonymised category alone. The source is tabular data originally from Excel — it may arrive tab-separated (pasted) or comma-separated (converted from .xlsx). The FIRST row is column headers, and the data MAY contain many columns you should ignore. Detect the delimiter from the data itself.
+
+YOUR TASK: identify which columns correspond to the six concepts below (match by MEANING, header wording varies) and extract every data row into a flat array.
+
+COLUMNS TO FIND (by meaning, not exact header text):
+1. SECTOR — the top-level grouping for the deck (e.g. "Technology & Data", "Investment Management"). Headers like "Sector", "Practice Area", "Division".
+2. ROLE_CATEGORY — a finer sub-grouping WITHIN the sector, used as each table's own heading (e.g. "Data & AI", "Investment Management Technology", "Group / Functions / Enterprise Technology"). Headers like "Role Category", "Sub-Sector", "Team", "Function". If you cannot find a distinct column for this, leave it blank rather than reusing the Sector value — do not fabricate a sub-category.
+3. ROLE — the job title placed. Copy VERBATIM.
+4. REAL_CLIENT — the actual, real client/company name. Headers like "Client", "Company", "Assignment Client". Used to look up a logo — never displayed as text directly.
+5. CLIENT_TYPE — a short category describing the client (e.g. "Hedge Fund", "Sovereign Wealth Fund", "Family Office", "Pension Fund"). This is shown as "NDA, [CLIENT_TYPE]" whenever the real client cannot be shown (confidential, or simply no logo available yet) — so it must always be filled if at all possible, even when a logo will likely be used instead.
+6. LOCATION — where this placement was based. Source data varies by team: it may already be one combined column ("City, Country"), or split across separate City and Country (or Country only) columns. If split across two columns, COMBINE them yourself into "City, Country" format (or just "Country" if no city is given). If nothing location-like exists in the data at all, leave it as "".
+
+CRITICAL RULES:
+- Only extract from columns that clearly match one of the six concepts above. Ignore every other column entirely.
+- Do NOT invent, guess, or hallucinate a value that isn't actually present in the source data for that row.
+- Preserve the source data's original row order — do not reorder or group rows yourself; the tool handles grouping afterwards.
+- Copy ROLE verbatim — do not rephrase or correct it.
+- Extract EVERY data row — do not skip rows, do not sample, do not truncate for length.
+- Return ONLY valid JSON. No markdown. No code blocks. No explanation.
+
+Return this exact JSON structure:
+{"items": [{"sector": "", "role_category": "", "role": "", "real_client": "", "client_type": "", "location": ""}]}
+
+SOURCE DATA — extract every row from this pasted table:
+
+` + inputText;
+
 var prompt = isApacEy
   ? apacEyPrompt
   : isEaIndiaV2
@@ -4418,6 +4462,8 @@ Use this exact JSON structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE ÃÂ
   ? advisorProfilePrompt
   : isTrackRecord
   ? trackRecordPrompt
+  : isTrackRecordLogo
+  ? trackRecordLogoTemplatePrompt
   : isBriefingPack
   ? briefingPackPrompt
   : isServicesProfile
@@ -4646,6 +4692,10 @@ function hideProgress(msg) {
     if ((!_histName || _histName === 'Unknown Candidate') && item && item.template === 'track-record-anonymised') {
       var _trHistDate = item.date ? new Date(item.date).toLocaleDateString('en-GB').replace(/\//g,'.') : '';
       _histName = 'Track Record - Anonymised' + (_trHistDate ? ' - ' + _trHistDate : '');
+    }
+    if ((!_histName || _histName === 'Unknown Candidate') && item && item.template === 'track-record-logo') {
+      var _tlHistDate = item.date ? new Date(item.date).toLocaleDateString('en-GB').replace(/\//g,'.') : '';
+      _histName = 'Detailed Format (Functions Teams)' + (_tlHistDate ? ' - ' + _tlHistDate : '');
     }
     _histName = String(_histName || '').trim() || 'Unknown Candidate';
 
@@ -5873,6 +5923,366 @@ async function downloadHistory(index) {
         _trA.download = _safeFileName('Track Record - Anonymised - ' + _trDateStamp, 'Track Record - Anonymised') + '.pptx';
         _trA.click();
         setTimeout(function(){ URL.revokeObjectURL(_trUrl); }, 2000);
+        return;
+      }
+
+// ── Track Record - With Logos ────────────────────────────────────────
+      if (item.template === 'track-record-logo') {
+        var _tlContent = item.content;
+        var _tlItems = Array.isArray(_tlContent.items) ? _tlContent.items : [];
+        if (!_tlItems.length) throw new Error('No track record rows were extracted — check the pasted data has a header row and at least one data row.');
+
+        function _tlXe(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        // ── Group by Sector, then by Role Category within each sector ──
+        var _tlSectorOrder = [];
+        var _tlSectors = {};
+        _tlItems.forEach(function(it){
+          var sec = (it.sector || '').trim() || 'General';
+          if (!_tlSectors[sec]) { _tlSectors[sec] = { catOrder: [], cats: {} }; _tlSectorOrder.push(sec); }
+          var cat = (it.role_category || '').trim() || 'General';
+          if (!_tlSectors[sec].cats[cat]) { _tlSectors[sec].cats[cat] = []; _tlSectors[sec].catOrder.push(cat); }
+          _tlSectors[sec].cats[cat].push({
+            role: (it.role||'').trim(),
+            real_client: (it.real_client||'').trim(),
+            client_type: (it.client_type||'').trim(),
+            location: (it.location||'').trim()
+          });
+        });
+
+        var TL_ROWS_PER_TABLE = 14;
+        function _tlChunk(arr, size){
+          var out = [];
+          for (var i=0;i<arr.length;i+=size) out.push(arr.slice(i, i+size));
+          return out;
+        }
+
+        // ── Logo matching (same approach as Track Record - Anonymised) ──
+        var _RAW_TL = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+        var _tlResp = await fetch(_RAW_TL + 'templates/Track_Record_Logo_TEMPLATE.pptx');
+        if (!_tlResp.ok) throw new Error('Failed to fetch Track Record (Logo) template');
+        var _tlZip = await JSZip.loadAsync(await _tlResp.arrayBuffer());
+
+        var _tlManifest = [];
+        try {
+          var _tlManifestResp = await fetch(_RAW_TL + 'logos/manifest.json');
+          if (_tlManifestResp.ok) _tlManifest = await _tlManifestResp.json();
+        } catch(_tlManifestErr) { /* no manifest — every row falls back to NDA text, not an error */ }
+
+        function _tlSlugify(name){
+          return (name||'').toLowerCase()
+            .replace(/\b(inc|incorporated|ltd|limited|llc|llp|plc|corp|corporation|holdings?|the)\b/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .replace(/-+/g, '-');
+        }
+        function _tlFindLogoMatch(realClientName){
+          var target = _tlSlugify(realClientName);
+          if (!target) return null;
+          for (var i=0;i<_tlManifest.length;i++){ if (_tlManifest[i] === target) return _tlManifest[i]; }
+          for (var j=0;j<_tlManifest.length;j++){
+            var s = _tlManifest[j];
+            if (target.indexOf(s) !== -1 || s.indexOf(target) !== -1) return s;
+          }
+          return null;
+        }
+
+        // ── One batch exclusion check for every distinct real client in the whole dataset ──
+        // (Blackstone / Sovereign Wealth Fund) — a yes/no classification, not a ranked selection,
+        // so this is one call total rather than one per section.
+        var _tlDistinctClients = [];
+        var _tlSeenClients = {};
+        _tlItems.forEach(function(it){
+          var rn = (it.real_client||'').trim();
+          if (rn && !_tlSeenClients[rn.toLowerCase()]) { _tlSeenClients[rn.toLowerCase()] = true; _tlDistinctClients.push(rn); }
+        });
+
+        var _tlExcludedSet = {};
+        if (_tlDistinctClients.length) {
+          var _tlExclPrompt = 'You are checking a list of real client names against two hard exclusion rules for a Sheffield Haworth track record deck.\n\n' +
+            'EXCLUDE a name if EITHER is true:\n' +
+            '1. It is Blackstone, in any spelling/capitalisation, or an entity described as owned by/affiliated with Blackstone.\n' +
+            '2. It is a Sovereign Wealth Fund, or wholly owned/operated by one — use your knowledge of major SWFs globally (e.g. Abu Dhabi Investment Authority, Temasek, GIC, Qatar Investment Authority, Kuwait Investment Authority, Norges Bank Investment Management, Mubadala, PIF, Wisayah, and similar state-owned investment vehicles anywhere in the world), even if the name doesn\'t literally say "sovereign" or "wealth fund".\n\n' +
+            'Do your checking silently. Your visible reply must contain NOTHING except the JSON object below — the first character must be "{".\n\n' +
+            'Return ONLY this JSON structure:\n{"excluded": ["exact name 1", "exact name 2", ...]}\n\n' +
+            'NAMES TO CHECK:\n' + _tlDistinctClients.map(function(n){ return '- ' + n; }).join('\n');
+
+          try {
+            var _tlExclResp = await fetch('/api/proxy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
+              body: JSON.stringify({
+                model: 'claude-sonnet-4-6',
+                max_tokens: 2000,
+                messages: [{ role: 'user', content: _tlExclPrompt }],
+                system: 'Return ONLY raw JSON. No markdown. No explanations.'
+              })
+            });
+            if (_tlExclResp.ok) {
+              var _tlExclData = await _tlExclResp.json();
+              var _tlExclRaw = (_tlExclData.content && _tlExclData.content[0] && _tlExclData.content[0].text) ? _tlExclData.content[0].text : '{}';
+              var _tlExclParsed = null;
+              try { _tlExclParsed = JSON.parse(_tlExclRaw.trim()); } catch(_e1) {
+                var lastB = _tlExclRaw.lastIndexOf('{');
+                if (lastB !== -1) { try { _tlExclParsed = JSON.parse(_tlExclRaw.slice(lastB)); } catch(_e2) {} }
+              }
+              if (_tlExclParsed && Array.isArray(_tlExclParsed.excluded)) {
+                _tlExclParsed.excluded.forEach(function(n){ _tlExcludedSet[n.toLowerCase()] = true; });
+              } else {
+                console.error('[Track Record logos] Exclusion check returned unexpected shape:', _tlExclRaw.slice(0,300));
+              }
+            } else {
+              console.error('[Track Record logos] Exclusion check HTTP', _tlExclResp.status);
+            }
+          } catch(_tlExclNetErr) {
+            console.error('[Track Record logos] Exclusion check network error:', _tlExclNetErr);
+          }
+        }
+
+        // ── Resolve each row's display mode: logo, or "NDA, [type]" text ──
+        function _tlResolveClient(it){
+          var rn = it.real_client;
+          var excluded = rn && _tlExcludedSet[rn.toLowerCase()];
+          var slug = (rn && !excluded) ? _tlFindLogoMatch(rn) : null;
+          if (slug) return { mode: 'logo', slug: slug, name: rn };
+          var typeLabel = it.client_type || 'Confidential';
+          return { mode: 'text', text: 'NDA, ' + typeLabel };
+        }
+
+        // ── Read template geometry (matches the deterministic heights set when the template was prepared) ──
+        var _tlContentBase = await _tlZip.file('ppt/slides/slide1.xml').async('string');
+        var _tlContentRels = await _tlZip.file('ppt/slides/_rels/slide1.xml.rels').async('string');
+
+        var TL_HEADER_BLOCK_H = 330200 + 60000 + 260000; // category bar + spacer + column-header row
+        var TL_ROW_H = 308653;
+        var TL_ROW_H_REDUCED = 195000; // ~37% shorter than the original — more compact, still comfortable room for 10pt text
+        var TL_TABLE_LEFT_X = 538872, TL_TABLE_RIGHT_X = 6277748, TL_TABLE_TOP_Y = 1051560;
+        var TL_ROLE_COL_W = 2415995, TL_CLIENT_COL_W = 1693333, TL_LOCATION_COL_W = 1258824;
+
+        function _tlPngSize(bytes){
+          var view = new DataView(bytes);
+          return { w: view.getUint32(16, false), h: view.getUint32(20, false) };
+        }
+        var _tlLogoCache = {};
+        async function _tlGetLogoBytes(slug){
+          if (_tlLogoCache[slug]) return _tlLogoCache[slug];
+          var resp = await fetch(_RAW_TL + 'logos/' + slug + '.png');
+          if (!resp.ok) return null;
+          var buf = await resp.arrayBuffer();
+          _tlLogoCache[slug] = buf;
+          return buf;
+        }
+
+        // Build one table's XML (category bar + up to 14 data rows), given which table (left/right) it is,
+        // and collect logo media to add to the zip afterward. Logos are set as the CLIENT cell's own
+        // background fill (via negative fillRect insets for letterboxing) rather than a separately
+        // positioned floating picture — this ties the image directly to wherever the cell actually
+        // renders, avoiding any dependency on predicting exact row/table geometry.
+        async function _tlBuildTable(tblXml, tableLeftX, categoryName, rows, mediaAccumulator, ridCounter){
+          var firstTr = tblXml.indexOf('<a:tr');
+          var prefix = tblXml.substring(0, firstTr);
+          var trList = tblXml.match(/<a:tr[\s\S]*?<\/a:tr>/g) || [];
+          var catRow = trList[0] || '', spacerRow = trList[1] || '', headRow = trList[2] || '', dataRowTemplate = trList[3] || '';
+
+          catRow = catRow.replace(/<a:t>[^<]*<\/a:t>/, '<a:t>' + _tlXe(categoryName) + '</a:t>');
+
+          // Shrink the data row height so a stretched-to-fill logo doesn't dominate the row next to the
+          // much more compact text-only rows (NDA entries). This is a safe fix — unlike fillRect insets,
+          // which caused a real tiling bug — since it's just a standard row-height reduction that shrinks
+          // logo and text rows together, keeping everything visually consistent.
+          dataRowTemplate = dataRowTemplate.replace(/<a:tr h="\d+"/, '<a:tr h="' + TL_ROW_H_REDUCED + '"');
+
+          var out = catRow + spacerRow + headRow;
+          var logoMedia = [];
+
+          for (var i = 0; i < TL_ROWS_PER_TABLE; i++) {
+            var rowData = rows[i];
+            var rowXml = dataRowTemplate;
+            if (!rowData) {
+              rowXml = rowXml.replace(/<a:t>[^<]*<\/a:t>/g, '<a:t></a:t>');
+              out += rowXml;
+              continue;
+            }
+            var resolved = _tlResolveClient(rowData);
+            var cellIdx = 0;
+            var logoFillXml = null;
+
+            if (resolved.mode === 'logo') {
+              var bytes = await _tlGetLogoBytes(resolved.slug);
+              if (bytes) {
+                // Plain stretch-to-fill — simple, standard, reliable. Trades perfect proportional fit
+                // for guaranteed-correct rendering; some very wide/narrow logos will show mild aspect
+                // distortion given the client column's own wide aspect ratio. Revisit once the core
+                // mechanic is proven solid — this is a deliberate, known trade-off, not an oversight.
+                var mediaFileName = 'logo_' + resolved.slug + '_' + Math.random().toString(36).slice(2,8) + '.png';
+                logoMedia.push({ fileName: mediaFileName, bytes: bytes, name: resolved.name });
+                logoFillXml = { mediaFileName: mediaFileName, name: resolved.name };
+              }
+            }
+
+            rowXml = rowXml.replace(/<a:tc>[\s\S]*?<\/a:tc>/g, function(cell){
+              var val;
+              if (cellIdx === 0) { val = rowData.role; cellIdx++; return cell.replace(/<a:t>[^<]*<\/a:t>/, '<a:t>' + _tlXe(val) + '</a:t>'); }
+              if (cellIdx === 1) {
+                cellIdx++;
+                if (logoFillXml) {
+                  // Empty the text, and replace the tcPr's own fill (this cell has <a:noFill/> from the
+                  // template styling — only one fill element is schema-valid per cell) with a placeholder
+                  // marker for the real <a:blipFill> — anchored to tcPr's open/close tags specifically so
+                  // this can't accidentally touch the text run's own <a:solidFill> used for text colour.
+                  var cleared = cell.replace(/<a:t>[^<]*<\/a:t>/, '<a:t></a:t>');
+                  var marker = '§§LOGOFILL:' + (logoMedia.length - 1) + '§§';
+                  cleared = cleared.replace(
+                    /(<a:tcPr[^>]*>)(?:<a:noFill\/>|<a:solidFill>[\s\S]*?<\/a:solidFill>)?(<\/a:tcPr>)/,
+                    '$1' + marker + '$2'
+                  );
+                  return cleared;
+                }
+                val = (resolved.mode === 'text') ? resolved.text : '';
+                return cell.replace(/<a:t>[^<]*<\/a:t>/, '<a:t>' + _tlXe(val) + '</a:t>');
+              }
+              val = rowData.location; cellIdx++;
+              return cell.replace(/<a:t>[^<]*<\/a:t>/, '<a:t>' + _tlXe(val) + '</a:t>');
+            });
+            out += rowXml;
+          }
+          return { xml: prefix + out, logoMedia: logoMedia };
+        }
+
+        // ── Build all slides, one per (sector, table-pair) ──
+        var _tlNewSlideFiles = [];
+        var _tlAllMedia = [];
+        var _tlSlideNum = 100;
+
+        for (var _tlSi = 0; _tlSi < _tlSectorOrder.length; _tlSi++) {
+          var sector = _tlSectorOrder[_tlSi];
+          var sectorData = _tlSectors[sector];
+          // Build a flat list of table-blocks: each category chunked into <=14-item pieces
+          var blocks = [];
+          sectorData.catOrder.forEach(function(cat){
+            _tlChunk(sectorData.cats[cat], TL_ROWS_PER_TABLE).forEach(function(chunk){
+              blocks.push({ category: cat, rows: chunk });
+            });
+          });
+
+          for (var _tlBi = 0; _tlBi < blocks.length; _tlBi += 2) {
+            var leftBlock = blocks[_tlBi];
+            var rightBlock = blocks[_tlBi + 1]; // may be undefined — right table stays empty-but-present
+
+            var slideXml = _tlContentBase;
+            slideXml = slideXml.replace('[Sector] [Role Category] Track Record', _tlXe(sector) + ' Track Record');
+
+            var tblBlocks = [];
+            var searchFrom = 0;
+            while (true) {
+              var s = slideXml.indexOf('<a:tbl>', searchFrom);
+              if (s === -1) break;
+              var e = slideXml.indexOf('</a:tbl>', s) + '</a:tbl>'.length;
+              tblBlocks.push({ start: s, end: e, xml: slideXml.substring(s+'<a:tbl>'.length, e-'</a:tbl>'.length) });
+              searchFrom = e;
+            }
+            if (tblBlocks.length < 2) throw new Error('Track Record (Logo) template: expected two tables, found ' + tblBlocks.length);
+
+            var leftResult = await _tlBuildTable(tblBlocks[0].xml, TL_TABLE_LEFT_X, leftBlock ? leftBlock.category : '', leftBlock ? leftBlock.rows : []);
+            var rightResult = await _tlBuildTable(tblBlocks[1].xml, TL_TABLE_RIGHT_X, rightBlock ? rightBlock.category : '', rightBlock ? rightBlock.rows : []);
+
+            // Resolve each table's §§LOGOFILL:N§§ markers into real <a:blipFill> cell backgrounds against
+            // ITS OWN media list — must happen before combining, since left/right marker indices both
+            // start at 0 independently and would otherwise collide.
+            var slideRels = _tlContentRels;
+            var maxRid = Math.max.apply(null, (slideRels.match(/Id="rId(\d+)"/g)||['rId0']).map(function(r){return parseInt(r.replace(/[^\d]/g,''));}));
+
+            function _tlResolveMarkers(xml, media){
+              return xml.replace(/§§LOGOFILL:(\d+)§§/g, function(_m, idxStr){
+                var entry = media[parseInt(idxStr)];
+                if (!entry) return '';
+                maxRid += 1;
+                var rId = 'rId' + maxRid;
+                slideRels = slideRels.replace('</Relationships>', '<Relationship Id="'+rId+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/'+entry.fileName+'"/></Relationships>');
+                _tlAllMedia.push({ fileName: entry.fileName, bytes: entry.bytes });
+                return '<a:blipFill><a:blip r:embed="'+rId+'"/><a:stretch><a:fillRect/></a:stretch></a:blipFill>';
+              });
+            }
+            var leftXmlResolved = _tlResolveMarkers(leftResult.xml, leftResult.logoMedia);
+            var rightXmlResolved = _tlResolveMarkers(rightResult.xml, rightResult.logoMedia);
+
+            var newTblRight = '<a:tbl>' + rightXmlResolved + '</a:tbl>';
+            slideXml = slideXml.substring(0, tblBlocks[1].start) + newTblRight + slideXml.substring(tblBlocks[1].end);
+            var newTblLeft = '<a:tbl>' + leftXmlResolved + '</a:tbl>';
+            slideXml = slideXml.substring(0, tblBlocks[0].start) + newTblLeft + slideXml.substring(tblBlocks[0].end);
+
+            _tlSlideNum++;
+            _tlNewSlideFiles.push({ num: _tlSlideNum, xml: slideXml, rels: slideRels });
+          }
+        }
+
+        // Write new slide parts + media into the zip
+        _tlNewSlideFiles.forEach(function(sf){
+          _tlZip.file('ppt/slides/slide' + sf.num + '.xml', sf.xml);
+          _tlZip.file('ppt/slides/_rels/slide' + sf.num + '.xml.rels', sf.rels);
+        });
+        var _tlWrittenMedia = {};
+        _tlAllMedia.forEach(function(m){
+          if (_tlWrittenMedia[m.fileName]) return;
+          _tlWrittenMedia[m.fileName] = true;
+          _tlZip.file('ppt/media/' + m.fileName, m.bytes);
+        });
+
+        var _tlPrsX = await _tlZip.file('ppt/presentation.xml').async('string');
+        var _tlPrsR = await _tlZip.file('ppt/_rels/presentation.xml.rels').async('string');
+        var _tlCtX  = await _tlZip.file('[Content_Types].xml').async('string');
+
+        var _tlRidNums = (_tlPrsR.match(/Id="rId(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));});
+        var _tlMRid = _tlRidNums.length ? Math.max.apply(null,_tlRidNums) : 10;
+        var _tlSidNums = (_tlPrsX.match(/id="(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));}).filter(function(n){return n<2000000000;});
+        var _tlMSid = _tlSidNums.length ? Math.max.apply(null,_tlSidNums) : 300;
+
+        var _tlS1ridM = _tlPrsR.match(/Id="(rId\d+)"[^>]*Target="slides\/slide1\.xml"/);
+        var _tlS1rid = _tlS1ridM ? _tlS1ridM[1] : null;
+
+        var _tlAllNewRels = '', _tlAllNewSldIds = '', _tlAllNewCT = '';
+        _tlNewSlideFiles.forEach(function(sf){
+          var nr = 'rId' + (++_tlMRid);
+          var ns = ++_tlMSid;
+          _tlAllNewRels += '<Relationship Id="'+nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+sf.num+'.xml"/>';
+          _tlAllNewSldIds += '<p:sldId id="'+ns+'" r:id="'+nr+'"/>';
+          _tlAllNewCT += '<Override PartName="/ppt/slides/slide'+sf.num+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>';
+        });
+
+        if (_tlS1rid) {
+          var _tlRelIdx = _tlPrsR.indexOf('Id="'+_tlS1rid+'"');
+          var _tlTagStart = _tlPrsR.lastIndexOf('<Relationship', _tlRelIdx);
+          var _tlTagEnd = _tlPrsR.indexOf('/>', _tlRelIdx) + 2;
+          _tlPrsR = _tlPrsR.substring(0,_tlTagStart) + _tlAllNewRels + _tlPrsR.substring(_tlTagEnd);
+
+          var _tlSldIdx = _tlPrsX.indexOf('r:id="'+_tlS1rid+'"');
+          var _tlSldTagStart = _tlPrsX.lastIndexOf('<p:sldId', _tlSldIdx);
+          var _tlSldTagEnd = _tlPrsX.indexOf('/>', _tlSldIdx) + 2;
+          _tlPrsX = _tlPrsX.substring(0,_tlSldTagStart) + _tlAllNewSldIds + _tlPrsX.substring(_tlSldTagEnd);
+        } else {
+          _tlPrsR = _tlPrsR.replace('</Relationships>', _tlAllNewRels + '</Relationships>');
+          _tlPrsX = _tlPrsX.replace('</p:sldIdLst>', _tlAllNewSldIds + '</p:sldIdLst>');
+        }
+        _tlCtX = _tlCtX.replace('<Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>', '');
+        _tlCtX = _tlCtX.replace('</Types>', _tlAllNewCT + '</Types>');
+        if (_tlAllMedia.length > 0 && _tlCtX.indexOf('Extension="png"') === -1) {
+          _tlCtX = _tlCtX.replace('</Types>', '<Default Extension="png" ContentType="image/png"/></Types>');
+        }
+
+        _tlZip.file('ppt/presentation.xml', _tlPrsX);
+        _tlZip.file('ppt/_rels/presentation.xml.rels', _tlPrsR);
+        _tlZip.file('[Content_Types].xml', _tlCtX);
+        _tlZip.remove('ppt/slides/slide1.xml');
+        _tlZip.remove('ppt/slides/_rels/slide1.xml.rels');
+
+        var _tlOut = await _tlZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+        var _tlUrl = URL.createObjectURL(_tlOut);
+        var _tlA = document.createElement('a');
+        var _tlDateStamp = new Date().toLocaleDateString('en-GB').replace(/\//g, '.');
+        _tlA.href = _tlUrl;
+        _tlA.download = _safeFileName('Detailed Format - ' + _tlDateStamp, 'Detailed Format') + '.pptx';
+        _tlA.click();
+        setTimeout(function(){ URL.revokeObjectURL(_tlUrl); }, 2000);
         return;
       }
 
