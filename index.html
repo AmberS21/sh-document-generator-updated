@@ -4224,6 +4224,24 @@ SOURCE DATA — extract every row from this pasted table:
 
 ` + inputText;
 
+var trackRecordLogoPrompt = `You are selecting client logos for one section of a Sheffield Haworth "Track Record - Anonymised" deck. You will be given a section name and a list of real client names that have a matching logo file available. Your job is to select the strongest subset for display, applying strict rules — this is not optional stylistic judgment, it's a compliance-adjacent task.
+
+HARD EXCLUSIONS — remove these from consideration entirely, no exceptions:
+1. Blackstone (in any spelling/capitalisation) — never selected, regardless of prestige.
+2. Any Sovereign Wealth Fund — use your knowledge of major SWFs globally (e.g. entities like Abu Dhabi Investment Authority, Temasek, GIC, Qatar Investment Authority, Kuwait Investment Authority, Norges Bank Investment Management, Mubadala, PIF, and similar state-owned investment vehicles anywhere in the world). If a name is a sovereign wealth fund or is wholly owned/operated by one, exclude it even if it doesn't literally contain the words "sovereign" or "wealth fund".
+
+SELECTION COUNT — you will be told exactly how many to select (already computed for you). Select exactly that many from what remains after exclusions, choosing the most prestigious, highest-profile, most recognisable names — the ones that would most impress a reader glancing at this section. Prestige means genuine institutional reputation and recognisability, not alphabetical order or list position.
+
+CRITICAL — if the exclusion rules remove a name, do NOT substitute a similar-sounding name that wasn't in the provided list. Only select from the exact list of candidate names given to you.
+
+Return ONLY valid JSON, no markdown, no explanation:
+{"selected": ["exact candidate name 1", "exact candidate name 2", ...]}
+
+SECTION: {{SECTION_NAME}}
+NUMBER TO SELECT: {{SELECT_COUNT}}
+CANDIDATE NAMES (already confirmed to have a logo available):
+{{CANDIDATE_LIST}}`;
+
 var prompt = isApacEy
   ? apacEyPrompt
   : isEaIndiaV2
@@ -4622,6 +4640,10 @@ function hideProgress(msg) {
           (item.content.ROLE_TITLE ? '_' + item.content.ROLE_TITLE : '') +
           (item.content.YEAR ? '_' + item.content.YEAR : '');
       }
+    }
+    if ((!_histName || _histName === 'Unknown Candidate') && item && item.template === 'track-record-anonymised') {
+      var _trHistDate = item.date ? new Date(item.date).toLocaleDateString('en-GB').replace(/\//g,'.') : '';
+      _histName = 'Track Record - Anonymised' + (_trHistDate ? ' - ' + _trHistDate : '');
     }
     _histName = String(_histName || '').trim() || 'Unknown Candidate';
 
@@ -5362,7 +5384,7 @@ async function downloadHistory(index) {
         _trItems.forEach(function(it){
           var sec = (it.section || '').trim() || 'General';
           if (!_trSections[sec]) { _trSections[sec] = []; _trSectionOrder.push(sec); }
-          _trSections[sec].push({ role: (it.role||'').trim(), client_type: (it.client_type||'').trim() });
+          _trSections[sec].push({ role: (it.role||'').trim(), client_type: (it.client_type||'').trim(), real_client: (it.real_client||'').trim() });
         });
 
         // Balanced distribution: N items across ceil(N/maxPerSlide) slides, sizes as even as possible
@@ -5382,6 +5404,128 @@ async function downloadHistory(index) {
         var _trResp = await fetch(_RAW_TR + 'templates/Track_Record_Anonymised_TEMPLATE.pptx');
         if (!_trResp.ok) throw new Error('Failed to fetch Track Record template');
         var _trZip = await JSZip.loadAsync(await _trResp.arrayBuffer());
+
+        // ── Logo selection pipeline ──
+        // Step 1: fetch the manifest of available logo slugs (maintained alongside the logos/ folder in the repo)
+        var _trLogoManifest = [];
+        try {
+          var _trManifestResp = await fetch(_RAW_TR + 'logos/manifest.json');
+          if (_trManifestResp.ok) _trLogoManifest = await _trManifestResp.json();
+        } catch(_trManifestErr) { /* no manifest yet — logo selection simply yields nothing, not an error */ }
+
+        // Step 2: client-side fuzzy matching between a real client name and an available slug.
+        // Handles common variation (Inc/Ltd/LLC suffixes, punctuation, spacing, casing) without needing AI.
+        function _trSlugify(name){
+          return (name||'').toLowerCase()
+            .replace(/\b(inc|incorporated|ltd|limited|llc|llp|plc|corp|corporation|holdings?|the)\b/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .replace(/-+/g, '-');
+        }
+        function _trFindLogoMatch(realClientName){
+          var target = _trSlugify(realClientName);
+          if (!target) return null;
+          for (var i=0;i<_trLogoManifest.length;i++){
+            var slug = _trLogoManifest[i];
+            if (slug === target) return slug;
+          }
+          // Loose containment match as a fallback (e.g. "BlackRock Investment Management" vs "blackrock")
+          for (var j=0;j<_trLogoManifest.length;j++){
+            var s = _trLogoManifest[j];
+            if (target.indexOf(s) !== -1 || s.indexOf(target) !== -1) return s;
+          }
+          return null;
+        }
+
+        // Step 3: the anonymity cap — logos shown must be a clear MINORITY subset of the eligible pool,
+        // so a reader can never assume the shown logos represent the whole client list for that section.
+        function _trLogoCap(eligibleCount){
+          if (eligibleCount <= 3) return 0;
+          return Math.min(7, Math.floor(eligibleCount * 0.6));
+        }
+
+        // Step 4: a standalone Claude call for exclusions (Blackstone, Sovereign Wealth Funds) + prestige ranking.
+        // Separate from the main extraction call — this only runs once real client names are known per section.
+        async function _trCallClaudeForLogos(sectionName, candidateNames, selectCount){
+          var promptText = trackRecordLogoPrompt
+            .replace('{{SECTION_NAME}}', sectionName)
+            .replace('{{SELECT_COUNT}}', String(selectCount))
+            .replace('{{CANDIDATE_LIST}}', candidateNames.map(function(n){ return '- ' + n; }).join('\n'));
+          var _trLogoResp = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-6',
+              max_tokens: 2000,
+              messages: [{ role: 'user', content: promptText }],
+              system: 'Return ONLY raw JSON. No markdown. No explanations.'
+            })
+          });
+          if (!_trLogoResp.ok) return [];
+          var _trLogoData = await _trLogoResp.json();
+          var _trLogoRaw = (_trLogoData.content && _trLogoData.content[0] && _trLogoData.content[0].text) ? _trLogoData.content[0].text : '{}';
+          try {
+            var _trLogoRep = _trLogoRaw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'');
+            var _trLogoParsed = JSON.parse(_trLogoRep);
+            return Array.isArray(_trLogoParsed.selected) ? _trLogoParsed.selected : [];
+          } catch(_trLogoParseErr) { return []; }
+        }
+
+        // Step 5: for each section, resolve its final logo set (name + matched slug), applying the cap and AI selection.
+        // Same set is used on every content slide within that section, per the agreed design.
+        for (var _trSecKey in _trSections) {
+          if (!_trSections.hasOwnProperty(_trSecKey)) continue;
+          var _trSecItems = _trSections[_trSecKey];
+          var _trRealNames = [];
+          var _trSeenNames = {};
+          _trSecItems.forEach(function(it){
+            var rn = it.real_client;
+            if (rn && !_trSeenNames[rn.toLowerCase()]) { _trSeenNames[rn.toLowerCase()] = true; _trRealNames.push(rn); }
+          });
+          var _trEligible = [];
+          _trRealNames.forEach(function(name){
+            var slug = _trFindLogoMatch(name);
+            if (slug) _trEligible.push({ name: name, slug: slug });
+          });
+          var _trCap = _trLogoCap(_trEligible.length);
+          var _trFinalLogos = [];
+          if (_trCap > 0 && _trEligible.length > 0) {
+            var _trSelectedNames = await _trCallClaudeForLogos(_trSecKey, _trEligible.map(function(e){return e.name;}), _trCap);
+            var _trEligibleByName = {};
+            _trEligible.forEach(function(e){ _trEligibleByName[e.name] = e; });
+            _trSelectedNames.forEach(function(n){
+              if (_trEligibleByName[n]) _trFinalLogos.push(_trEligibleByName[n]);
+            });
+          }
+          _trSections[_trSecKey] = { items: _trSecItems, logos: _trFinalLogos };
+        }
+        // Restore the plain items arrays for the existing balanced-distribution logic below, keeping logos accessible separately
+        var _trSectionLogos = {};
+        for (var _trSecKey2 in _trSections) {
+          if (!_trSections.hasOwnProperty(_trSecKey2)) continue;
+          _trSectionLogos[_trSecKey2] = _trSections[_trSecKey2].logos;
+          _trSections[_trSecKey2] = _trSections[_trSecKey2].items;
+        }
+
+        // Step 6: PNG dimension reader (from the IHDR chunk) — needed to fit each logo proportionally,
+        // never stretched, within its placeholder slot.
+        function _trPngSize(bytes){
+          var view = new DataView(bytes);
+          var w = view.getUint32(16, false);
+          var h = view.getUint32(20, false);
+          return { w: w, h: h };
+        }
+
+        // Fetch and cache each unique selected logo's image bytes once, even if used across multiple sections
+        var _trLogoImageCache = {};
+        async function _trGetLogoBytes(slug){
+          if (_trLogoImageCache[slug]) return _trLogoImageCache[slug];
+          var resp = await fetch(_RAW_TR + 'logos/' + slug + '.png');
+          if (!resp.ok) return null;
+          var buf = await resp.arrayBuffer();
+          _trLogoImageCache[slug] = buf;
+          return buf;
+        }
 
         // Robust slide detection: identify the divider and content pattern slides BY CONTENT, not by
         // assumed file number — file numbering does not follow display order in PPTX packages, and any
@@ -5462,31 +5606,111 @@ async function downloadHistory(index) {
           return xml;
         }
 
-        // Build all new slide parts (dividers + content slides), one section at a time
+        // Step 7: embed the resolved logos into one content slide's XML, replacing "Logo Slot N" placeholder
+        // shapes with actual proportionally-fitted pictures. Unused slots (fewer logos than 7) are removed
+        // entirely rather than left as empty grey boxes. Returns updated {xml, rels} plus any new media files
+        // to add to the zip (as {partName, bytes} — caller adds these once, shared across slides in a section).
+        async function _trEmbedLogos(xml, rels, sectionLogos){
+          var newRels = rels;
+          var maxRid = Math.max.apply(null, (rels.match(/Id="rId(\d+)"/g)||['rId0']).map(function(r){return parseInt(r.replace(/[^\d]/g,''));}));
+          var mediaToAdd = [];
+
+          for (var slotN = 1; slotN <= 7; slotN++) {
+            var marker = 'Logo Slot ' + slotN;
+            var idx = xml.indexOf('name="' + marker + '"');
+            if (idx === -1) continue;
+            var spStart = xml.lastIndexOf('<p:sp>', idx);
+            var spEnd = xml.indexOf('</p:sp>', idx) + '</p:sp>'.length;
+            var shapeXml = xml.substring(spStart, spEnd);
+
+            var logo = sectionLogos[slotN - 1]; // undefined if we have fewer than 7 logos for this section
+            if (!logo) {
+              // Remove this unused slot entirely
+              xml = xml.substring(0, spStart) + xml.substring(spEnd);
+              continue;
+            }
+
+            var bytes = await _trGetLogoBytes(logo.slug);
+            if (!bytes) {
+              xml = xml.substring(0, spStart) + xml.substring(spEnd);
+              continue;
+            }
+
+            // Extract this slot's position/size so the replacement picture aligns exactly where the box was
+            var offM = shapeXml.match(/<a:off x="(-?\d+)" y="(-?\d+)"\/>/);
+            var extM = shapeXml.match(/<a:ext cx="(\d+)" cy="(\d+)"\/>/);
+            var boxX = offM ? parseInt(offM[1]) : 0, boxY = offM ? parseInt(offM[2]) : 0;
+            var boxW = extM ? parseInt(extM[1]) : 1332387, boxH = extM ? parseInt(extM[2]) : 502460;
+
+            var dims = _trPngSize(bytes);
+            var scale = Math.min(boxW / dims.w, boxH / dims.h) * 0.86; // 0.86 leaves a little breathing room in the slot
+            var picW = Math.round(dims.w * scale), picH = Math.round(dims.h * scale);
+            var picX = Math.round(boxX + (boxW - picW) / 2), picY = Math.round(boxY + (boxH - picH) / 2);
+
+            maxRid += 1;
+            var rId = 'rId' + maxRid;
+            var mediaFileName = 'logo_' + logo.slug + '.png';
+            mediaToAdd.push({ fileName: mediaFileName, bytes: bytes });
+            newRels = newRels.replace('</Relationships>',
+              '<Relationship Id="' + rId + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/' + mediaFileName + '"/></Relationships>');
+
+            var picXml = '<p:pic><p:nvPicPr><p:cNvPr id="' + (900+slotN) + '" name="' + marker + '" descr="' + logo.name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr>' +
+              '<p:blipFill><a:blip r:embed="' + rId + '"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>' +
+              '<p:spPr><a:xfrm><a:off x="' + picX + '" y="' + picY + '"/><a:ext cx="' + picW + '" cy="' + picH + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
+
+            xml = xml.substring(0, spStart) + picXml + xml.substring(spEnd);
+          }
+
+          return { xml: xml, rels: newRels, media: mediaToAdd };
+        }
+
+        // Build all new slide parts (dividers + content slides), one section at a time.
+        // Async now — logo embedding needs to fetch image bytes per section.
         var _trNewSlideFiles = []; // {num, xml, rels}
+        var _trAllMedia = []; // {fileName, bytes} collected across all sections, added to the zip once at the end
         var _trSlideNum = 100;
-        _trSectionOrder.forEach(function(sec){
+        for (var _trSecIdx = 0; _trSecIdx < _trSectionOrder.length; _trSecIdx++) {
+          var sec = _trSectionOrder[_trSecIdx];
           var items = _trSections[sec];
+          var sectionLogos = _trSectionLogos[sec] || [];
           _trSlideNum++;
           _trNewSlideFiles.push({ num: _trSlideNum, xml: _trBuildDivider(sec), rels: _trDividerRels });
 
           var sizes = _trBalancedSizes(items.length, TR_MAX_PER_SLIDE);
           var offset = 0;
-          sizes.forEach(function(size){
+          for (var _trSizeIdx = 0; _trSizeIdx < sizes.length; _trSizeIdx++) {
+            var size = sizes[_trSizeIdx];
             var slideItems = items.slice(offset, offset + size);
             offset += size;
             var leftItems = slideItems.slice(0, TR_MAX_PER_TABLE);
             var rightItems = slideItems.slice(TR_MAX_PER_TABLE, TR_MAX_PER_TABLE*2);
+            var contentXml = _trBuildContent(sec, leftItems, rightItems);
+            var embedded = await _trEmbedLogos(contentXml, _trContentRels, sectionLogos);
+            _trAllMedia = _trAllMedia.concat(embedded.media);
             _trSlideNum++;
-            _trNewSlideFiles.push({ num: _trSlideNum, xml: _trBuildContent(sec, leftItems, rightItems), rels: _trContentRels });
-          });
-        });
+            _trNewSlideFiles.push({ num: _trSlideNum, xml: embedded.xml, rels: embedded.rels });
+          }
+        }
 
         // Write new slide parts into the zip
         _trNewSlideFiles.forEach(function(sf){
           _trZip.file('ppt/slides/slide' + sf.num + '.xml', sf.xml);
           _trZip.file('ppt/slides/_rels/slide' + sf.num + '.xml.rels', sf.rels);
         });
+        // Write the collected logo media files, deduplicated by filename (same logo may be reused across sections/slides)
+        var _trWrittenMedia = {};
+        _trAllMedia.forEach(function(m){
+          if (_trWrittenMedia[m.fileName]) return;
+          _trWrittenMedia[m.fileName] = true;
+          _trZip.file('ppt/media/' + m.fileName, m.bytes);
+        });
+        if (_trAllMedia.length > 0) {
+          var _trMediaCt = await _trZip.file('[Content_Types].xml').async('string');
+          if (_trMediaCt.indexOf('Extension="png"') === -1) {
+            _trMediaCt = _trMediaCt.replace('</Types>', '<Default Extension="png" ContentType="image/png"/></Types>');
+            _trZip.file('[Content_Types].xml', _trMediaCt);
+          }
+        }
 
         // Update presentation.xml, its rels, and Content_Types — remove template slides 2 & 3, insert new ones after slide 1
         var _trPrsX = await _trZip.file('ppt/presentation.xml').async('string');
@@ -5569,7 +5793,8 @@ async function downloadHistory(index) {
         var _trUrl = URL.createObjectURL(_trOut);
         var _trA = document.createElement('a');
         _trA.href = _trUrl;
-        _trA.download = _safeFileName((item.name || 'Track Record - Anonymised'), 'Track Record - Anonymised') + '.pptx';
+        var _trDateStamp = new Date().toLocaleDateString('en-GB').replace(/\//g, '.');
+        _trA.download = _safeFileName('Track Record - Anonymised - ' + _trDateStamp, 'Track Record - Anonymised') + '.pptx';
         _trA.click();
         setTimeout(function(){ URL.revokeObjectURL(_trUrl); }, 2000);
         return;
