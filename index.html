@@ -4271,7 +4271,7 @@ COLUMNS TO FIND (by meaning, not exact header text):
 3. ROLE — the job title placed. Copy VERBATIM.
 4. REAL_CLIENT — the actual, real client/company name. Headers like "Client", "Company", "Assignment Client". Used to look up a logo — never displayed as text directly.
 5. CLIENT_TYPE — a short category describing the client (e.g. "Hedge Fund", "Sovereign Wealth Fund", "Family Office", "Pension Fund"). This is shown as "NDA, [CLIENT_TYPE]" whenever the real client cannot be shown (confidential, or simply no logo available yet) — so it must always be filled if at all possible, even when a logo will likely be used instead.
-6. LOCATION — where this placement was based. Source data varies by team: it may already be one combined column ("City, Country"), or split across separate City and Country (or Country only) columns. If split across two columns, COMBINE them yourself into "City, Country" format (or just "Country" if no city is given). If nothing location-like exists in the data at all, leave it as "".
+6. LOCATION — where this placement was based. Source data varies by team: it may already be one combined column ("Country, City"), or split across separate City and Country (or Country only) columns. If split across two columns, COMBINE them yourself into "Country, City" format — COUNTRY FIRST, then city (e.g. "UK, London", not "London, UK"). If only a country is given, just use "Country". If nothing location-like exists in the data at all, leave it as "".
 
 CRITICAL RULES:
 - Only extract from columns that clearly match one of the six concepts above. Ignore every other column entirely.
