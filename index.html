@@ -6114,8 +6114,48 @@ async function downloadHistory(index) {
           if (!resp.ok) return null;
           var buf = await resp.arrayBuffer();
           var trimmed = await _tlTrimLogoBytes(buf);
-          _tlLogoCache[slug] = trimmed;
-          return trimmed;
+          var composed = await _tlComposeLogoForCell(trimmed);
+          _tlLogoCache[slug] = composed;
+          return composed;
+        }
+
+        // Trimming alone can't fix distortion — logos still have wildly different NATIVE aspect ratios
+        // (a square icon-mark vs. an 8:1 wide wordmark), and the cell itself is a fixed, wide ratio.
+        // Stretching any of them to fill that fixed shape distorts whichever ones don't already match it.
+        // The fix: pre-compose each logo onto a transparent canvas that already HAS the cell's exact
+        // aspect ratio, using proper contain-fit (preserving the logo's own proportions, centred, with
+        // consistent padding). The resulting composite matches the target shape exactly, so the cell's
+        // plain stretch-to-fill causes zero distortion — every logo ends up visually consistent.
+        async function _tlComposeLogoForCell(bytes){
+          try {
+            var blob = new Blob([bytes], {type:'image/png'});
+            var url = URL.createObjectURL(blob);
+            var img = new Image();
+            await new Promise(function(resolve, reject){ img.onload = resolve; img.onerror = reject; img.src = url; });
+            URL.revokeObjectURL(url);
+
+            var targetAspect = TL_CLIENT_COL_W / TL_ROW_H_REDUCED;
+            var compositeW = 1000;
+            var compositeH = Math.round(compositeW / targetAspect);
+
+            var canvas = document.createElement('canvas');
+            canvas.width = compositeW; canvas.height = compositeH;
+            var ctx = canvas.getContext('2d');
+            // Leave the canvas fully transparent — this is the "padding" that keeps every logo's
+            // visible content at a consistent scale within the cell, regardless of its own shape.
+
+            var PAD = 0.82; // use 82% of the composite space for the logo, leaving even breathing room
+            var scale = Math.min((compositeW*PAD)/img.width, (compositeH*PAD)/img.height);
+            var drawW = img.width*scale, drawH = img.height*scale;
+            var drawX = (compositeW-drawW)/2, drawY = (compositeH-drawH)/2;
+            ctx.drawImage(img, drawX, drawY, drawW, drawH);
+
+            var outBlob = await new Promise(function(resolve){ canvas.toBlob(resolve, 'image/png'); });
+            return await outBlob.arrayBuffer();
+          } catch(_tlComposeErr) {
+            console.error('[Track Record logos] Compose failed, using trimmed image as-is:', _tlComposeErr);
+            return bytes; // never block generation over a compositing failure — fall back gracefully
+          }
         }
 
         // Build one table's XML (category bar + up to 14 data rows), given which table (left/right) it is,
