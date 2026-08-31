@@ -5950,7 +5950,7 @@ async function downloadHistory(index) {
           });
         });
 
-        var TL_ROWS_PER_TABLE = 14;
+        var TL_ROWS_PER_TABLE = 14; // tested: 15 still overlaps footer even with reduced header block on realistic data; 14 is the safe maximum given the header-block savings
         function _tlChunk(arr, size){
           var out = [];
           for (var i=0;i<arr.length;i+=size) out.push(arr.slice(i, i+size));
