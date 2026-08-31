@@ -6055,7 +6055,7 @@ async function downloadHistory(index) {
 
         var TL_HEADER_BLOCK_H = 330200 + 60000 + 260000; // category bar + spacer + column-header row
         var TL_ROW_H = 308653;
-        var TL_ROW_H_REDUCED = 195000; // ~37% shorter than the original — more compact, still comfortable room for 10pt text
+        var TL_ROW_H_REDUCED = 308653; // back to the original height — she confirmed logo consistency matters more than extra compactness
         var TL_TABLE_LEFT_X = 538872, TL_TABLE_RIGHT_X = 6277748, TL_TABLE_TOP_Y = 1051560;
         var TL_ROLE_COL_W = 2915995, TL_CLIENT_COL_W = 914400, TL_LOCATION_COL_W = 1537757;
 
@@ -6144,9 +6144,19 @@ async function downloadHistory(index) {
             // Leave the canvas fully transparent — this is the "padding" that keeps every logo's
             // visible content at a consistent scale within the cell, regardless of its own shape.
 
-            var PAD = 0.82; // use 82% of the composite space for the logo, leaving even breathing room
-            var scale = Math.min((compositeW*PAD)/img.width, (compositeH*PAD)/img.height);
-            var drawW = img.width*scale, drawH = img.height*scale;
+            // Target-height scaling: every logo is scaled to the SAME height, letting width vary freely
+            // (capped only to prevent extreme wordmarks overflowing the composite's width). Tried area-
+            // based scaling first (matching the sidebar logos elsewhere), but traced through the actual
+            // numbers and found it doesn't work here — the composite is a fixed, wide shape, so a near-
+            // square logo hits the height ceiling almost immediately regardless of area target, while a
+            // wide wordmark reaches the full target area easily. Height is also the dimension people
+            // actually judge as "size" when scanning down a column of rows, so targeting it directly is
+            // both more effective and more true to what "consistent" means here.
+            var targetH = compositeH * 0.86;
+            var scale = targetH / img.height;
+            var drawW = img.width * scale, drawH = targetH;
+            var maxW = compositeW * 0.92;
+            if (drawW > maxW) { var s1 = maxW / drawW; drawW *= s1; drawH *= s1; }
             var drawX = (compositeW-drawW)/2, drawY = (compositeH-drawH)/2;
             ctx.drawImage(img, drawX, drawY, drawW, drawH);
 
