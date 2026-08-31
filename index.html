@@ -6063,14 +6063,59 @@ async function downloadHistory(index) {
           var view = new DataView(bytes);
           return { w: view.getUint32(16, false), h: view.getUint32(20, false) };
         }
+
+        // Auto-trim each logo to its actual visible content, discarding transparent padding. Source logo
+        // files vary hugely in how much dead space they carry (some fill 100% of their canvas, others as
+        // little as 60%) — with plain stretch-to-fill, that padding difference is exactly what makes
+        // logos look inconsistently sized even though every cell is identical. Trimming first means the
+        // same stretch behaves consistently across every logo, regardless of how the source file was cropped.
+        async function _tlTrimLogoBytes(bytes){
+          try {
+            var blob = new Blob([bytes], {type: 'image/png'});
+            var url = URL.createObjectURL(blob);
+            var img = new Image();
+            await new Promise(function(resolve, reject){ img.onload = resolve; img.onerror = reject; img.src = url; });
+            var canvas = document.createElement('canvas');
+            canvas.width = img.width; canvas.height = img.height;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            var minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0, found = false;
+            for (var y = 0; y < canvas.height; y++) {
+              for (var x = 0; x < canvas.width; x++) {
+                var alpha = data[(y * canvas.width + x) * 4 + 3];
+                if (alpha > 10) {
+                  found = true;
+                  if (x < minX) minX = x; if (x > maxX) maxX = x;
+                  if (y < minY) minY = y; if (y > maxY) maxY = y;
+                }
+              }
+            }
+            URL.revokeObjectURL(url);
+            if (!found) return bytes; // fully transparent — nothing to trim, fall back to original
+            var trimW = maxX - minX + 1, trimH = maxY - minY + 1;
+            if (trimW === canvas.width && trimH === canvas.height) return bytes; // already tight, no-op
+            var trimCanvas = document.createElement('canvas');
+            trimCanvas.width = trimW; trimCanvas.height = trimH;
+            var trimCtx = trimCanvas.getContext('2d');
+            trimCtx.drawImage(canvas, minX, minY, trimW, trimH, 0, 0, trimW, trimH);
+            var trimmedBlob = await new Promise(function(resolve){ trimCanvas.toBlob(resolve, 'image/png'); });
+            return await trimmedBlob.arrayBuffer();
+          } catch(_tlTrimErr) {
+            console.error('[Track Record logos] Trim failed, using original image:', _tlTrimErr);
+            return bytes; // never block generation over a trimming failure — fall back gracefully
+          }
+        }
+
         var _tlLogoCache = {};
         async function _tlGetLogoBytes(slug){
           if (_tlLogoCache[slug]) return _tlLogoCache[slug];
           var resp = await fetch(_RAW_TL + 'logos/' + slug + '.png');
           if (!resp.ok) return null;
           var buf = await resp.arrayBuffer();
-          _tlLogoCache[slug] = buf;
-          return buf;
+          var trimmed = await _tlTrimLogoBytes(buf);
+          _tlLogoCache[slug] = trimmed;
+          return trimmed;
         }
 
         // Build one table's XML (category bar + up to 14 data rows), given which table (left/right) it is,
@@ -6125,7 +6170,7 @@ async function downloadHistory(index) {
                 // for guaranteed-correct rendering; some very wide/narrow logos will show mild aspect
                 // distortion given the client column's own wide aspect ratio. Revisit once the core
                 // mechanic is proven solid — this is a deliberate, known trade-off, not an oversight.
-                var mediaFileName = 'logo_' + resolved.slug + '_' + Math.random().toString(36).slice(2,8) + '.png';
+                var mediaFileName = 'logo_' + resolved.slug + '.png';
                 logoMedia.push({ fileName: mediaFileName, bytes: bytes, name: resolved.name });
                 logoFillXml = { mediaFileName: mediaFileName, name: resolved.name };
               }
