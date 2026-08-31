@@ -6057,7 +6057,7 @@ async function downloadHistory(index) {
         var TL_ROW_H = 308653;
         var TL_ROW_H_REDUCED = 195000; // ~37% shorter than the original — more compact, still comfortable room for 10pt text
         var TL_TABLE_LEFT_X = 538872, TL_TABLE_RIGHT_X = 6277748, TL_TABLE_TOP_Y = 1051560;
-        var TL_ROLE_COL_W = 2415995, TL_CLIENT_COL_W = 1693333, TL_LOCATION_COL_W = 1258824;
+        var TL_ROLE_COL_W = 2915995, TL_CLIENT_COL_W = 914400, TL_LOCATION_COL_W = 1537757;
 
         function _tlPngSize(bytes){
           var view = new DataView(bytes);
@@ -6085,6 +6085,17 @@ async function downloadHistory(index) {
           var catRow = trList[0] || '', spacerRow = trList[1] || '', headRow = trList[2] || '', dataRowTemplate = trList[3] || '';
 
           catRow = catRow.replace(/<a:t>[^<]*<\/a:t>/, '<a:t>' + _tlXe(categoryName) + '</a:t>');
+
+          // Rewrite the column widths — the template's original Client column is far wider than any
+          // logo's natural aspect ratio, so a stretched-to-fill logo gets badly distorted horizontally.
+          // Narrow it and give the freed width to Role/Location, which can use the extra room anyway.
+          var _tlColTargets = [TL_ROLE_COL_W, TL_CLIENT_COL_W, TL_LOCATION_COL_W];
+          var _tlColIdx = 0;
+          prefix = prefix.replace(/<a:gridCol w="\d+"/g, function(_m){
+            var w = _tlColTargets[_tlColIdx] !== undefined ? _tlColTargets[_tlColIdx] : null;
+            _tlColIdx++;
+            return w !== null ? '<a:gridCol w="' + w + '"' : _m;
+          });
 
           // Shrink the data row height so a stretched-to-fill logo doesn't dominate the row next to the
           // much more compact text-only rows (NDA entries). This is a safe fix — unlike fillRect insets,
@@ -6139,7 +6150,13 @@ async function downloadHistory(index) {
                   return cleared;
                 }
                 val = (resolved.mode === 'text') ? resolved.text : '';
-                return cell.replace(/<a:t>[^<]*<\/a:t>/, '<a:t>' + _tlXe(val) + '</a:t>');
+                var _tlCell = cell.replace(/<a:t>[^<]*<\/a:t>/, '<a:t>' + _tlXe(val) + '</a:t>');
+                if (resolved.mode === 'text') {
+                  // NDA text needs a smaller size to fit on one line in the narrower Client column,
+                  // rather than wrapping to two or three lines and overflowing the row.
+                  _tlCell = _tlCell.replace(/sz="\d+"/, 'sz="700"');
+                }
+                return _tlCell;
               }
               val = rowData.location; cellIdx++;
               return cell.replace(/<a:t>[^<]*<\/a:t>/, '<a:t>' + _tlXe(val) + '</a:t>');
