@@ -1326,6 +1326,13 @@ const TEMPLATES = {
     file: 'templates/Track_Record_Logo_TEMPLATE.pptx',
     isTrackRecordLogo: true,
     promptType: 'track-record-logo'
+  },
+
+  'tombstone-standard': {
+    label: 'Tombstone Format (Standard - Most Teams)',
+    file: 'templates/Tombstone_Standard_TEMPLATE.pptx',
+    isTombstone: true,
+    promptType: 'tombstone-standard'
   }
 
 };
@@ -1354,7 +1361,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
   var sel = document.getElementById('tplSel');
   if (!sel) return;
   var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','candidate-briefing-pack','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile','advisor-profile'];
-  var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update','track-record-anonymised','track-record-logo'];
+  var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update','track-record-anonymised','track-record-logo','tombstone-standard'];
 
   var grp1 = document.createElement('optgroup');
   grp1.label = 'PROFILES ──';
@@ -1505,6 +1512,15 @@ var TPL = {
     fmt: 'p',
     reg: 'Global',
     flds: ['Sector','Role Category','Role / Job Title','Client Logo (or NDA + category)','Location']
+  },
+  'tombstone-standard': {
+    name: 'Tombstone Format (Standard - Most Teams)',
+    sub: 'Multi-Slide PowerPoint',
+    ico: 'ppt',
+    bg: 'rgba(31,36,120,.15)',
+    fmt: 'p',
+    reg: 'Global',
+    flds: ['Sector','Assignment Name','Client Logo','Client Type (anonymised)']
   }
 };
 
@@ -3468,6 +3484,7 @@ var isEaIndiaV2 = (tpl === 'ea-india-profile-v2');
 var isAdvisorProfile = (tpl === 'advisor-profile');
 var isTrackRecord = (tpl === 'track-record-anonymised');
 var isTrackRecordLogo = (tpl === 'track-record-logo');
+var isTombstone = (tpl === 'tombstone-standard');
 var _ei2Now2 = new Date();
 var _ei2M2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 var eaIndiaV2JsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","SUMMARY_BULLETS":"","companies":[{"name":"","location":"","dates":"","description":"","overview_bullets":[""],"roles":[{"role":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_HEADING":"","PROFESSIONAL_QUALS":[{"year":"","qualification":""}],"ADDITIONAL_SECTIONS":[{"heading":"","content":[""]}],"TECH_SKILLS":"","NATIONALITY":"","LANGUAGES":[{"language":"","level":""}],"ADDITIONAL_INFO":"","INTERESTS":"","TRANSACTION_EXPERIENCE_HEADING":"","TRANSACTION_EXPERIENCE":[{"subheading":"","items":[""]}],"TRANSACTION_EXPERIENCE_NOTE":"","AFFILIATIONS":[{"organization":"","role":"","dates":""}]}';
@@ -4288,6 +4305,31 @@ SOURCE DATA — extract every row from this pasted table:
 
 ` + inputText;
 
+var tombstonePrompt = `You are extracting structured track record data for a Sheffield Haworth "Tombstone Format" PowerPoint deck — a grid of "tombstone" boxes, each showing a client logo, the assignment name, and the client type (never the real client name as text — that stays internal, used only to look up a logo). The source is tabular data originally from Excel — it may arrive tab-separated (pasted) or comma-separated (converted from .xlsx). The FIRST row is column headers, and the data MAY contain many columns you should ignore. Detect the delimiter from the data itself.
+
+YOUR TASK: identify which columns correspond to the four concepts below (match by MEANING, header wording varies) and extract every data row into a flat array.
+
+COLUMNS TO FIND (by meaning, not exact header text):
+1. SECTOR — the top-level grouping for the deck (e.g. "Technology & Data", "Investment Management"). Headers like "Sector", "Practice Area", "Division". If no such column exists, leave blank — every row will be grouped under one general section.
+2. ASSIGNMENT — the role/assignment title placed. Headers like "Role", "Assignment", "Job Title", "Position". Copy VERBATIM.
+3. REAL_CLIENT — the actual, real client/company name. Headers like "Client", "Company", "Assignment Client". Used ONLY to look up a logo — never displayed as text.
+4. CLIENT_TYPE — a short category describing the client (e.g. "Global Insurance Carrier", "Sovereign Wealth Fund", "Global Asset Manager"). This is what actually displays on the slide underneath the assignment name — so extract it carefully, and if the source data doesn't have an explicit category column, infer a short, reasonable category from context (industry, other columns) rather than leaving it blank, since this text is the only client-identifying information shown when no logo is available.
+
+CRITICAL RULES:
+- Only extract from columns that clearly match one of the four concepts above. Ignore every other column entirely.
+- Do NOT invent, guess, or hallucinate a value for ASSIGNMENT or REAL_CLIENT that isn't actually present in the source data for that row.
+- Preserve the source data's original row order — do not reorder or group rows yourself; the tool handles grouping and layout afterwards.
+- Copy ASSIGNMENT verbatim — do not rephrase or correct it.
+- Extract EVERY data row — do not skip rows, do not sample, do not truncate for length.
+- Return ONLY valid JSON. No markdown. No code blocks. No explanation.
+
+Return this exact JSON structure:
+{"items": [{"sector": "", "assignment": "", "real_client": "", "client_type": ""}]}
+
+SOURCE DATA — extract every row from this pasted table:
+
+` + inputText;
+
 var prompt = isApacEy
   ? apacEyPrompt
   : isEaIndiaV2
@@ -4464,6 +4506,8 @@ Use this exact JSON structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE ÃÂ
   ? trackRecordPrompt
   : isTrackRecordLogo
   ? trackRecordLogoTemplatePrompt
+  : isTombstone
+  ? tombstonePrompt
   : isBriefingPack
   ? briefingPackPrompt
   : isServicesProfile
@@ -6395,6 +6439,365 @@ async function downloadHistory(index) {
         _tlA.download = _safeFileName('Detailed Format - ' + _tlDateStamp, 'Detailed Format') + '.pptx';
         _tlA.click();
         setTimeout(function(){ URL.revokeObjectURL(_tlUrl); }, 2000);
+        return;
+      }
+
+// ── Tombstone Format (Standard) ──────────────────────────────────────
+      if (item.template === 'tombstone-standard') {
+        var _tsContent = item.content;
+        var _tsItems = Array.isArray(_tsContent.items) ? _tsContent.items : [];
+        if (!_tsItems.length) throw new Error('No tombstone items were extracted — check the pasted data has a header row and at least one data row.');
+
+        function _tsXe(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        // ── Group by sector ──
+        var _tsSectorOrder = [];
+        var _tsSectors = {};
+        _tsItems.forEach(function(it){
+          var sec = (it.sector || '').trim() || 'General';
+          if (!_tsSectors[sec]) { _tsSectors[sec] = []; _tsSectorOrder.push(sec); }
+          _tsSectors[sec].push({
+            assignment: (it.assignment||'').trim(),
+            real_client: (it.real_client||'').trim(),
+            client_type: (it.client_type||'').trim()
+          });
+        });
+
+        var TS_PER_SLIDE = 12;
+        // Balanced distribution (not greedy) — the prompt explicitly asks for 15 items to become
+        // 8+7, not a full 12-item slide followed by a near-empty 3-item one.
+        function _tsBalancedSizes(n, maxPerSlide){
+          if (n <= 0) return [];
+          var numSlides = Math.ceil(n / maxPerSlide);
+          var base = Math.floor(n / numSlides);
+          var rem = n % numSlides;
+          var sizes = [];
+          for (var i=0;i<numSlides;i++) sizes.push(base + (i < rem ? 1 : 0));
+          return sizes;
+        }
+
+        // ── Logo matching (same approach as the other Track Record templates) ──
+        var _RAW_TS = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-updated/main/';
+        var _tsResp = await fetch(_RAW_TS + 'templates/Tombstone_Standard_TEMPLATE.pptx');
+        if (!_tsResp.ok) throw new Error('Failed to fetch Tombstone template');
+        var _tsZip = await JSZip.loadAsync(await _tsResp.arrayBuffer());
+
+        var _tsManifest = [];
+        try {
+          var _tsManifestResp = await fetch(_RAW_TS + 'logos/manifest.json');
+          if (_tsManifestResp.ok) _tsManifest = await _tsManifestResp.json();
+        } catch(_tsManifestErr) { /* no manifest — every item simply shows no logo, not an error */ }
+
+        function _tsSlugify(name){
+          return (name||'').toLowerCase()
+            .replace(/\b(inc|incorporated|ltd|limited|llc|llp|plc|corp|corporation|holdings?|the)\b/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .replace(/-+/g, '-');
+        }
+        function _tsFindLogoMatch(realClientName){
+          var target = _tsSlugify(realClientName);
+          if (!target) return null;
+          for (var i=0;i<_tsManifest.length;i++){ if (_tsManifest[i] === target) return _tsManifest[i]; }
+          for (var j=0;j<_tsManifest.length;j++){
+            var s = _tsManifest[j];
+            if (target.indexOf(s) !== -1 || s.indexOf(target) !== -1) return s;
+          }
+          return null;
+        }
+
+        // One batch exclusion check for every distinct real client in the whole dataset.
+        var _tsDistinctClients = [];
+        var _tsSeenClients = {};
+        _tsItems.forEach(function(it){
+          var rn = (it.real_client||'').trim();
+          if (rn && !_tsSeenClients[rn.toLowerCase()]) { _tsSeenClients[rn.toLowerCase()] = true; _tsDistinctClients.push(rn); }
+        });
+
+        var _tsExcludedSet = {};
+        if (_tsDistinctClients.length) {
+          var _tsExclPrompt = 'You are checking a list of real client names against two hard exclusion rules for a Sheffield Haworth track record deck.\n\n' +
+            'EXCLUDE a name if EITHER is true:\n' +
+            '1. It is Blackstone, in any spelling/capitalisation, or an entity described as owned by/affiliated with Blackstone.\n' +
+            '2. It is a Sovereign Wealth Fund, or wholly owned/operated by one — use your knowledge of major SWFs globally, even if the name doesn\'t literally say "sovereign" or "wealth fund".\n\n' +
+            'Do your checking silently. Your visible reply must contain NOTHING except the JSON object below — the first character must be "{".\n\n' +
+            'Return ONLY this JSON structure:\n{"excluded": ["exact name 1", "exact name 2", ...]}\n\n' +
+            'NAMES TO CHECK:\n' + _tsDistinctClients.map(function(n){ return '- ' + n; }).join('\n');
+
+          try {
+            var _tsExclResp = await fetch('/api/proxy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
+              body: JSON.stringify({
+                model: 'claude-sonnet-4-6',
+                max_tokens: 2000,
+                messages: [{ role: 'user', content: _tsExclPrompt }],
+                system: 'Return ONLY raw JSON. No markdown. No explanations.'
+              })
+            });
+            if (_tsExclResp.ok) {
+              var _tsExclData = await _tsExclResp.json();
+              var _tsExclRaw = (_tsExclData.content && _tsExclData.content[0] && _tsExclData.content[0].text) ? _tsExclData.content[0].text : '{}';
+              var _tsExclParsed = null;
+              try { _tsExclParsed = JSON.parse(_tsExclRaw.trim()); } catch(_e1) {
+                var lastB = _tsExclRaw.lastIndexOf('{');
+                if (lastB !== -1) { try { _tsExclParsed = JSON.parse(_tsExclRaw.slice(lastB)); } catch(_e2) {} }
+              }
+              if (_tsExclParsed && Array.isArray(_tsExclParsed.excluded)) {
+                _tsExclParsed.excluded.forEach(function(n){ _tsExcludedSet[n.toLowerCase()] = true; });
+              } else {
+                console.error('[Tombstone] Exclusion check returned unexpected shape:', _tsExclRaw.slice(0,300));
+              }
+            } else {
+              console.error('[Tombstone] Exclusion check HTTP', _tsExclResp.status);
+            }
+          } catch(_tsExclNetErr) {
+            console.error('[Tombstone] Exclusion check network error:', _tsExclNetErr);
+          }
+        }
+
+        function _tsResolveLogo(it){
+          var rn = it.real_client;
+          var excluded = rn && _tsExcludedSet[rn.toLowerCase()];
+          return (rn && !excluded) ? _tsFindLogoMatch(rn) : null;
+        }
+
+        // ── Grid geometry (from the template's own 12 fixed tombstone positions) ──
+        var TS_COL_X = [539232, 2436210, 4321155, 6206101, 8091045, 9988023];
+        var TS_ROWS = [
+          { logoY: 1651030, nameY: 2346917, typeY: 2855083 },
+          { logoY: 3995893, nameY: 4691780, typeY: 5199946 }
+        ];
+        var TS_LOGO_W = 1629802, TS_LOGO_H = 581025;
+        var TS_NAME_W = 1629802, TS_NAME_H = 437245;
+        var TS_TYPE_W = 1629803, TS_TYPE_H = 866543;
+
+        function _tsPngSize(bytes){
+          var view = new DataView(bytes);
+          return { w: view.getUint32(16, false), h: view.getUint32(20, false) };
+        }
+        var _tsLogoCache = {};
+        async function _tsGetLogoBytes(slug){
+          if (_tsLogoCache[slug]) return _tsLogoCache[slug];
+          var resp = await fetch(_RAW_TS + 'logos/' + slug + '.png');
+          if (!resp.ok) return null;
+          var buf = await resp.arrayBuffer();
+          _tsLogoCache[slug] = buf;
+          return buf;
+        }
+
+        // Extract the stencil elements (one logo placeholder, one name box, one type box) from the
+        // template, keyed by their original name/text so we know which is which regardless of order.
+        var _tsBaseSlideXml = await _tsZip.file('ppt/slides/slide1.xml').async('string');
+        var _tsBaseRels = await _tsZip.file('ppt/slides/_rels/slide1.xml.rels').async('string');
+
+        function _tsExtractStencil(xml, marker){
+          var idx = xml.indexOf(marker);
+          var start = xml.lastIndexOf('<p:sp>', idx);
+          var end = xml.indexOf('</p:sp>', idx) + '</p:sp>'.length;
+          return xml.substring(start, end);
+        }
+        var _tsLogoStencil = _tsExtractStencil(_tsBaseSlideXml, 'Picture Placeholder 4"');
+        var _tsNameStencil = _tsExtractStencil(_tsBaseSlideXml, '>Assignment Name<');
+        var _tsTypeStencil = _tsExtractStencil(_tsBaseSlideXml, '>Assignment Client Type');
+
+        // Build one tombstone's three elements (logo/name/type) at a given grid column+row, returning
+        // XML plus any logo media needed. Logo goes in as a real <p:pic> (not a fill) — a simple floating
+        // picture, correctly positioned and proportionally sized, with no risk of the tiling bug that
+        // affected the table-cell approach on the other template, since there's no cell to stretch into here.
+        async function _tsBuildTombstone(colIdx, rowIdx, it, shapeIdCounter){
+          var x = TS_COL_X[colIdx];
+          var row = TS_ROWS[rowIdx];
+          var out = { xml: '', media: null };
+
+          // Name box
+          var nameXml = _tsNameStencil.replace(/x="\d+" y="\d+"/, 'x="' + x + '" y="' + row.nameY + '"');
+          nameXml = nameXml.replace('>Assignment Name<', '>' + _tsXe(it.assignment) + '<');
+          nameXml = nameXml.replace(/id="\d+"/, 'id="' + (shapeIdCounter.n++) + '"');
+
+          // Type box
+          var typeXml = _tsTypeStencil.replace(/x="\d+" y="\d+"/, 'x="' + x + '" y="' + row.typeY + '"');
+          typeXml = typeXml.replace(/>Assignment Client Type[^<]*</, '>' + _tsXe(it.client_type) + '<');
+          typeXml = typeXml.replace(/id="\d+"/, 'id="' + (shapeIdCounter.n++) + '"');
+
+          var slug = _tsResolveLogo(it);
+          var picXml = '';
+          var media = null;
+          if (slug) {
+            var bytes = await _tsGetLogoBytes(slug);
+            if (bytes) {
+              var dims = _tsPngSize(bytes);
+              // Target height scaling — matches the approach that worked well for the Detailed Format
+              // logos: consistent height across every logo, width capped to avoid overflowing the slot.
+              var targetH = TS_LOGO_H * 0.86;
+              var scale = targetH / dims.h;
+              var picW = dims.w * scale, picH = targetH;
+              var maxW = TS_LOGO_W * 0.92;
+              if (picW > maxW) { var s1 = maxW / picW; picW *= s1; picH *= s1; }
+              var picX = Math.round(x + (TS_LOGO_W - picW) / 2);
+              var picY = Math.round(row.logoY + (TS_LOGO_H - picH) / 2);
+              var mediaFileName = 'logo_' + slug + '.png';
+              media = { fileName: mediaFileName, bytes: bytes };
+              var picId = shapeIdCounter.n++;
+              picXml = '§§TSPIC:' + picId + ':' + Math.round(picX) + ':' + Math.round(picY) + ':' + Math.round(picW) + ':' + Math.round(picH) + ':' + mediaFileName + ':' + _tsXe(it.real_client) + '§§';
+            }
+          }
+
+          out.xml = nameXml + typeXml + picXml;
+          out.media = media;
+          return out;
+        }
+
+        // ── Build all slides ──
+        var _tsNewSlideFiles = [];
+        var _tsAllMedia = [];
+        var _tsSlideNum = 100;
+
+        for (var _tsSi = 0; _tsSi < _tsSectorOrder.length; _tsSi++) {
+          var sector = _tsSectorOrder[_tsSi];
+          var sectorItems = _tsSectors[sector];
+          var slideSizes = _tsBalancedSizes(sectorItems.length, TS_PER_SLIDE);
+          var offset = 0;
+
+          for (var _tsSlideIdx = 0; _tsSlideIdx < slideSizes.length; _tsSlideIdx++) {
+            var n = slideSizes[_tsSlideIdx];
+            var slideItems = sectorItems.slice(offset, offset + n);
+            offset += n;
+
+            var topCount = Math.ceil(n / 2), botCount = Math.floor(n / 2);
+            var topItems = slideItems.slice(0, topCount);
+            var botItems = slideItems.slice(topCount);
+
+            var slideXml = _tsBaseSlideXml;
+            slideXml = slideXml.replace('| DECK TITLE', _tsXe(sector) + ' Track Record');
+
+            // Remove the 12 original stencil elements + their divider lines; we rebuild only what's needed.
+            var _tsSpBlocks = slideXml.match(/<p:sp>[\s\S]*?<\/p:sp>/g) || [];
+            _tsSpBlocks.forEach(function(block){
+              if (/Picture Placeholder|Assignment Name|Assignment Client Type/.test(block)) {
+                slideXml = slideXml.replace(block, '');
+              }
+            });
+            // Partial rows look cleaner without mid-row divider lines floating around unused space —
+            // remove all vertical column dividers; full rows (6 items) simply render without them too,
+            // a deliberate simplification for this first version rather than dynamically recomputing
+            // which specific dividers would sit between used columns.
+            var _tsCxnBlocks = slideXml.match(/<p:cxnSp>[\s\S]*?<\/p:cxnSp>/g) || [];
+            _tsCxnBlocks.forEach(function(block){
+              if (/Straight Connector 1[4-9]\d/.test(block)) {
+                slideXml = slideXml.replace(block, '');
+              }
+            });
+
+            var _tsShapeIdCounter = { n: 900 };
+            var contentXml = '';
+            function _tsStartCol(count){ return Math.floor((6 - count) / 2); }
+
+            for (var _ti = 0; _ti < topItems.length; _ti++) {
+              var col = _tsStartCol(topCount) + _ti;
+              var built = await _tsBuildTombstone(col, 0, topItems[_ti], _tsShapeIdCounter);
+              contentXml += built.xml;
+              if (built.media) _tsAllMedia.push(built.media);
+            }
+            for (var _bi = 0; _bi < botItems.length; _bi++) {
+              var col2 = _tsStartCol(botCount) + _bi;
+              var built2 = await _tsBuildTombstone(col2, 1, botItems[_bi], _tsShapeIdCounter);
+              contentXml += built2.xml;
+              if (built2.media) _tsAllMedia.push(built2.media);
+            }
+
+            // Resolve §§TSPIC§§ markers into real <p:pic> elements with proper rIds now that we know
+            // this slide's relationship list.
+            var slideRels = _tsBaseRels;
+            var maxRid = Math.max.apply(null, (slideRels.match(/Id="rId(\d+)"/g)||['rId0']).map(function(r){return parseInt(r.replace(/[^\d]/g,''));}));
+            contentXml = contentXml.replace(/§§TSPIC:(\d+):(\d+):(\d+):(\d+):(\d+):([^:]+):([^§]*)§§/g, function(_m, picId, px, py, pw, ph, fname, clientName){
+              maxRid += 1;
+              var rId = 'rId' + maxRid;
+              slideRels = slideRels.replace('</Relationships>', '<Relationship Id="'+rId+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/'+fname+'"/></Relationships>');
+              return '<p:pic><p:nvPicPr><p:cNvPr id="'+picId+'" name="Client Logo" descr="'+clientName+'"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr>' +
+                '<p:blipFill><a:blip r:embed="'+rId+'"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>' +
+                '<p:spPr><a:xfrm><a:off x="'+px+'" y="'+py+'"/><a:ext cx="'+pw+'" cy="'+ph+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
+            });
+
+            slideXml = slideXml.replace('</p:spTree>', contentXml + '</p:spTree>');
+
+            _tsSlideNum++;
+            _tsNewSlideFiles.push({ num: _tsSlideNum, xml: slideXml, rels: slideRels });
+          }
+        }
+
+        // Write new slide parts + media into the zip
+        _tsNewSlideFiles.forEach(function(sf){
+          _tsZip.file('ppt/slides/slide' + sf.num + '.xml', sf.xml);
+          _tsZip.file('ppt/slides/_rels/slide' + sf.num + '.xml.rels', sf.rels);
+        });
+        var _tsWrittenMedia = {};
+        _tsAllMedia.forEach(function(m){
+          if (_tsWrittenMedia[m.fileName]) return;
+          _tsWrittenMedia[m.fileName] = true;
+          _tsZip.file('ppt/media/' + m.fileName, m.bytes);
+        });
+
+        var _tsPrsX = await _tsZip.file('ppt/presentation.xml').async('string');
+        var _tsPrsR = await _tsZip.file('ppt/_rels/presentation.xml.rels').async('string');
+        var _tsCtX  = await _tsZip.file('[Content_Types].xml').async('string');
+
+        var _tsRidNums = (_tsPrsR.match(/Id="rId(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));});
+        var _tsMRid = _tsRidNums.length ? Math.max.apply(null,_tsRidNums) : 10;
+        var _tsSidNums = (_tsPrsX.match(/id="(\d+)"/g)||[]).map(function(r){return parseInt(r.replace(/[^\d]/g,''));}).filter(function(n){return n<2000000000;});
+        var _tsMSid = _tsSidNums.length ? Math.max.apply(null,_tsSidNums) : 300;
+
+        var _tsS1ridM = _tsPrsR.match(/Id="(rId\d+)"[^>]*Target="slides\/slide1\.xml"/);
+        var _tsS1rid = _tsS1ridM ? _tsS1ridM[1] : null;
+
+        var _tsAllNewRels = '', _tsAllNewSldIds = '', _tsAllNewCT = '';
+        _tsNewSlideFiles.forEach(function(sf){
+          var nr = 'rId' + (++_tsMRid);
+          var ns = ++_tsMSid;
+          _tsAllNewRels += '<Relationship Id="'+nr+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide'+sf.num+'.xml"/>';
+          _tsAllNewSldIds += '<p:sldId id="'+ns+'" r:id="'+nr+'"/>';
+          _tsAllNewCT += '<Override PartName="/ppt/slides/slide'+sf.num+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>';
+        });
+
+        if (_tsS1rid) {
+          var _tsRelIdx = _tsPrsR.indexOf('Id="'+_tsS1rid+'"');
+          var _tsTagStart = _tsPrsR.lastIndexOf('<Relationship', _tsRelIdx);
+          var _tsTagEnd = _tsPrsR.indexOf('/>', _tsRelIdx) + 2;
+          _tsPrsR = _tsPrsR.substring(0,_tsTagStart) + _tsAllNewRels + _tsPrsR.substring(_tsTagEnd);
+
+          var _tsSldIdx = _tsPrsX.indexOf('r:id="'+_tsS1rid+'"');
+          var _tsSldTagStart = _tsPrsX.lastIndexOf('<p:sldId', _tsSldIdx);
+          var _tsSldTagEnd = _tsPrsX.indexOf('/>', _tsSldIdx) + 2;
+          _tsPrsX = _tsPrsX.substring(0,_tsSldTagStart) + _tsAllNewSldIds + _tsPrsX.substring(_tsSldTagEnd);
+        } else {
+          _tsPrsR = _tsPrsR.replace('</Relationships>', _tsAllNewRels + '</Relationships>');
+          _tsPrsX = _tsPrsX.replace('</p:sldIdLst>', _tsAllNewSldIds + '</p:sldIdLst>');
+        }
+        _tsCtX = _tsCtX.replace('<Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>', '');
+        _tsCtX = _tsCtX.replace('</Types>', _tsAllNewCT + '</Types>');
+        if (_tsAllMedia.length > 0 && _tsCtX.indexOf('Extension="png"') === -1) {
+          _tsCtX = _tsCtX.replace('</Types>', '<Default Extension="png" ContentType="image/png"/></Types>');
+        }
+
+        _tsZip.file('ppt/presentation.xml', _tsPrsX);
+        _tsZip.file('ppt/_rels/presentation.xml.rels', _tsPrsR);
+        _tsZip.file('[Content_Types].xml', _tsCtX);
+        _tsZip.remove('ppt/slides/slide1.xml');
+        _tsZip.remove('ppt/slides/_rels/slide1.xml.rels');
+        // The source template file itself carries some leftover [trash]/*.dat entries from a prior
+        // editing tool — harmless (nothing references them) but worth stripping for a clean output.
+        Object.keys(_tsZip.files).forEach(function(fname){
+          if (fname.indexOf('[trash]') === 0) _tsZip.remove(fname);
+        });
+
+        var _tsOut = await _tsZip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+        var _tsUrl = URL.createObjectURL(_tsOut);
+        var _tsA = document.createElement('a');
+        var _tsDateStamp = new Date().toLocaleDateString('en-GB').replace(/\//g, '.');
+        _tsA.href = _tsUrl;
+        _tsA.download = _safeFileName('Tombstone Format - ' + _tsDateStamp, 'Tombstone Format') + '.pptx';
+        _tsA.click();
+        setTimeout(function(){ URL.revokeObjectURL(_tsUrl); }, 2000);
         return;
       }
 
