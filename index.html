@@ -4741,6 +4741,10 @@ function hideProgress(msg) {
       var _tlHistDate = item.date ? new Date(item.date).toLocaleDateString('en-GB').replace(/\//g,'.') : '';
       _histName = 'Detailed Format (Functions Teams)' + (_tlHistDate ? ' - ' + _tlHistDate : '');
     }
+    if ((!_histName || _histName === 'Unknown Candidate') && item && item.template === 'tombstone-standard') {
+      var _tsHistDate = item.date ? new Date(item.date).toLocaleDateString('en-GB').replace(/\//g,'.') : '';
+      _histName = 'Tombstone Format (Standard - Most Teams)' + (_tsHistDate ? ' - ' + _tsHistDate : '');
+    }
     _histName = String(_histName || '').trim() || 'Unknown Candidate';
 
     return `
@@ -6499,9 +6503,17 @@ async function downloadHistory(index) {
           var target = _tsSlugify(realClientName);
           if (!target) return null;
           for (var i=0;i<_tsManifest.length;i++){ if (_tsManifest[i] === target) return _tsManifest[i]; }
+          // Word-boundary fallback only — e.g. "oaktree-capital" matching "oaktree" is a legitimate
+          // prefix match, but a loose "anywhere in the string" check would also wrongly match "ares"
+          // inside "antares-capital-lp", since "ares" is a real substring of "antares". Requiring the
+          // match to land at a hyphen boundary (a whole segment, prefix, or suffix) avoids that.
           for (var j=0;j<_tsManifest.length;j++){
             var s = _tsManifest[j];
-            if (target.indexOf(s) !== -1 || s.indexOf(target) !== -1) return s;
+            if (target === s) continue;
+            var isPrefix = target.indexOf(s + '-') === 0;
+            var isSuffix = target.indexOf('-' + s) === target.length - s.length - 1 && target.length > s.length;
+            var isSegment = ('-' + target + '-').indexOf('-' + s + '-') !== -1;
+            if (isPrefix || isSuffix || isSegment) return s;
           }
           return null;
         }
@@ -6641,6 +6653,15 @@ async function downloadHistory(index) {
               var picId = shapeIdCounter.n++;
               picXml = '§§TSPIC:' + picId + ':' + Math.round(picX) + ':' + Math.round(picY) + ':' + Math.round(picW) + ':' + Math.round(picH) + ':' + mediaFileName + ':' + _tsXe(it.real_client) + '§§';
             }
+          }
+
+          if (!picXml) {
+            // No logo available (excluded, or no match found) — keep the original, visible "click to
+            // add picture" placeholder rather than leaving the slot silently empty, so it's obvious a
+            // logo still needs to be added and the user can insert one manually in PowerPoint.
+            var placeholderXml = _tsLogoStencil.replace(/x="\d+" y="\d+"/, 'x="' + x + '" y="' + row.logoY + '"');
+            placeholderXml = placeholderXml.replace(/id="\d+"/, 'id="' + (shapeIdCounter.n++) + '"');
+            picXml = placeholderXml;
           }
 
           out.xml = nameXml + typeXml + picXml;
