@@ -2244,13 +2244,18 @@ function buildEaIndiaRegBizExp(companies) {
   var xml = '';
   function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   var _MONTHS = {january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec',jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',sept:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
+  var _MONTH_NUMS = {'1':'Jan','01':'Jan','2':'Feb','02':'Feb','3':'Mar','03':'Mar','4':'Apr','04':'Apr','5':'May','05':'May','6':'Jun','06':'Jun','7':'Jul','07':'Jul','8':'Aug','08':'Aug','9':'Sep','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
   function normDate(s) {
     if (!s) return '';
     s = s.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b/gi, function(m){ return _MONTHS[m.toLowerCase()]||m; });
     s = s.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, function(m, yr, mo){ return mo + ' ' + yr; });
+    // Safety net: numeric MM/YYYY or MM/YY dates (e.g. "04/2016", "04/16") that the AI didn't convert —
+    // catches cases the prompt instruction alone might miss, regardless of source formatting.
+    s = s.replace(/\b(\d{1,2})\/(\d{4})\b/g, function(m, mo, yr){ var mn = _MONTH_NUMS[mo]; return mn ? (mn + ' ' + yr) : m; });
+    s = s.replace(/\b(\d{1,2})\/(\d{2})\b/g, function(m, mo, yy){ var mn = _MONTH_NUMS[mo]; if (!mn) return m; var yyNum = parseInt(yy,10); var fullYr = (yyNum <= 30 ? 2000 : 1900) + yyNum; return mn + ' ' + fullYr; });
     return s;
   }
-  function normDateRange(s) {
+function normDateRange(s) {
     if (!s) return '';
     var parts = s.split(/\s*[\u2013\u2014-]+\s*/);
     if (parts.length === 2) return normDate(parts[0].trim()) + ' \u2013 ' + normDate(parts[1].trim());
@@ -3573,7 +3578,8 @@ Preserve the CV's original chronological order in the output array — the earli
 - company.dates: The OVERALL tenure across ALL roles at THIS company only — earliest start date to latest end date AMONG THIS COMPANY'S OWN ROLES. CRITICAL: never borrow or carry over a date from a different, adjacent company entry — each company's dates must come exclusively from that company's own role_dates values, computed independently of whatever company came before or after it in the list. If a company has only one role, company.dates MUST exactly equal that role's own role_dates — do not widen it using any other company's dates. ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Dec 2005 – Oct 2025". Never use full month names or "Sept".
 - company.location: City/Country of the company headquarters or primary location. Leave "" if not stated. Normalize "USA" to "US" — always write "US", never "USA", regardless of how the source CV writes it.
 - role.role: Exact job title. If that specific role was in a different location, append it after a comma e.g. "Programme Manager — Group Risk, London / India".
-- role.role_dates: Dates for this role only. REQUIRED when company has 2 or more roles. Leave "" only if company has exactly ONE role.
+- role.role_dates: Dates for this role only. REQUIRED when company has 2 or more roles. Leave "" only if company has exactly ONE role. ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec) — e.g. "Apr 2016 – Aug 2017", NEVER numeric "04/2016 – 08/2017". If the CV shows dates as MM/YY or MM/YYYY (e.g. "04/16" or "04/2016"), convert to month-abbreviation format the same way. Never use full month names or "Sept".
+- EARLIER CAREER EXPERIENCE: some CVs have a distinct section (often titled "Earlier Career Experience", "Earlier Career", "Prior Experience", or similar) listing older roles in condensed form — usually just company + title, sometimes with a one-line description, rarely with bullets. Do NOT create a separate field or section for this — treat every entry in it as an ordinary additional company in the companies[] array, appended after the more recent/detailed companies in the CV's own order, using the same company/role/dates extraction rules as everything else. If an entry gives only a one-line description with no bullets, leave that role's bullets as [] rather than inventing content.
 - company.overview_bullets: Use this INSTEAD of role.bullets when the CV lists multiple job titles/promotions at ONE company together as a group of title+date lines, followed by paragraph(s) describing responsibilities across that WHOLE progression as a single narrative — not broken out separately under each specific title. In that case: list every role/title with its own role_dates (leave each role's bullets as []), and put the narrative paragraph(s) in company.overview_bullets instead (one array item per paragraph, verbatim). Example — if the CV shows:
   Vice President, Global Privacy    2025 – Present
   Chief Privacy Officer             2022 – 2025
@@ -3624,7 +3630,7 @@ EDUCATION:
 - degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = additional lines for this degree (majors, thesis title, specialisation, honours, semester-abroad notes, etc.) — if the CV lists these as multiple separate lines, PRESERVE them as separate lines by joining with a newline character \n between each one (do NOT merge them into a single run-on sentence with added periods). Leave "" if no extra lines. Most recent degree first within the array.
 - Most recent institution first.
 
-QUAL_HEADING: Copy the CV's own literal heading for its qualifications/achievements/recognition section VERBATIM, exactly as written (e.g. "Industry Recognition", "Achievements", "Awards", "Professional Qualifications", "Certifications"). Do not substitute a generic label. Leave "" if no such section exists (fallback will use "Professional Qualifications").
+QUAL_HEADING: Copy the CV's own literal heading for its qualifications/achievements/recognition section VERBATIM, exactly as written — EXCEPT if the CV's heading is "Certifications" (or a close variant like "Certification", "Professional Certifications"), in which case use "Professional Qualifications" instead, since these are treated as the same thing. Keep genuinely different headings as-is verbatim (e.g. "Industry Recognition", "Achievements", "Awards"). Do not substitute a generic label for anything other than the Certifications case above. Leave "" if no such section exists (fallback will use "Professional Qualifications").
 PROFESSIONAL_QUALS: Array of {year, qualification} for the section named in QUAL_HEADING above — this covers certifications, professional designations, AND career awards/recognitions (e.g. "Awarded Top Global CISO for 2023, 2024, 2025", "Northeast People's Choice Award for 2019") if the CV groups them together; only use this for items under a genuinely separate qualifications/recognition heading (see the EDUCATION rule above for the exception where they belong in education[] instead).
 - year: the year(s) exactly as written next to that entry (e.g. "2023, 2024, 2025", "2019"). If the entry has NO year at all in the source, leave year as "" — do not invent one.
 - qualification: the qualification/award text VERBATIM. CRITICAL — do NOT repeat the year inside this text if it's already captured in the year field (e.g. if the CV says "Awarded Top Global CISO for 2023, 2024, 2025" and you've put "2023, 2024, 2025" in year, the qualification text should just be "Awarded Top Global CISO" — do not duplicate the year twice).
@@ -3665,7 +3671,7 @@ if (isApacV2) { isApac = true; isApacUpdated = true; }
 var apacEyJsonStr = '{"CANDIDATE_NAME":"","CURRENT_TITLE":"","CURRENT_EMPLOYER":"","PROFILE_DATE":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"executive_experience":[{"section":"","bullets":[""]}],"EDU_1_INSTITUTION":"","EDU_1_START":"","EDU_1_END":"","EDU_1_DEGREE":"","EDU_2_INSTITUTION":"","EDU_2_START":"","EDU_2_END":"","EDU_2_DEGREE":"","EDU_1_BULLETS":"","EDU_2_BULLETS":"","QUAL_1_TEXT":"","QUAL_1_START":"","QUAL_1_END":"","QUAL_1_DETAIL":"","QUAL_2_TEXT":"","QUAL_2_START":"","QUAL_2_END":"","QUAL_2_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","CANDIDATE_SUMMARY":""}';
 var changeConsJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_1_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","INTERESTS_DETAIL":""}';
 var eaIndiaJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY_INTRO":"","EXP_SKILL_1":"","EXP_SKILL_2":"","EXP_SKILL_3":"","EXP_SKILL_4":"","EXP_SKILL_5":"","EXP_SKILL_6":"","LRR_SKILL_1":"","LRR_SKILL_2":"","LRR_SKILL_3":"","LRR_SKILL_4":"","LRR_SKILL_5":"","LRR_SKILL_6":"","LRR_SKILL_7":"","LRR_SKILL_8":"","LRR_SKILL_9":"","LRR_SKILL_10":"","LRR_SKILL_11":"","KEY_SKILL_1":"","KEY_SKILL_2":"","KEY_SKILL_3":"","KEY_SKILL_4":"","KEY_SKILL_5":"","KEY_SKILL_6":"","KEY_SKILL_7":"","KEY_SKILL_8":"","KEY_SKILL_9":"","KEY_SKILL_10":"","EXEC_OVERVIEW_BULLET_1":"","EXEC_OVERVIEW_BULLET_2":"","EXEC_OVERVIEW_BULLET_3":"","EXEC_OVERVIEW_BULLET_4":"","EXEC_OVERVIEW_BULLET_5":"","EXEC_OVERVIEW_BULLET_6":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","role_description":"","bullets":[""]}]}],"EDU_1_YEAR":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_1_EXTRA":"","EDU_2_YEAR":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","EDU_3_YEAR":"","EDU_3_INSTITUTION":"","EDU_3_LOCATION":"","EDU_3_DEGREE":"","EDU_3_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_2_YEAR":"","QUAL_2_TEXT":"","QUAL_3_YEAR":"","QUAL_3_TEXT":"","QUAL_4_YEAR":"","QUAL_4_TEXT":"","QUAL_5_YEAR":"","QUAL_5_TEXT":"","AFFIL_1_YEAR":"","AFFIL_1_TEXT":"","AFFIL_2_YEAR":"","AFFIL_2_TEXT":"","AFFIL_3_YEAR":"","AFFIL_3_TEXT":"","AFFIL_4_YEAR":"","AFFIL_4_TEXT":"","AFFIL_5_YEAR":"","AFFIL_5_TEXT":"","NATIONALITY":"","LANGUAGES":"","TECH_SKILLS":"","INTERESTS":"","volunteering":[{"dates":"","role":"","description":""}]}';
-var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"projects":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","degree":""}],"QUAL_1":"e.g. CPIM | Six Sigma Black Belt — copy FULL string verbatim","QUAL_2":"","QUAL_3":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","PROJECT_1_TITLE":"","PROJECT_1_CLIENT":"","PROJECT_1_DATE":"","PROJECT_1_DESCRIPTION":"","PROJECT_2_TITLE":"","PROJECT_2_CLIENT":"","PROJECT_2_DATE":"","PROJECT_2_DESCRIPTION":"","PROJECT_3_TITLE":"","PROJECT_3_CLIENT":"","PROJECT_3_DATE":"","PROJECT_3_DESCRIPTION":"","PROJECT_4_TITLE":"","PROJECT_4_CLIENT":"","PROJECT_4_DATE":"","PROJECT_4_DESCRIPTION":"","PROJECT_5_TITLE":"","PROJECT_5_CLIENT":"","PROJECT_5_DATE":"","PROJECT_5_DESCRIPTION":"","PROJECT_6_TITLE":"","PROJECT_6_CLIENT":"","PROJECT_6_DATE":"","PROJECT_6_DESCRIPTION":"","PROJECT_7_TITLE":"","PROJECT_7_CLIENT":"","PROJECT_7_DATE":"","PROJECT_7_DESCRIPTION":"","PROJECT_8_TITLE":"","PROJECT_8_CLIENT":"","PROJECT_8_DATE":"","PROJECT_8_DESCRIPTION":"","PROJECT_9_TITLE":"","PROJECT_9_CLIENT":"","PROJECT_9_DATE":"","PROJECT_9_DESCRIPTION":"","PROJECT_10_TITLE":"","PROJECT_10_CLIENT":"","PROJECT_10_DATE":"","PROJECT_10_DESCRIPTION":""}';
+var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"projects":[{"name":"","location":"","dates":"","roles":[{"role":"","function":"","role_dates":"","bullets":[""]}]}],"education":[{"years":"","institution":"","location":"","degree":""}],"QUAL_1":"ALL qualification items joined by pipe, e.g. SFC License Type 1 | CFA Level II (2017) | Piano Band 9 — copy FULL string verbatim, every item, never split across other fields","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","PROJECT_1_TITLE":"","PROJECT_1_CLIENT":"","PROJECT_1_DATE":"","PROJECT_1_DESCRIPTION":"","PROJECT_2_TITLE":"","PROJECT_2_CLIENT":"","PROJECT_2_DATE":"","PROJECT_2_DESCRIPTION":"","PROJECT_3_TITLE":"","PROJECT_3_CLIENT":"","PROJECT_3_DATE":"","PROJECT_3_DESCRIPTION":"","PROJECT_4_TITLE":"","PROJECT_4_CLIENT":"","PROJECT_4_DATE":"","PROJECT_4_DESCRIPTION":"","PROJECT_5_TITLE":"","PROJECT_5_CLIENT":"","PROJECT_5_DATE":"","PROJECT_5_DESCRIPTION":"","PROJECT_6_TITLE":"","PROJECT_6_CLIENT":"","PROJECT_6_DATE":"","PROJECT_6_DESCRIPTION":"","PROJECT_7_TITLE":"","PROJECT_7_CLIENT":"","PROJECT_7_DATE":"","PROJECT_7_DESCRIPTION":"","PROJECT_8_TITLE":"","PROJECT_8_CLIENT":"","PROJECT_8_DATE":"","PROJECT_8_DESCRIPTION":"","PROJECT_9_TITLE":"","PROJECT_9_CLIENT":"","PROJECT_9_DATE":"","PROJECT_9_DESCRIPTION":"","PROJECT_10_TITLE":"","PROJECT_10_CLIENT":"","PROJECT_10_DATE":"","PROJECT_10_DESCRIPTION":""}';
 var csJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var globalJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CURRENT_TITLE":"","SEARCH_TITLE":"","CLIENT_COMPANY":"","MONTH_YEAR":"","SUMMARY":"","COMPANY_1_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_1_BULLET_1":"","COMPANY_1_BULLET_2":"","COMPANY_1_BULLET_3":"","COMPANY_1_BULLET_4":"","COMPANY_1_BULLET_5":"","COMPANY_1_BULLET_6":"","COMPANY_1_BULLET_7":"","COMPANY_1_BULLET_8":"","COMPANY_1_BULLET_9":"","COMPANY_1_BULLET_10":"","COMPANY_2_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_2_BULLET_1":"","COMPANY_2_BULLET_2":"","COMPANY_2_BULLET_3":"","COMPANY_2_BULLET_4":"","COMPANY_2_BULLET_5":"","COMPANY_2_BULLET_6":"","COMPANY_2_BULLET_7":"","COMPANY_2_BULLET_8":"","COMPANY_2_BULLET_9":"","COMPANY_2_BULLET_10":"","COMPANY_3_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_3_BULLET_1":"","COMPANY_3_BULLET_2":"","COMPANY_3_BULLET_3":"","COMPANY_3_BULLET_4":"","COMPANY_3_BULLET_5":"","COMPANY_3_BULLET_6":"","COMPANY_3_BULLET_7":"","COMPANY_3_BULLET_8":"","COMPANY_3_BULLET_9":"","COMPANY_3_BULLET_10":"","COMPANY_4_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_4_BULLET_1":"","COMPANY_4_BULLET_2":"","COMPANY_4_BULLET_3":"","COMPANY_4_BULLET_4":"","COMPANY_4_BULLET_5":"","COMPANY_4_BULLET_6":"","COMPANY_4_BULLET_7":"","COMPANY_4_BULLET_8":"","COMPANY_4_BULLET_9":"","COMPANY_4_BULLET_10":"","COMPANY_5_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_5_BULLET_1":"","COMPANY_5_BULLET_2":"","COMPANY_5_BULLET_3":"","COMPANY_5_BULLET_4":"","COMPANY_5_BULLET_5":"","COMPANY_5_BULLET_6":"","COMPANY_5_BULLET_7":"","COMPANY_5_BULLET_8":"","COMPANY_5_BULLET_9":"","COMPANY_5_BULLET_10":"","COMPANY_6_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_6_BULLET_1":"","COMPANY_6_BULLET_2":"","COMPANY_6_BULLET_3":"","COMPANY_6_BULLET_4":"","COMPANY_6_BULLET_5":"","COMPANY_6_BULLET_6":"","COMPANY_6_BULLET_7":"","COMPANY_6_BULLET_8":"","COMPANY_6_BULLET_9":"","COMPANY_6_BULLET_10":"","COMPANY_7_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_7_BULLET_1":"","COMPANY_7_BULLET_2":"","COMPANY_7_BULLET_3":"","COMPANY_7_BULLET_4":"","COMPANY_7_BULLET_5":"","COMPANY_7_BULLET_6":"","COMPANY_7_BULLET_7":"","COMPANY_7_BULLET_8":"","COMPANY_7_BULLET_9":"","COMPANY_7_BULLET_10":"","COMPANY_8_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_8_BULLET_1":"","COMPANY_8_BULLET_2":"","COMPANY_8_BULLET_3":"","COMPANY_8_BULLET_4":"","COMPANY_8_BULLET_5":"","COMPANY_8_BULLET_6":"","COMPANY_8_BULLET_7":"","COMPANY_8_BULLET_8":"","COMPANY_8_BULLET_9":"","COMPANY_8_BULLET_10":"","COMPANY_9_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_9_BULLET_1":"","COMPANY_9_BULLET_2":"","COMPANY_9_BULLET_3":"","COMPANY_9_BULLET_4":"","COMPANY_9_BULLET_5":"","COMPANY_9_BULLET_6":"","COMPANY_9_BULLET_7":"","COMPANY_9_BULLET_8":"","COMPANY_9_BULLET_9":"","COMPANY_9_BULLET_10":"","COMPANY_10_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_10_BULLET_1":"","COMPANY_10_BULLET_2":"","COMPANY_10_BULLET_3":"","COMPANY_10_BULLET_4":"","COMPANY_10_BULLET_5":"","COMPANY_10_BULLET_6":"","COMPANY_10_BULLET_7":"","COMPANY_10_BULLET_8":"","COMPANY_10_BULLET_9":"","COMPANY_10_BULLET_10":"","COMPANY_11_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_11_BULLET_1":"","COMPANY_11_BULLET_2":"","COMPANY_11_BULLET_3":"","COMPANY_11_BULLET_4":"","COMPANY_11_BULLET_5":"","COMPANY_11_BULLET_6":"","COMPANY_11_BULLET_7":"","COMPANY_11_BULLET_8":"","COMPANY_11_BULLET_9":"","COMPANY_11_BULLET_10":"","COMPANY_12_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_12_BULLET_1":"","COMPANY_12_BULLET_2":"","COMPANY_12_BULLET_3":"","COMPANY_12_BULLET_4":"","COMPANY_12_BULLET_5":"","COMPANY_12_BULLET_6":"","COMPANY_12_BULLET_7":"","COMPANY_12_BULLET_8":"","COMPANY_12_BULLET_9":"","COMPANY_12_BULLET_10":"","COMPANY_13_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_13_BULLET_1":"","COMPANY_13_BULLET_2":"","COMPANY_13_BULLET_3":"","COMPANY_13_BULLET_4":"","COMPANY_13_BULLET_5":"","COMPANY_13_BULLET_6":"","COMPANY_13_BULLET_7":"","COMPANY_13_BULLET_8":"","COMPANY_13_BULLET_9":"","COMPANY_13_BULLET_10":"","COMPANY_14_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_14_BULLET_1":"","COMPANY_14_BULLET_2":"","COMPANY_14_BULLET_3":"","COMPANY_14_BULLET_4":"","COMPANY_14_BULLET_5":"","COMPANY_14_BULLET_6":"","COMPANY_14_BULLET_7":"","COMPANY_14_BULLET_8":"","COMPANY_14_BULLET_9":"","COMPANY_14_BULLET_10":"","COMPANY_15_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_15_BULLET_1":"","COMPANY_15_BULLET_2":"","COMPANY_15_BULLET_3":"","COMPANY_15_BULLET_4":"","COMPANY_15_BULLET_5":"","COMPANY_15_BULLET_6":"","COMPANY_15_BULLET_7":"","COMPANY_15_BULLET_8":"","COMPANY_15_BULLET_9":"","COMPANY_15_BULLET_10":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","AFFILIATION_2":"","AFFILIATION_2_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var _eaIndiaMonthYear = (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})();
@@ -4363,22 +4369,23 @@ FIELD-BY-FIELD INSTRUCTIONS:
    - For all roles at the same company, use the EXACT SAME company name string in COMPANY_N_NAME (this triggers automatic grouping in the template).
    - COMPANY_N_NAME: Full legal company name. IDENTICAL string for all roles at same company.
    - COMPANY_N_LOCATION: City, Country if provided; leave empty if not.
-   - COMPANY_N_DATES: Overall company tenure dates (e.g. "Mar 1996 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Present") for FIRST role at that company ONLY. Leave EMPTY for all subsequent roles at same company.
+   - COMPANY_N_DATES: Overall company tenure dates (e.g. "Mar 1996 – Present") for FIRST role at that company ONLY. Leave EMPTY for all subsequent roles at same company. ALWAYS use month-then-year order with a 3-letter month abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec) — e.g. "Mar 2016 – Aug 2017", NEVER "2016 Mar" or numeric "03/2016". Convert whatever order/format the CV uses (including "2026-05", "2026 May", "05/2026") into this standard "Mon YYYY" form.
    - COMPANY_N_ROLE: Exact job title as written.
    - COMPANY_N_FUNCTION: Department or function if listed, else empty.
-   - COMPANY_N_ROLE_DATES: Dates for THIS specific role only (e.g. "Dec 2025 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Present").
-   - COMPANY_N_BULLETS: All bullet points / achievements for this role, joined with | (pipe character). Copy text VERBATIM. Do NOT summarise.
-   - companies array: Group all roles at the same company under ONE entry. Each company has: name (full legal name), location, dates (overall tenure), roles array with: role (exact title), function (dept), role_dates (dates for this specific role — leave EMPTY STRING if the company has only ONE role, since dates already show in the company header), bullets (ALL achievements verbatim array). 9. PROJECT EXPERIENCES: Use projects array, same structure as companies array. Leave as empty array [] if no project experience found in CV.
+   - COMPANY_N_ROLE_DATES: Dates for THIS specific role only (e.g. "Dec 2025 – Present"). Same month-then-year format rule as COMPANY_N_DATES above.
+   - COMPANY_N_BULLETS: All bullet points / achievements for this role, joined with | (pipe character). Copy text VERBATIM except for two things: (1) if the source CV bolds specific words or phrases within a bullet (company names, deal tickers, key terms, etc.), preserve that by wrapping the exact same bolded text in double asterisks, e.g. "Joint Sponsor for **Victory Giant Technology**'s ~US$3bn Hong Kong IPO (**2476.HK**)" — do this ONLY for text the CV itself shows as bold, never add emphasis that wasn't there; (2) ensure every bullet ends with terminal punctuation (a period, or keep the CV's own "!" or "?" if present) — add a period if the source bullet has none, but never add one if the bullet already ends in a colon (since that indicates more content follows) or already has terminal punctuation. Do NOT summarise or rephrase the wording itself.
+   - companies array: Group all roles at the same company under ONE entry. Each company has: name (full legal name), location, dates (overall tenure, same "Mon YYYY" format as above), roles array with: role (exact title), function (dept), role_dates (dates for this specific role — leave EMPTY STRING if the company has only ONE role, since dates already show in the company header; same "Mon YYYY" format), bullets (ALL achievements verbatim array, with the same bold-preservation via ** and terminal-punctuation rules as COMPANY_N_BULLETS above). 9. PROJECT EXPERIENCES: Use projects array, same structure as companies array. Leave as empty array [] if no project experience found in CV.
 
-9. EDUCATION: Build an "education" array. Each entry = {"years": "YYYY – YYYY", "institution": "Full institution name", "degree": "Full degree description"}. Include ALL education entries. Most recent first. Example: "education": [{"years": "1988 – 1992", "institution": "Shanghai Jiaotong University", "degree": "Bachelor of Science in Polymer Science"}]
+9. EDUCATION: Build an "education" array. Each entry = {"years": "YYYY – YYYY", "institution": "Full institution name", "location": "City/Country if stated, else empty", "degree": "Full degree description"}. Include ALL education entries. Most recent first. Example: "education": [{"years": "1988 – 1992", "institution": "Shanghai Jiaotong University", "location": "Shanghai, China", "degree": "Bachelor of Science in Polymer Science"}]
    - years: year range only e.g. "1988 – 1992"
-   - institution: full institution name only (no location)
+   - institution: full institution name only, no location (location is now its own field, see above)
+   - location: City and/or Country as stated in the CV for that institution. Leave "" if genuinely not stated anywhere in the CV — do not guess a location that isn't written down.
    - degree: complete degree/qualification description
-   - OLD FIELDS EDU_1_YEARSÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ1992")
+   - OLD FIELDS EDU_1_YEARS…1992")
    - EDU_1_INSTITUTION...: Full institution name
    - EDU_1_DEGREE...: Degree or qualification name
 
-10. QUAL_1: CRITICAL — The pipe character | is NOT a separator — it is PART of the qualification string. Copy the ENTIRE qualifications/certifications string VERBATIM including everything after each pipe. The CV may list qualifications at the top AND again in a certifications section — always extract the MOST COMPLETE version. E.g. input "CPIM (Certified in Production and Inventory Management) | Six Sigma Black Belt" → output EXACTLY "CPIM (Certified in Production and Inventory Management) | Six Sigma Black Belt". Do NOT stop at the pipe. Do NOT truncate.
+10. QUAL_1: Build ONE string containing EVERY qualification/certification/award item listed anywhere in the CV (commonly under a heading like "Honors & Certificate", "Certifications", "Awards", regardless of whether the CV displays them in one column or several side-by-side columns — read across ALL columns and rows, do not stop after the first one). Join the items together with " | " as the separator between DISTINCT items, e.g. "SFC License Type 1, 4, 6 (Passed Paper 1, 16, 17) | Passed CFA Level II Exam (2017) | Piano Band 9 Test of Chinese Musicians Association". Copy each item's own text VERBATIM, including any year shown, and do NOT stop at the first pipe-like separator you encounter in the source — if the CV lists nine items, QUAL_1 must contain all nine, not just the first. Do not truncate or drop any item for length.
 11. NATIONALITY: Exact nationality as stated; leave empty if not provided.
 12. LANGUAGES: Languages with proficiency levels as stated; leave empty if not provided.
 13. INTERESTS: As stated; leave empty if not provided.
@@ -8205,6 +8212,55 @@ async function downloadHistory(index) {
         if (!_apCv.MONTH_YEAR && _apCv.PROFILE_MONTH) _apCv.MONTH_YEAR = _apCv.PROFILE_MONTH;
         // Ensure companies array is present (docxtemplater loops over it)
         _apCv.companies = _apCv.companies || [];
+        // projects array — empty if not present (moved up so the shared normalizer below covers both)
+        _apCv.projects = _apCv.projects || [];
+
+        // Pre-render normalization: docxtemplater's native {{#companies}}/{{#bullets}} loops insert
+        // values verbatim with no hook for post-processing per-value, so date format and full-stop
+        // enforcement must happen here, on the raw data, before .render() is ever called.
+        (function() {
+          var _apMonths = {january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec',jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',sept:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
+          var _apMonthNums = {'1':'Jan','01':'Jan','2':'Feb','02':'Feb','3':'Mar','03':'Mar','4':'Apr','04':'Apr','5':'May','05':'May','6':'Jun','06':'Jun','7':'Jul','07':'Jul','8':'Aug','08':'Aug','9':'Sep','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
+          function normOneDate(s) {
+            if (!s) return '';
+            s = String(s).trim();
+            var m1 = s.match(/^(\d{4})[\s\-\/](\d{1,2})$/);
+            if (m1) { var mn1 = _apMonthNums[m1[2]]; if (mn1) return mn1 + ' ' + m1[1]; }
+            var m2 = s.match(/^(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)$/i);
+            if (m2) { var mn2 = _apMonths[m2[2].toLowerCase()]; if (mn2) return mn2 + ' ' + m2[1]; }
+            var m3 = s.match(/^(\d{1,2})[\/\-](\d{4})$/);
+            if (m3) { var mn3 = _apMonthNums[m3[1]]; if (mn3) return mn3 + ' ' + m3[2]; }
+            s = s.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b/gi, function(m){ return _apMonths[m.toLowerCase()]||m; });
+            return s;
+          }
+          function normDateRangeStr(s) {
+            if (!s) return '';
+            var str = String(s);
+            var parts = str.split(/\s*[\u2013\u2014-]+\s*/);
+            if (parts.length === 2) {
+              var endPart = /present|now/i.test(parts[1]) ? parts[1].trim() : normOneDate(parts[1]);
+              return normOneDate(parts[0]) + ' \u2013 ' + endPart;
+            }
+            return normOneDate(str);
+          }
+          function ensureFullStop(t) {
+            var s = String(t || '').replace(/\s+$/, '');
+            if (!s) return s;
+            if (/[.!?:\u2026]$/.test(s)) return s;
+            return s + '.';
+          }
+          [_apCv.companies, _apCv.projects].forEach(function(arr){
+            (arr || []).forEach(function(co){
+              if (!co) return;
+              if (co.dates) co.dates = normDateRangeStr(co.dates);
+              (co.roles || []).forEach(function(r){
+                if (!r) return;
+                if (r.role_dates) r.role_dates = normDateRangeStr(r.role_dates);
+                if (Array.isArray(r.bullets)) r.bullets = r.bullets.map(function(b){ return ensureFullStop(b); });
+              });
+            });
+          });
+        })();
         // education array — build from flat EDU fields if not present
         if (!_apCv.education || !_apCv.education.length) {
           _apCv.education = [];
@@ -8223,11 +8279,18 @@ async function downloadHistory(index) {
             });
           }
         }
-        // projects array — empty if not present
-        _apCv.projects = _apCv.projects || [];
         // Qual fields
         if (!_apCv.QUAL_1 && _apCv.QUAL_1_TEXT) _apCv.QUAL_1 = _apCv.QUAL_1_TEXT;
         if (!_apCv.QUAL_YEAR && _apCv.QUAL_1_START) _apCv.QUAL_YEAR = _apCv.QUAL_1_START;
+        // Safety net: if the AI still splits qualifications across QUAL_2/QUAL_3 despite the prompt
+        // instruction (there's no template slot for those, so anything there would be silently lost),
+        // fold them into QUAL_1 before processing.
+        (function() {
+          var _extras = [_apCv.QUAL_2, _apCv.QUAL_3].filter(function(v){ return v && String(v).trim(); });
+          if (_extras.length) {
+            _apCv.QUAL_1 = [(_apCv.QUAL_1 || '').trim()].concat(_extras.map(function(v){return String(v).trim();})).filter(Boolean).join(' | ');
+          }
+        })();
         // Inject QUAL_1 as bold SHBullets paragraphs split on '|'
         (function() {
           var _qd = _apZip.files['word/document.xml'].asText();
@@ -8235,7 +8298,7 @@ async function downloadHistory(index) {
           if (_q1) {
             var _qItems = _q1.split('|').map(function(s){return s.trim();}).filter(Boolean);
             var _qXml = _qItems.map(function(item){
-              return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0"/></w:pPr>'
+              return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0" w:hanging="0"/></w:pPr>'
                    + '<w:r><w:rPr><w:b/><w:bCs/></w:rPr>'
                    + '<w:t xml:space="preserve">' + item.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</w:t>'
                    + '</w:r></w:p>';
@@ -8271,7 +8334,7 @@ async function downloadHistory(index) {
             return s;
           }).filter(Boolean);
           if (_sumBuls.length > 1) {
-            var _BPP = '<w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0"/></w:pPr>';
+            var _BPP = '<w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0" w:hanging="0"/></w:pPr>';
             var _BRP = '';
             function _xe(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
             var _sumXml = _sumBuls.map(function(b){
@@ -8302,6 +8365,30 @@ async function downloadHistory(index) {
             nullGetter: function() { return ''; }
           });
           _apDoc.render(_apCv);
+          // Post-render: convert **bold** markup (added by the prompt for text the source CV itself
+          // bolds) into real bold runs. docxtemplater's native {{.}} loop just inserts escaped plain
+          // text with no per-value hook, so this has to happen on the rendered XML directly, splitting
+          // any run whose text contains ** into multiple runs.
+          (function() {
+            var _apOutZip = _apDoc.getZip();
+            var _apOutXml = _apOutZip.files['word/document.xml'].asText();
+            if (_apOutXml.indexOf('**') === -1) return;
+            _apOutXml = _apOutXml.replace(/<w:r>(?:<w:rPr>([\s\S]*?)<\/w:rPr>)?<w:t([^>]*)>([^<]*)<\/w:t><\/w:r>/g, function(full, rPrInner, tAttrs, text) {
+              if (text.indexOf('**') === -1) return full;
+              var segs = text.split(/\*\*(.+?)\*\*/g);
+              var runs = '';
+              for (var i = 0; i < segs.length; i++) {
+                if (!segs[i]) continue;
+                var isBold = (i % 2 === 1);
+                var rPr = rPrInner || '';
+                if (isBold && rPr.indexOf('<w:b') === -1) rPr += '<w:b/><w:bCs/>';
+                else if (isBold) rPr = rPr; // already bold, leave as-is
+                runs += '<w:r>' + (rPr ? '<w:rPr>' + rPr + '</w:rPr>' : '') + '<w:t' + tAttrs + '>' + segs[i] + '</w:t></w:r>';
+              }
+              return runs || full;
+            });
+            _apOutZip.file('word/document.xml', _apOutXml);
+          })();
           out = _apDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
         } catch(_apErr) {
           console.error('[APAC] docxtemplater error:', _apErr.message);
