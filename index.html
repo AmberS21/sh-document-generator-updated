@@ -2537,138 +2537,6 @@ function buildGlobalSummary(summaryText) {
   return xml;
 }
 
-// APAC Candidate Profile (English) — dedicated business experience builder.
-// Built as its own function (not sharing buildGlobalBizExp, which several OTHER templates still rely
-// on) specifically to add: bold-span preservation via **markup**, a full-stop safety net, and a date
-// order/format safety net — without risking any change to the other templates' shared behavior.
-function buildApacProfileBizExp(cv) {
-  var xml = '';
-  var RPN = '<w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr>';
-  var RBL = '<w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/><w:color w:val="002060"/></w:rPr>';
-  var RBL_B = '<w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/><w:color w:val="002060"/><w:b/><w:bCs/></w:rPr>';
-  var RBU = '<w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/><w:color w:val="2C2E82" w:themeColor="accent1"/></w:rPr>';
-
-  var _AP_MONTHS = {january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec',jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',sept:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
-  var _AP_MONTH_NUMS = {'1':'Jan','01':'Jan','2':'Feb','02':'Feb','3':'Mar','03':'Mar','4':'Apr','04':'Apr','5':'May','05':'May','6':'Jun','06':'Jun','7':'Jul','07':'Jul','8':'Aug','08':'Aug','9':'Sep','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
-  function _apNormOneDate(s) {
-    if (!s) return '';
-    s = s.trim();
-    // "YYYY Mon" or "YYYY-MM" or "YYYY/MM" numeric -> "Mon YYYY"
-    var m1 = s.match(/^(\d{4})[\s\-\/](\d{1,2})$/);
-    if (m1) { var mn1 = _AP_MONTH_NUMS[m1[2]]; if (mn1) return mn1 + ' ' + m1[1]; }
-    var m2 = s.match(/^(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)$/i);
-    if (m2) { var mn2 = _AP_MONTHS[m2[2].toLowerCase()]; if (mn2) return mn2 + ' ' + m2[1]; }
-    // numeric "MM/YYYY" or "MM-YYYY" -> "Mon YYYY"
-    var m3 = s.match(/^(\d{1,2})[\/\-](\d{4})$/);
-    if (m3) { var mn3 = _AP_MONTH_NUMS[m3[1]]; if (mn3) return mn3 + ' ' + m3[2]; }
-    // full/short month name already in "Mon YYYY" or "Month YYYY" order -> just normalize the month spelling
-    s = s.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b/gi, function(m){ return _AP_MONTHS[m.toLowerCase()]||m; });
-    return s;
-  }
-  function apNormDateRange(s) {
-    if (!s) return '';
-    if (/present/i.test(s) && !/[\u2013\u2014-]/.test(s.replace(/present/i,''))) {
-      // handle a lone "Present" or similar with no explicit range separator oddities — fall through normally
-    }
-    var parts = s.split(/\s*[\u2013\u2014-]+\s*/);
-    if (parts.length === 2) {
-      var endPart = /present/i.test(parts[1]) ? 'Present' : _apNormOneDate(parts[1]);
-      return _apNormOneDate(parts[0]) + ' \u2013 ' + endPart;
-    }
-    return _apNormOneDate(s);
-  }
-
-  function gXmlEscAp(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  // Parses **bold** markup in text and returns an array of {text, bold} segments.
-  function _apParseBoldSegments(text) {
-    var segments = [];
-    var parts = (text || '').split(/\*\*(.+?)\*\*/g);
-    // split() with a capturing group alternates: [plain, bold, plain, bold, ..., plain]
-    for (var i = 0; i < parts.length; i++) {
-      if (!parts[i]) continue;
-      segments.push({ text: parts[i], bold: (i % 2 === 1) });
-    }
-    if (!segments.length) segments.push({ text: '', bold: false });
-    return segments;
-  }
-
-  // Safety net: ensure a bullet ends with terminal punctuation, unless it ends in a colon (more
-  // content follows) or already has its own terminal punctuation — independent of what the AI did.
-  function _apEnsureFullStop(text) {
-    var t = (text || '').replace(/\s+$/, '');
-    if (!t) return t;
-    if (/[.!?:\u2026]$/.test(t)) return t;
-    return t + '.';
-  }
-
-  function tblRow(nameLoc, roleFunc, dates) {
-    function cell(w, text) {
-      return '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>'
-           + '<w:tcBorders><w:bottom w:val="single" w:sz="4" w:space="0" w:color="C8C8DC"/></w:tcBorders>'
-           + '</w:tcPr>'
-           + '<w:p><w:pPr><w:spacing w:after="60"/>' + RPN + '</w:pPr>'
-           + '<w:r>' + RBU + '<w:t xml:space="preserve">' + gXmlEscAp(text) + '</w:t></w:r>'
-           + '</w:p></w:tc>';
-    }
-    return '<w:tbl>'
-         + '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/>'
-         + '<w:tblBorders>'
-         + '<w:top w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
-         + '<w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
-         + '<w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
-         + '<w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
-         + '<w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
-         + '</w:tblBorders>'
-         + '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>'
-         + '</w:tblPr>'
-         + '<w:tblGrid><w:gridCol w:w="3436"/><w:gridCol w:w="3011"/><w:gridCol w:w="2579"/></w:tblGrid>'
-         + '<w:tr>' + cell('3500', nameLoc) + cell('3000', roleFunc) + cell('2526', dates) + '</w:tr>'
-         + '</w:tbl>';
-  }
-
-  function bulletPara(rawText) {
-    var withFullStop = _apEnsureFullStop(rawText);
-    var segs = _apParseBoldSegments(withFullStop);
-    var runsXml = segs.map(function(seg){
-      return '<w:r>' + (seg.bold ? RBL_B : RBL) + '<w:t xml:space="preserve">' + gXmlEscAp(seg.text) + '</w:t></w:r>';
-    }).join('');
-    return '<w:p>'
-         + '<w:pPr><w:pStyle w:val="ListParagraph"/>'
-         + '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="8"/></w:numPr>'
-         + '<w:spacing w:after="40"/>' + RPN + '</w:pPr>'
-         + runsXml
-         + '</w:p>';
-  }
-
-  var spacerSmall = '<w:p><w:pPr><w:spacing w:after="60"/>' + RPN + '</w:pPr></w:p>';
-  var spacerLarge = '<w:p><w:pPr><w:spacing w:after="120"/>' + RPN + '</w:pPr></w:p>';
-
-  // Support up to 20 companies
-  for (var n = 1; n <= 20; n++) {
-    var name = cv['COMPANY_' + n + '_NAME'];
-    if (!name || !name.trim()) break;
-    var loc      = cv['COMPANY_' + n + '_LOCATION'] || '';
-    var role     = cv['COMPANY_' + n + '_ROLE']     || '';
-    var func     = cv['COMPANY_' + n + '_FUNCTION'] || '';
-    var dates    = apNormDateRange(cv['COMPANY_' + n + '_DATES'] || '');
-    var nameLoc  = loc ? name + ', ' + loc : name;
-    var roleFunc = func ? role + ', ' + func : role;
-
-    xml += tblRow(nameLoc, roleFunc, dates);
-    xml += spacerSmall;
-
-    // Bullets — support up to 10 per company
-    for (var b = 1; b <= 10; b++) {
-      var bullet = cv['COMPANY_' + n + '_BULLET_' + b];
-      if (!bullet || !bullet.trim()) break;
-      xml += bulletPara(bullet);
-    }
-    xml += spacerLarge;
-  }
-  return xml;
-}
-
 function buildGlobalBizExp(cv) {
   var xml = '';
   var RPN = '<w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr>';
@@ -8343,6 +8211,55 @@ async function downloadHistory(index) {
         if (!_apCv.MONTH_YEAR && _apCv.PROFILE_MONTH) _apCv.MONTH_YEAR = _apCv.PROFILE_MONTH;
         // Ensure companies array is present (docxtemplater loops over it)
         _apCv.companies = _apCv.companies || [];
+        // projects array — empty if not present (moved up so the shared normalizer below covers both)
+        _apCv.projects = _apCv.projects || [];
+
+        // Pre-render normalization: docxtemplater's native {{#companies}}/{{#bullets}} loops insert
+        // values verbatim with no hook for post-processing per-value, so date format and full-stop
+        // enforcement must happen here, on the raw data, before .render() is ever called.
+        (function() {
+          var _apMonths = {january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec',jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',sept:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
+          var _apMonthNums = {'1':'Jan','01':'Jan','2':'Feb','02':'Feb','3':'Mar','03':'Mar','4':'Apr','04':'Apr','5':'May','05':'May','6':'Jun','06':'Jun','7':'Jul','07':'Jul','8':'Aug','08':'Aug','9':'Sep','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
+          function normOneDate(s) {
+            if (!s) return '';
+            s = String(s).trim();
+            var m1 = s.match(/^(\d{4})[\s\-\/](\d{1,2})$/);
+            if (m1) { var mn1 = _apMonthNums[m1[2]]; if (mn1) return mn1 + ' ' + m1[1]; }
+            var m2 = s.match(/^(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)$/i);
+            if (m2) { var mn2 = _apMonths[m2[2].toLowerCase()]; if (mn2) return mn2 + ' ' + m2[1]; }
+            var m3 = s.match(/^(\d{1,2})[\/\-](\d{4})$/);
+            if (m3) { var mn3 = _apMonthNums[m3[1]]; if (mn3) return mn3 + ' ' + m3[2]; }
+            s = s.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b/gi, function(m){ return _apMonths[m.toLowerCase()]||m; });
+            return s;
+          }
+          function normDateRangeStr(s) {
+            if (!s) return '';
+            var str = String(s);
+            var parts = str.split(/\s*[\u2013\u2014-]+\s*/);
+            if (parts.length === 2) {
+              var endPart = /present|now/i.test(parts[1]) ? parts[1].trim() : normOneDate(parts[1]);
+              return normOneDate(parts[0]) + ' \u2013 ' + endPart;
+            }
+            return normOneDate(str);
+          }
+          function ensureFullStop(t) {
+            var s = String(t || '').replace(/\s+$/, '');
+            if (!s) return s;
+            if (/[.!?:\u2026]$/.test(s)) return s;
+            return s + '.';
+          }
+          [_apCv.companies, _apCv.projects].forEach(function(arr){
+            (arr || []).forEach(function(co){
+              if (!co) return;
+              if (co.dates) co.dates = normDateRangeStr(co.dates);
+              (co.roles || []).forEach(function(r){
+                if (!r) return;
+                if (r.role_dates) r.role_dates = normDateRangeStr(r.role_dates);
+                if (Array.isArray(r.bullets)) r.bullets = r.bullets.map(function(b){ return ensureFullStop(b); });
+              });
+            });
+          });
+        })();
         // education array — build from flat EDU fields if not present
         if (!_apCv.education || !_apCv.education.length) {
           _apCv.education = [];
@@ -8361,8 +8278,6 @@ async function downloadHistory(index) {
             });
           }
         }
-        // projects array — empty if not present
-        _apCv.projects = _apCv.projects || [];
         // Qual fields
         if (!_apCv.QUAL_1 && _apCv.QUAL_1_TEXT) _apCv.QUAL_1 = _apCv.QUAL_1_TEXT;
         if (!_apCv.QUAL_YEAR && _apCv.QUAL_1_START) _apCv.QUAL_YEAR = _apCv.QUAL_1_START;
@@ -8440,6 +8355,30 @@ async function downloadHistory(index) {
             nullGetter: function() { return ''; }
           });
           _apDoc.render(_apCv);
+          // Post-render: convert **bold** markup (added by the prompt for text the source CV itself
+          // bolds) into real bold runs. docxtemplater's native {{.}} loop just inserts escaped plain
+          // text with no per-value hook, so this has to happen on the rendered XML directly, splitting
+          // any run whose text contains ** into multiple runs.
+          (function() {
+            var _apOutZip = _apDoc.getZip();
+            var _apOutXml = _apOutZip.files['word/document.xml'].asText();
+            if (_apOutXml.indexOf('**') === -1) return;
+            _apOutXml = _apOutXml.replace(/<w:r>(?:<w:rPr>([\s\S]*?)<\/w:rPr>)?<w:t([^>]*)>([^<]*)<\/w:t><\/w:r>/g, function(full, rPrInner, tAttrs, text) {
+              if (text.indexOf('**') === -1) return full;
+              var segs = text.split(/\*\*(.+?)\*\*/g);
+              var runs = '';
+              for (var i = 0; i < segs.length; i++) {
+                if (!segs[i]) continue;
+                var isBold = (i % 2 === 1);
+                var rPr = rPrInner || '';
+                if (isBold && rPr.indexOf('<w:b') === -1) rPr += '<w:b/><w:bCs/>';
+                else if (isBold) rPr = rPr; // already bold, leave as-is
+                runs += '<w:r>' + (rPr ? '<w:rPr>' + rPr + '</w:rPr>' : '') + '<w:t' + tAttrs + '>' + segs[i] + '</w:t></w:r>';
+              }
+              return runs || full;
+            });
+            _apOutZip.file('word/document.xml', _apOutXml);
+          })();
           out = _apDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
         } catch(_apErr) {
           console.error('[APAC] docxtemplater error:', _apErr.message);
@@ -8459,7 +8398,7 @@ async function downloadHistory(index) {
         var _sumXml = buildGlobalSummary(item.content.SUMMARY || '');
         _docXml = _docXml.replace(_SUMMARY_PARA, _sumXml);
 
-        var _bizXml = (item.template === 'apac-profile') ? buildApacProfileBizExp(item.content) : buildGlobalBizExp(item.content);
+        var _bizXml = buildGlobalBizExp(item.content);
         _docXml = _docXml.replace(_BE_PARA, _bizXml);
 
         zip.file('word/document.xml', _docXml);
