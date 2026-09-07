@@ -8298,7 +8298,7 @@ async function downloadHistory(index) {
           if (_q1) {
             var _qItems = _q1.split('|').map(function(s){return s.trim();}).filter(Boolean);
             var _qXml = _qItems.map(function(item){
-              return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0"/></w:pPr>'
+              return '<w:p><w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0" w:hanging="0"/></w:pPr>'
                    + '<w:r><w:rPr><w:b/><w:bCs/></w:rPr>'
                    + '<w:t xml:space="preserve">' + item.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</w:t>'
                    + '</w:r></w:p>';
@@ -8334,7 +8334,7 @@ async function downloadHistory(index) {
             return s;
           }).filter(Boolean);
           if (_sumBuls.length > 1) {
-            var _BPP = '<w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0"/></w:pPr>';
+            var _BPP = '<w:pPr><w:pStyle w:val="SHBullets"/><w:ind w:left="0" w:hanging="0"/></w:pPr>';
             var _BRP = '';
             function _xe(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
             var _sumXml = _sumBuls.map(function(b){
