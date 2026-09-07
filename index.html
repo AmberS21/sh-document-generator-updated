@@ -2244,13 +2244,18 @@ function buildEaIndiaRegBizExp(companies) {
   var xml = '';
   function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   var _MONTHS = {january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec',jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',sept:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
+  var _MONTH_NUMS = {'1':'Jan','01':'Jan','2':'Feb','02':'Feb','3':'Mar','03':'Mar','4':'Apr','04':'Apr','5':'May','05':'May','6':'Jun','06':'Jun','7':'Jul','07':'Jul','8':'Aug','08':'Aug','9':'Sep','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
   function normDate(s) {
     if (!s) return '';
     s = s.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b/gi, function(m){ return _MONTHS[m.toLowerCase()]||m; });
     s = s.replace(/\b(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, function(m, yr, mo){ return mo + ' ' + yr; });
+    // Safety net: numeric MM/YYYY or MM/YY dates (e.g. "04/2016", "04/16") that the AI didn't convert —
+    // catches cases the prompt instruction alone might miss, regardless of source formatting.
+    s = s.replace(/\b(\d{1,2})\/(\d{4})\b/g, function(m, mo, yr){ var mn = _MONTH_NUMS[mo]; return mn ? (mn + ' ' + yr) : m; });
+    s = s.replace(/\b(\d{1,2})\/(\d{2})\b/g, function(m, mo, yy){ var mn = _MONTH_NUMS[mo]; if (!mn) return m; var yyNum = parseInt(yy,10); var fullYr = (yyNum <= 30 ? 2000 : 1900) + yyNum; return mn + ' ' + fullYr; });
     return s;
   }
-  function normDateRange(s) {
+function normDateRange(s) {
     if (!s) return '';
     var parts = s.split(/\s*[\u2013\u2014-]+\s*/);
     if (parts.length === 2) return normDate(parts[0].trim()) + ' \u2013 ' + normDate(parts[1].trim());
@@ -2528,6 +2533,138 @@ function buildGlobalSummary(summaryText) {
          + '<w:r>' + RBL
          + '<w:t xml:space="preserve">' + gXmlEsc(lines[i]) + '</w:t>'
          + '</w:r></w:p>';
+  }
+  return xml;
+}
+
+// APAC Candidate Profile (English) — dedicated business experience builder.
+// Built as its own function (not sharing buildGlobalBizExp, which several OTHER templates still rely
+// on) specifically to add: bold-span preservation via **markup**, a full-stop safety net, and a date
+// order/format safety net — without risking any change to the other templates' shared behavior.
+function buildApacProfileBizExp(cv) {
+  var xml = '';
+  var RPN = '<w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/></w:rPr>';
+  var RBL = '<w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/><w:color w:val="002060"/></w:rPr>';
+  var RBL_B = '<w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/><w:color w:val="002060"/><w:b/><w:bCs/></w:rPr>';
+  var RBU = '<w:rPr><w:rFonts w:ascii="Raleway" w:hAnsi="Raleway"/><w:color w:val="2C2E82" w:themeColor="accent1"/></w:rPr>';
+
+  var _AP_MONTHS = {january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec',jan:'Jan',feb:'Feb',mar:'Mar',apr:'Apr',jun:'Jun',jul:'Jul',aug:'Aug',sep:'Sep',sept:'Sep',oct:'Oct',nov:'Nov',dec:'Dec'};
+  var _AP_MONTH_NUMS = {'1':'Jan','01':'Jan','2':'Feb','02':'Feb','3':'Mar','03':'Mar','4':'Apr','04':'Apr','5':'May','05':'May','6':'Jun','06':'Jun','7':'Jul','07':'Jul','8':'Aug','08':'Aug','9':'Sep','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
+  function _apNormOneDate(s) {
+    if (!s) return '';
+    s = s.trim();
+    // "YYYY Mon" or "YYYY-MM" or "YYYY/MM" numeric -> "Mon YYYY"
+    var m1 = s.match(/^(\d{4})[\s\-\/](\d{1,2})$/);
+    if (m1) { var mn1 = _AP_MONTH_NUMS[m1[2]]; if (mn1) return mn1 + ' ' + m1[1]; }
+    var m2 = s.match(/^(\d{4})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)$/i);
+    if (m2) { var mn2 = _AP_MONTHS[m2[2].toLowerCase()]; if (mn2) return mn2 + ' ' + m2[1]; }
+    // numeric "MM/YYYY" or "MM-YYYY" -> "Mon YYYY"
+    var m3 = s.match(/^(\d{1,2})[\/\-](\d{4})$/);
+    if (m3) { var mn3 = _AP_MONTH_NUMS[m3[1]]; if (mn3) return mn3 + ' ' + m3[2]; }
+    // full/short month name already in "Mon YYYY" or "Month YYYY" order -> just normalize the month spelling
+    s = s.replace(/\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b/gi, function(m){ return _AP_MONTHS[m.toLowerCase()]||m; });
+    return s;
+  }
+  function apNormDateRange(s) {
+    if (!s) return '';
+    if (/present/i.test(s) && !/[\u2013\u2014-]/.test(s.replace(/present/i,''))) {
+      // handle a lone "Present" or similar with no explicit range separator oddities — fall through normally
+    }
+    var parts = s.split(/\s*[\u2013\u2014-]+\s*/);
+    if (parts.length === 2) {
+      var endPart = /present/i.test(parts[1]) ? 'Present' : _apNormOneDate(parts[1]);
+      return _apNormOneDate(parts[0]) + ' \u2013 ' + endPart;
+    }
+    return _apNormOneDate(s);
+  }
+
+  function gXmlEscAp(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // Parses **bold** markup in text and returns an array of {text, bold} segments.
+  function _apParseBoldSegments(text) {
+    var segments = [];
+    var parts = (text || '').split(/\*\*(.+?)\*\*/g);
+    // split() with a capturing group alternates: [plain, bold, plain, bold, ..., plain]
+    for (var i = 0; i < parts.length; i++) {
+      if (!parts[i]) continue;
+      segments.push({ text: parts[i], bold: (i % 2 === 1) });
+    }
+    if (!segments.length) segments.push({ text: '', bold: false });
+    return segments;
+  }
+
+  // Safety net: ensure a bullet ends with terminal punctuation, unless it ends in a colon (more
+  // content follows) or already has its own terminal punctuation — independent of what the AI did.
+  function _apEnsureFullStop(text) {
+    var t = (text || '').replace(/\s+$/, '');
+    if (!t) return t;
+    if (/[.!?:\u2026]$/.test(t)) return t;
+    return t + '.';
+  }
+
+  function tblRow(nameLoc, roleFunc, dates) {
+    function cell(w, text) {
+      return '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>'
+           + '<w:tcBorders><w:bottom w:val="single" w:sz="4" w:space="0" w:color="C8C8DC"/></w:tcBorders>'
+           + '</w:tcPr>'
+           + '<w:p><w:pPr><w:spacing w:after="60"/>' + RPN + '</w:pPr>'
+           + '<w:r>' + RBU + '<w:t xml:space="preserve">' + gXmlEscAp(text) + '</w:t></w:r>'
+           + '</w:p></w:tc>';
+    }
+    return '<w:tbl>'
+         + '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/>'
+         + '<w:tblBorders>'
+         + '<w:top w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
+         + '<w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
+         + '<w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
+         + '<w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
+         + '<w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>'
+         + '</w:tblBorders>'
+         + '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>'
+         + '</w:tblPr>'
+         + '<w:tblGrid><w:gridCol w:w="3436"/><w:gridCol w:w="3011"/><w:gridCol w:w="2579"/></w:tblGrid>'
+         + '<w:tr>' + cell('3500', nameLoc) + cell('3000', roleFunc) + cell('2526', dates) + '</w:tr>'
+         + '</w:tbl>';
+  }
+
+  function bulletPara(rawText) {
+    var withFullStop = _apEnsureFullStop(rawText);
+    var segs = _apParseBoldSegments(withFullStop);
+    var runsXml = segs.map(function(seg){
+      return '<w:r>' + (seg.bold ? RBL_B : RBL) + '<w:t xml:space="preserve">' + gXmlEscAp(seg.text) + '</w:t></w:r>';
+    }).join('');
+    return '<w:p>'
+         + '<w:pPr><w:pStyle w:val="ListParagraph"/>'
+         + '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="8"/></w:numPr>'
+         + '<w:spacing w:after="40"/>' + RPN + '</w:pPr>'
+         + runsXml
+         + '</w:p>';
+  }
+
+  var spacerSmall = '<w:p><w:pPr><w:spacing w:after="60"/>' + RPN + '</w:pPr></w:p>';
+  var spacerLarge = '<w:p><w:pPr><w:spacing w:after="120"/>' + RPN + '</w:pPr></w:p>';
+
+  // Support up to 20 companies
+  for (var n = 1; n <= 20; n++) {
+    var name = cv['COMPANY_' + n + '_NAME'];
+    if (!name || !name.trim()) break;
+    var loc      = cv['COMPANY_' + n + '_LOCATION'] || '';
+    var role     = cv['COMPANY_' + n + '_ROLE']     || '';
+    var func     = cv['COMPANY_' + n + '_FUNCTION'] || '';
+    var dates    = apNormDateRange(cv['COMPANY_' + n + '_DATES'] || '');
+    var nameLoc  = loc ? name + ', ' + loc : name;
+    var roleFunc = func ? role + ', ' + func : role;
+
+    xml += tblRow(nameLoc, roleFunc, dates);
+    xml += spacerSmall;
+
+    // Bullets — support up to 10 per company
+    for (var b = 1; b <= 10; b++) {
+      var bullet = cv['COMPANY_' + n + '_BULLET_' + b];
+      if (!bullet || !bullet.trim()) break;
+      xml += bulletPara(bullet);
+    }
+    xml += spacerLarge;
   }
   return xml;
 }
@@ -3573,7 +3710,8 @@ Preserve the CV's original chronological order in the output array — the earli
 - company.dates: The OVERALL tenure across ALL roles at THIS company only — earliest start date to latest end date AMONG THIS COMPANY'S OWN ROLES. CRITICAL: never borrow or carry over a date from a different, adjacent company entry — each company's dates must come exclusively from that company's own role_dates values, computed independently of whatever company came before or after it in the list. If a company has only one role, company.dates MUST exactly equal that role's own role_dates — do not widen it using any other company's dates. ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec). e.g. "Dec 2005 – Oct 2025". Never use full month names or "Sept".
 - company.location: City/Country of the company headquarters or primary location. Leave "" if not stated. Normalize "USA" to "US" — always write "US", never "USA", regardless of how the source CV writes it.
 - role.role: Exact job title. If that specific role was in a different location, append it after a comma e.g. "Programme Manager — Group Risk, London / India".
-- role.role_dates: Dates for this role only. REQUIRED when company has 2 or more roles. Leave "" only if company has exactly ONE role.
+- role.role_dates: Dates for this role only. REQUIRED when company has 2 or more roles. Leave "" only if company has exactly ONE role. ALWAYS include month using 3-letter abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec) — e.g. "Apr 2016 – Aug 2017", NEVER numeric "04/2016 – 08/2017". If the CV shows dates as MM/YY or MM/YYYY (e.g. "04/16" or "04/2016"), convert to month-abbreviation format the same way. Never use full month names or "Sept".
+- EARLIER CAREER EXPERIENCE: some CVs have a distinct section (often titled "Earlier Career Experience", "Earlier Career", "Prior Experience", or similar) listing older roles in condensed form — usually just company + title, sometimes with a one-line description, rarely with bullets. Do NOT create a separate field or section for this — treat every entry in it as an ordinary additional company in the companies[] array, appended after the more recent/detailed companies in the CV's own order, using the same company/role/dates extraction rules as everything else. If an entry gives only a one-line description with no bullets, leave that role's bullets as [] rather than inventing content.
 - company.overview_bullets: Use this INSTEAD of role.bullets when the CV lists multiple job titles/promotions at ONE company together as a group of title+date lines, followed by paragraph(s) describing responsibilities across that WHOLE progression as a single narrative — not broken out separately under each specific title. In that case: list every role/title with its own role_dates (leave each role's bullets as []), and put the narrative paragraph(s) in company.overview_bullets instead (one array item per paragraph, verbatim). Example — if the CV shows:
   Vice President, Global Privacy    2025 – Present
   Chief Privacy Officer             2022 – 2025
@@ -3624,7 +3762,7 @@ EDUCATION:
 - degrees[]: Array of {degree, extra} for each degree at this institution. degree = full degree name exactly as written. extra = additional lines for this degree (majors, thesis title, specialisation, honours, semester-abroad notes, etc.) — if the CV lists these as multiple separate lines, PRESERVE them as separate lines by joining with a newline character \n between each one (do NOT merge them into a single run-on sentence with added periods). Leave "" if no extra lines. Most recent degree first within the array.
 - Most recent institution first.
 
-QUAL_HEADING: Copy the CV's own literal heading for its qualifications/achievements/recognition section VERBATIM, exactly as written (e.g. "Industry Recognition", "Achievements", "Awards", "Professional Qualifications", "Certifications"). Do not substitute a generic label. Leave "" if no such section exists (fallback will use "Professional Qualifications").
+QUAL_HEADING: Copy the CV's own literal heading for its qualifications/achievements/recognition section VERBATIM, exactly as written — EXCEPT if the CV's heading is "Certifications" (or a close variant like "Certification", "Professional Certifications"), in which case use "Professional Qualifications" instead, since these are treated as the same thing. Keep genuinely different headings as-is verbatim (e.g. "Industry Recognition", "Achievements", "Awards"). Do not substitute a generic label for anything other than the Certifications case above. Leave "" if no such section exists (fallback will use "Professional Qualifications").
 PROFESSIONAL_QUALS: Array of {year, qualification} for the section named in QUAL_HEADING above — this covers certifications, professional designations, AND career awards/recognitions (e.g. "Awarded Top Global CISO for 2023, 2024, 2025", "Northeast People's Choice Award for 2019") if the CV groups them together; only use this for items under a genuinely separate qualifications/recognition heading (see the EDUCATION rule above for the exception where they belong in education[] instead).
 - year: the year(s) exactly as written next to that entry (e.g. "2023, 2024, 2025", "2019"). If the entry has NO year at all in the source, leave year as "" — do not invent one.
 - qualification: the qualification/award text VERBATIM. CRITICAL — do NOT repeat the year inside this text if it's already captured in the year field (e.g. if the CV says "Awarded Top Global CISO for 2023, 2024, 2025" and you've put "2023, 2024, 2025" in year, the qualification text should just be "Awarded Top Global CISO" — do not duplicate the year twice).
@@ -4363,12 +4501,12 @@ FIELD-BY-FIELD INSTRUCTIONS:
    - For all roles at the same company, use the EXACT SAME company name string in COMPANY_N_NAME (this triggers automatic grouping in the template).
    - COMPANY_N_NAME: Full legal company name. IDENTICAL string for all roles at same company.
    - COMPANY_N_LOCATION: City, Country if provided; leave empty if not.
-   - COMPANY_N_DATES: Overall company tenure dates (e.g. "Mar 1996 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Present") for FIRST role at that company ONLY. Leave EMPTY for all subsequent roles at same company.
+   - COMPANY_N_DATES: Overall company tenure dates (e.g. "Mar 1996 – Present") for FIRST role at that company ONLY. Leave EMPTY for all subsequent roles at same company. ALWAYS use month-then-year order with a 3-letter month abbreviation (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec) — e.g. "Mar 2016 – Aug 2017", NEVER "2016 Mar" or numeric "03/2016". Convert whatever order/format the CV uses (including "2026-05", "2026 May", "05/2026") into this standard "Mon YYYY" form.
    - COMPANY_N_ROLE: Exact job title as written.
    - COMPANY_N_FUNCTION: Department or function if listed, else empty.
-   - COMPANY_N_ROLE_DATES: Dates for THIS specific role only (e.g. "Dec 2025 ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Present").
-   - COMPANY_N_BULLETS: All bullet points / achievements for this role, joined with | (pipe character). Copy text VERBATIM. Do NOT summarise.
-   - companies array: Group all roles at the same company under ONE entry. Each company has: name (full legal name), location, dates (overall tenure), roles array with: role (exact title), function (dept), role_dates (dates for this specific role — leave EMPTY STRING if the company has only ONE role, since dates already show in the company header), bullets (ALL achievements verbatim array). 9. PROJECT EXPERIENCES: Use projects array, same structure as companies array. Leave as empty array [] if no project experience found in CV.
+   - COMPANY_N_ROLE_DATES: Dates for THIS specific role only (e.g. "Dec 2025 – Present"). Same month-then-year format rule as COMPANY_N_DATES above.
+   - COMPANY_N_BULLETS: All bullet points / achievements for this role, joined with | (pipe character). Copy text VERBATIM except for two things: (1) if the source CV bolds specific words or phrases within a bullet (company names, deal tickers, key terms, etc.), preserve that by wrapping the exact same bolded text in double asterisks, e.g. "Joint Sponsor for **Victory Giant Technology**'s ~US$3bn Hong Kong IPO (**2476.HK**)" — do this ONLY for text the CV itself shows as bold, never add emphasis that wasn't there; (2) ensure every bullet ends with terminal punctuation (a period, or keep the CV's own "!" or "?" if present) — add a period if the source bullet has none, but never add one if the bullet already ends in a colon (since that indicates more content follows) or already has terminal punctuation. Do NOT summarise or rephrase the wording itself.
+   - companies array: Group all roles at the same company under ONE entry. Each company has: name (full legal name), location, dates (overall tenure, same "Mon YYYY" format as above), roles array with: role (exact title), function (dept), role_dates (dates for this specific role — leave EMPTY STRING if the company has only ONE role, since dates already show in the company header; same "Mon YYYY" format), bullets (ALL achievements verbatim array, with the same bold-preservation via ** and terminal-punctuation rules as COMPANY_N_BULLETS above). 9. PROJECT EXPERIENCES: Use projects array, same structure as companies array. Leave as empty array [] if no project experience found in CV.
 
 9. EDUCATION: Build an "education" array. Each entry = {"years": "YYYY – YYYY", "institution": "Full institution name", "degree": "Full degree description"}. Include ALL education entries. Most recent first. Example: "education": [{"years": "1988 – 1992", "institution": "Shanghai Jiaotong University", "degree": "Bachelor of Science in Polymer Science"}]
    - years: year range only e.g. "1988 – 1992"
@@ -8321,7 +8459,7 @@ async function downloadHistory(index) {
         var _sumXml = buildGlobalSummary(item.content.SUMMARY || '');
         _docXml = _docXml.replace(_SUMMARY_PARA, _sumXml);
 
-        var _bizXml = buildGlobalBizExp(item.content);
+        var _bizXml = (item.template === 'apac-profile') ? buildApacProfileBizExp(item.content) : buildGlobalBizExp(item.content);
         _docXml = _docXml.replace(_BE_PARA, _bizXml);
 
         zip.file('word/document.xml', _docXml);
