@@ -8261,6 +8261,18 @@ async function downloadHistory(index) {
               });
             });
           });
+          // Education detail bullets: auto-bold a short leading "Label:" prefix (e.g. "Research
+          // Focus: ...") by wrapping it in ** markup, reusing the same bold-run post-processing
+          // used for the ** markers elsewhere in this template. Also ensure full stops.
+          (_apCv.education || []).forEach(function(ed){
+            if (!ed || !Array.isArray(ed.details)) return;
+            ed.details = ed.details.map(function(d){
+              var s = ensureFullStop(d);
+              var m = s.match(/^([A-Z][A-Za-z0-9 /&'-]{2,30}:)\s*(.*)$/);
+              if (m && !/^https?:/i.test(s)) s = '**' + m[1] + '**' + ' ' + m[2];
+              return s;
+            });
+          });
         })();
         // education array — build from flat EDU fields if not present
         if (!_apCv.education || !_apCv.education.length) {
@@ -8369,13 +8381,28 @@ async function downloadHistory(index) {
           // Post-render: convert **bold** markup (added by the prompt for text the source CV itself
           // bolds) into real bold runs. docxtemplater's native {{.}} loop just inserts escaped plain
           // text with no per-value hook, so this has to happen on the rendered XML directly, splitting
-          // any run whose text contains ** into multiple runs.
+          // any run whose text contains ** into multiple runs. Uses a two-step split-then-process
+          // approach rather than one large regex with an optional non-greedy group — that pattern has
+          // proven unreliable at full-document scale elsewhere in this codebase (silently matches
+          // fewer runs than expected once the document is large), even though it works fine in
+          // isolated tests on a short string.
           (function() {
             var _apOutZip = _apDoc.getZip();
             var _apOutXml = _apOutZip.files['word/document.xml'].asText();
             if (_apOutXml.indexOf('**') === -1) return;
-            _apOutXml = _apOutXml.replace(/<w:r>(?:<w:rPr>([\s\S]*?)<\/w:rPr>)?<w:t([^>]*)>([^<]*)<\/w:t><\/w:r>/g, function(full, rPrInner, tAttrs, text) {
-              if (text.indexOf('**') === -1) return full;
+            // Split on the literal "</w:r>" closing tag — an unambiguous, non-regex delimiter — so
+            // there is no possibility of a match spanning further than one run, regardless of
+            // document size.
+            var _apParts = _apOutXml.split('</w:r>');
+            for (var pi = 0; pi < _apParts.length; pi++) {
+              var part = _apParts[pi];
+              var runStart = part.lastIndexOf('<w:r>');
+              if (runStart === -1) continue;
+              var runXml = part.substring(runStart) + '</w:r>';
+              if (runXml.indexOf('**') === -1) continue;
+              var m = runXml.match(/^<w:r>(?:<w:rPr>([\s\S]*)<\/w:rPr>)?<w:t([^>]*)>([^<]*)<\/w:t><\/w:r>$/);
+              if (!m) continue;
+              var rPrInner = m[1], tAttrs = m[2], text = m[3];
               var segs = text.split(/\*\*(.+?)\*\*/g);
               var runs = '';
               for (var i = 0; i < segs.length; i++) {
@@ -8383,11 +8410,14 @@ async function downloadHistory(index) {
                 var isBold = (i % 2 === 1);
                 var rPr = rPrInner || '';
                 if (isBold && rPr.indexOf('<w:b') === -1) rPr += '<w:b/><w:bCs/>';
-                else if (isBold) rPr = rPr; // already bold, leave as-is
                 runs += '<w:r>' + (rPr ? '<w:rPr>' + rPr + '</w:rPr>' : '') + '<w:t' + tAttrs + '>' + segs[i] + '</w:t></w:r>';
               }
-              return runs || full;
-            });
+              if (runs) {
+                runs = runs.slice(0, -'</w:r>'.length); // join() below re-adds the final </w:r>
+                _apParts[pi] = part.substring(0, runStart) + runs;
+              }
+            }
+            _apOutXml = _apParts.join('</w:r>');
             _apOutZip.file('word/document.xml', _apOutXml);
           })();
           out = _apDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
