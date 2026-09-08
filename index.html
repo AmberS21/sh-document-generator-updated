@@ -3266,8 +3266,66 @@ async function generate() {
                 }
                 var pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab)}).promise;
                 var txt='';
-                for(var pg=1;pg<=pdf.numPages;pg++){var page=await pdf.getPage(pg);var tc=await page.getTextContent();txt+=tc.items.map(function(s){return s.str;}).join(' ')+'\n';}
-                var extracted = txt.trim();
+                for(var pg=1;pg<=pdf.numPages;pg++){
+                  var page=await pdf.getPage(pg);
+                  // commonObjs (used below for real font names) is only populated once the page's
+                  // operator list has been resolved — without this call, every commonObjs.get()
+                  // throws "Requesting object that isn't resolved yet" and bold detection silently
+                  // falls back to the unreliable generic fontFamily.
+                  try { await page.getOperatorList(); } catch (_ol) { /* non-fatal: fall back below */ }
+                  var tc=await page.getTextContent();
+                  // PDF.js splits text into separate items at every font/style change, so joining
+                  // items with a space corrupts hyphenated words ("26-year" -> "26 - year") and
+                  // silently discards which spans were bold. Instead: only insert a space where
+                  // PDF.js itself signals a break (hasEOL), and wrap bold runs in ** markers so
+                  // downstream bold preservation has something to work with.
+                  var styles = tc.styles || {};
+                  // PDF.js flattens style.fontFamily to a generic value ("sans-serif") for both
+                  // bold and regular fonts in many PDFs, so that field can't be trusted for bold
+                  // detection. The real embedded font name (e.g. "ABCDEF+Aptos Display,Bold") is
+                  // available via page.commonObjs — resolve each fontName once and cache it.
+                  var boldCache = {};
+                  function _isBoldFont(fontName) {
+                    if (boldCache.hasOwnProperty(fontName)) return boldCache[fontName];
+                    var realName = '';
+                    try {
+                      var fobj = page.commonObjs.get(fontName);
+                      realName = (fobj && (fobj.name || fobj.loadedName)) || '';
+                    } catch (_fe) { realName = ''; }
+                    if (!realName) {
+                      var st0 = styles[fontName] || {};
+                      realName = st0.fontFamily || fontName || '';
+                    }
+                    var res = /bold|black|heavy|semibold|demibold/i.test(realName);
+                    boldCache[fontName] = res;
+                    return res;
+                  }
+                  var pageTxt = '';
+                  var prevBold = false;
+                  for (var ti = 0; ti < tc.items.length; ti++) {
+                    var it = tc.items[ti];
+                    var isBold = _isBoldFont(it.fontName);
+                    var s = it.str;
+                    if (!s) { if (it.hasEOL) { pageTxt += '\n'; prevBold = false; } continue; }
+                    if (isBold !== prevBold) {
+                      // close previous bold run / open a new one at the style boundary
+                      if (prevBold) pageTxt = pageTxt.replace(/\s+$/, '') + '**';
+                      if (isBold) pageTxt += '**';
+                      prevBold = isBold;
+                    }
+                    pageTxt += s;
+                    if (it.hasEOL) {
+                      if (prevBold) { pageTxt = pageTxt.replace(/\s+$/, '') + '**'; prevBold = false; }
+                      pageTxt += '\n';
+                    }
+                  }
+                  if (prevBold) pageTxt += '**';
+                  // Collapse the ** markers that ended up wrapping only whitespace/punctuation,
+                  // and merge adjacent bold runs split purely by PDF.js item boundaries.
+                  pageTxt = pageTxt.replace(/\*\*(\s*)\*\*/g, '$1').replace(/\*\*\s*\*\*/g, ' ');
+                  txt += pageTxt + '\n';
+                }
+                var extracted = txt.replace(/[ \t]{2,}/g, ' ').trim();
                 if (!extracted || extracted.length < 50) {
                   throw new Error('This PDF appears to be image-based (scanned). PDF.js cannot extract text from image PDFs.\n\nPlease either:\n• Copy and paste the CV text directly using the Paste Text tab\n• Convert the PDF to a text-based PDF first\n• Use a Word (.docx) version of the CV');
                 }
