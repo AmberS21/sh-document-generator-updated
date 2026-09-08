@@ -4586,6 +4586,29 @@ try {
   
   // Remove leading/trailing non-JSON characters
   rawOutput = rawOutput.replace(/^[^{[]*/, '').replace(/[^}\]]*$/, '');
+
+  // Brace-balanced extraction: the regex above only strips trailing text that does NOT itself end
+  // in } or ], so a trailing note like 'Note: see [ref]' survives and breaks JSON.parse with
+  // "Unexpected non-whitespace character after JSON". Walk from the opening brace to its true
+  // matching close (ignoring braces inside strings) and discard anything after it.
+  (function() {
+    if (rawOutput.charAt(0) !== '{' && rawOutput.charAt(0) !== '[') return;
+    var openCh = rawOutput.charAt(0);
+    var closeCh = openCh === '{' ? '}' : ']';
+    var depth = 0, inStr = false, esc = false;
+    for (var bi = 0; bi < rawOutput.length; bi++) {
+      var c = rawOutput.charAt(bi);
+      if (esc) { esc = false; continue; }
+      if (c === '\\') { esc = true; continue; }
+      if (c === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (c === openCh) depth++;
+      else if (c === closeCh) {
+        depth--;
+        if (depth === 0) { rawOutput = rawOutput.substring(0, bi + 1); return; }
+      }
+    }
+  })();
   
   // Remove control characters that break JSON
   rawOutput = rawOutput.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' '); // strip ALL control chars including newlines
