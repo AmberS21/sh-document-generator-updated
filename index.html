@@ -2736,9 +2736,7 @@ async function generate() {
         pptCandidates: _pptPasted, candidates: _pptPasted
       }
     };
-    var _ppH = JSON.parse(localStorage.getItem('sh_history')||'[]');
-    _ppH.unshift(_pptPastedItem);
-    localStorage.setItem('sh_history', JSON.stringify(_ppH));
+    _saveToHistory(_pptPastedItem);
     renderHistory();
     btn.classList.remove('loading');
     btn.innerHTML = '\u2705 Done \u2014 Check My History';
@@ -3131,9 +3129,7 @@ async function generate() {
             fmt: (tpl === 'project-report' || tpl === 'project-report-gb' || tpl === 'project-report-ext') ? 'x' : tpl === 'ppt-candidate-update' ? 'p' : 'd',
             content: projContent
           };
-          var projHistory = JSON.parse(localStorage.getItem('sh_history') || '[]');
-          projHistory.unshift(projItem);
-          localStorage.setItem('sh_history', JSON.stringify(projHistory));
+          _saveToHistory(projItem);
           renderHistory();
           btn.classList.remove('loading'); btn.innerHTML = '\u2705 Document Ready \u2014 Check My History';
           notify('Done! Project report saved — go to My History to download.');
@@ -3237,9 +3233,7 @@ async function generate() {
               };
               var _pptFmt = tpl === 'ppt-candidate-update' ? 'p' : 'x';
               var _prItem = { name: _prContent.projectName, date: new Date().toLocaleString(), template: tpl, fmt: _pptFmt, content: _prContent };
-              var _prHist = JSON.parse(localStorage.getItem('sh_history')||'[]');
-              _prHist.unshift(_prItem);
-              localStorage.setItem('sh_history', JSON.stringify(_prHist));
+              _saveToHistory(_prItem);
               renderHistory();
               btn.classList.remove('loading'); btn.innerHTML = '\u2705 Done \u2014 Check My History';
               notify('Project data loaded from file (' + _candidates.length + ' candidates) — go to My History to download.');
@@ -3364,9 +3358,7 @@ async function generate() {
             content: _combinedOutputs,
             type: 'combined'
           };
-          var _ch = JSON.parse(localStorage.getItem('sh_history') || '[]');
-          _ch.unshift(_combItem);
-          localStorage.setItem('sh_history', JSON.stringify(_ch));
+          _saveToHistory(_combItem);
           renderHistory();
         }
         btn.classList.remove('loading'); btn.innerHTML = '\u26a1 Generate Document';
@@ -4764,9 +4756,7 @@ try {
           fmt: fmt,
           content: output
         };
-        var history = JSON.parse(localStorage.getItem('sh_history') || '[]');
-        history.unshift(item);
-        localStorage.setItem('sh_history', JSON.stringify(history));
+        _saveToHistory(item);
 
         renderHistory();
 
@@ -4797,6 +4787,35 @@ function showProgress(current, total, msg) {
 function hideProgress(msg) {
   var b = document.getElementById('genBtn');
   if (b) b.disabled = false;
+}
+// Centralized, quota-safe history writer. localStorage has a hard browser quota (typically
+// 5-10MB per origin); every generation's full extracted content was being appended with no cap,
+// so heavy users eventually hit QuotaExceededError on setItem. That error was uncaught and
+// propagated up into the generation's own .catch() handler, so the user saw "Generation failed"
+// even though their document had already been produced successfully — a storage bookkeeping
+// failure was being reported as a generation failure. This function caps history length and
+// never throws, so a full history can no longer break generation for anyone.
+function _saveToHistory(item) {
+  var history;
+  try { history = JSON.parse(localStorage.getItem('sh_history') || '[]'); } catch (_pe) { history = []; }
+  history.unshift(item);
+  var MAX_HISTORY_ENTRIES = 60;
+  if (history.length > MAX_HISTORY_ENTRIES) history = history.slice(0, MAX_HISTORY_ENTRIES);
+  var attempts = 0;
+  while (attempts < 8) {
+    try {
+      localStorage.setItem('sh_history', JSON.stringify(history));
+      return;
+    } catch (_qe) {
+      if (history.length <= 1) {
+        console.error('[history] Could not save even a single entry \u2014 skipping history save this time:', _qe);
+        return;
+      }
+      history = history.slice(0, Math.max(1, Math.floor(history.length / 2)));
+      attempts++;
+    }
+  }
+  console.error('[history] Gave up saving to history after repeated trims.');
 }
  function renderHistory() {
     var list = document.getElementById('historyList');
