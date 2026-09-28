@@ -1156,6 +1156,18 @@ const TEMPLATES = {
 
   },
 
+  'global-profile-wam-uae': {
+
+    label: 'Global Candidate Profile — WAM UAE',
+
+    file: 'templates/Global_Candidate_Profile_WAM_UAE.docx',
+
+    patchFiles: ['word/document.xml'],
+
+    promptType: 'wam-uae'
+
+  },
+
   'services-profile': {
 
     label: 'Services Candidate Profile',
@@ -1360,7 +1372,7 @@ var _ghBase = 'https://raw.githubusercontent.com/AmberS21/sh-document-generator-
 (function() {
   var sel = document.getElementById('tplSel');
   if (!sel) return;
-  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','candidate-briefing-pack','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile','advisor-profile'];
+  var profileKeys = ['apac-ey-profile','apac-profile','apac-profile-deal-list','change-consulting-profile','gb-profile','ea-india-profile','ea-india-profile-v2','candidate-briefing-pack','gm-global-profile-basic','global-no-scorecard','global-with-scorecard','global-career-summary','global-career-summary-wam-us','services-profile','advisor-profile','global-profile-wam-uae'];
   var reportKeys  = ['project-report','project-report-gb','project-report-ext','ppt-candidate-update','track-record-anonymised','track-record-logo','tombstone-standard'];
 
   var grp1 = document.createElement('optgroup');
@@ -1413,6 +1425,15 @@ var TPL = {
     fmt:  'd',
     reg:  'APAC',
     flds: ['Candidate Name','Current Employer','Client Company','Search Title','Summary','Business Experience (all companies (up to 10))','Education','Qualifications','Nationality','Languages','Interests']
+  },
+  'global-profile-wam-uae': {
+    name: 'Global Candidate Profile',
+    sub:  'WAM UAE',
+    ico:  'doc',
+    bg:   'rgba(43,124,211,.12)',
+    fmt:  'd',
+    reg:  'Global',
+    flds: ['Candidate Name','Current Employer','New Employer','New Role','Month & Year','Summary (Current/Prior/Initial)','Business Experience','Education','Languages']
   },
   'apac-profile': {
     name: 'APAC Candidate Profile (Updated)',
@@ -3713,7 +3734,62 @@ CANDIDATE SOURCE:
 
 ` + inputText;
 var isChangeCons = (tpl === 'change-consulting-profile');
+// Global Candidate Profile — WAM UAE. Deliberately independent of apacJsonStr/apac schema, per the
+// zero-shared-code principle: this template's own field names (job_title, sub_role, role_dates,
+// SUMMARY_CURRENT/PRIOR/INITIAL) and structure differ enough from APAC's that sharing would create
+// exactly the kind of cross-template coupling that has caused cascading breakage before.
+// Defined BEFORE wamUaePrompt below, since the prompt's template literal references this variable
+// directly and var declarations are not initialized until their assignment line actually runs.
+var wamUaeJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","NEW_EMPLOYER":"","NEW_ROLE":"","MONTH_YEAR":"","SUMMARY_CURRENT":"","SUMMARY_PRIOR":"","SUMMARY_INITIAL":"","companies":[{"name":"","location":"","dates":"","job_title":"","roles":[{"sub_role":"","role_dates":"","bullets":[""]}]}],"education":[{"year":"","institution":"","degree":""}],"LANGUAGES":""}';
+var wamUaePrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate source below and extract information into a structured JSON object for the Global Candidate Profile — WAM UAE template. This template is used when placing a candidate into a NEW role — the source may be the candidate's own CV (describing their past/current career) plus separate details of the new role they are moving into.
+
+ABSOLUTE RULES:
+- Return ONLY raw JSON. No markdown, no code blocks, no backticks, no commentary.
+- Copy factual details (company names, dates, deal specifics) VERBATIM — never invent a fact that isn't in the source.
+- The summary fields (SUMMARY_CURRENT/PRIOR/INITIAL) are the one place you synthesise rather than copy verbatim — write them as flowing prose in third person, in the style of an executive search profile, not copied CV bullets.
+- If the CV shows any word or phrase in bold, preserve it by wrapping that exact text in double asterisks, e.g. **Brookfield Asset Management**. Only mark text the CV itself renders bold.
+- Do NOT generate content for "Sheffield Haworth Comments", "General/ Positive Comments", or "Moving to [Employer]" — those are intentionally left blank in this template for a human to complete manually. Do not attempt to write anything for them.
+
+FIELD-BY-FIELD INSTRUCTIONS:
+
+1. CANDIDATE_NAME: Full name exactly as written.
+2. CURRENT_EMPLOYER: The candidate's current/most recent employer name only — no location, no role. This appears on the cover page as "Ex - {{CURRENT_EMPLOYER}}", so give just the company name (e.g. "Brookfield Asset Management").
+3. NEW_EMPLOYER: The name of the company the candidate is moving TO. This is the new/target role's employer, not the current one — look for it in a section of the source describing the placement, offer, or new role, separate from the CV's own work history. Leave "" if genuinely not provided anywhere in the source — do not guess or reuse the current employer.
+4. NEW_ROLE: The job title of the new role the candidate is moving into. Same sourcing note as NEW_EMPLOYER — leave "" if not provided.
+5. MONTH_YEAR: Today's month and year, e.g. "October 2025".
+
+6. SUMMARY_CURRENT: A synthesised summary of the candidate's CURRENT/most recent role, in flowing third-person prose (not bullets). Approximately 80 words. Cover their current employer, title, scope of responsibility, and one or two standout achievements or figures (e.g. portfolio size, deal values) drawn from their most recent role's bullets.
+7. SUMMARY_PRIOR: A synthesised summary of the candidate's PRIOR work experience (the role(s) before their current one), approximately 50-60 words, same prose style.
+8. SUMMARY_INITIAL: A synthesised summary of the candidate's INITIAL/earliest career experience, approximately 45-55 words, same prose style. If the candidate has only two distinct employers/eras total (current + one prior), still write a short INITIAL summary covering how their career began; only leave it noticeably shorter if the source genuinely gives very little detail about their earliest experience.
+
+9. companies: Build an array of every employer, MOST RECENT FIRST, covering the candidate's full career with no gaps. Each entry = {"name": "", "location": "", "dates": "YYYY - YYYY", "job_title": "", "roles": [...]}.
+   - name: company name only, no location.
+   - location: city (and country if the CV distinguishes it), e.g. "Dubai".
+   - dates: the full date range of the candidate's ENTIRE tenure at this company, e.g. "2014 - 2025". Use "Present" only if the CV itself says so AND this is genuinely their current employer — for a candidate moving to a new role, their most recent past employer normally has a firm end date instead.
+   - job_title: the candidate's overall/most senior job title at this company, shown once beneath the company line. If the candidate held multiple sequential titles at the same company, use the most senior/final one here and capture the distinct periods as separate "roles" entries instead (see below).
+   - roles: one or more sub-sections under this company. MOST CVs will have exactly ONE roles entry per company with sub_role and role_dates left as "" — use this simple form whenever the CV just lists a title and bullets with no further internal breakdown.
+     Only use MULTIPLE roles entries when the CV itself explicitly breaks a company down into distinct named projects, platforms, or initiatives, each with its own date range (e.g. "Regional Funds Platform [2021-present]", "Strategic Initiatives – Middle East [2016-21]" as separate named sections within the same company). In that case:
+       - sub_role: the project/initiative/platform name exactly as the CV titles it.
+       - role_dates: that specific sub-section's own date range, e.g. "2016 - 2021".
+     When there is no such internal breakdown, set sub_role and role_dates to "" and put all of that role's bullets directly in the one roles entry.
+   - bullets: copy every bullet point for that role/sub-section VERBATIM, one array item each, preserving **bold** spans as instructed above. Do not merge multiple source bullets into one, and do not split one source bullet into several.
+
+10. education: Build an array of every degree, most recent first. Each entry = {"year": "", "institution": "", "degree": ""}.
+    - year: ONLY the year the candidate completed/graduated (the END year of their study period), not a range, e.g. a CV showing "2004-2006" becomes year "2006". This is a deliberate departure from most other Sheffield Haworth templates, which show a full range — this template shows completion year only.
+    - institution: full institution name.
+    - degree: the degree/qualification name and field, e.g. "Masters Business Administration" or "Bachelors of Technology, Electrical & Electronics". Expand common abbreviations the CV uses for its own degree name where unambiguous (e.g. "B.Tech" -> "Bachelors of Technology"), but do not invent a specialisation the source doesn't state.
+
+11. LANGUAGES: Languages the candidate is fluent in, comma-separated if more than one, e.g. "English, Arabic". If the source states only one language, give just that one.
+
+Return this exact JSON structure:
+` + wamUaeJsonStr + `
+
+SOURCE — extract from the candidate material below:
+
+` + inputText;
+
 var isApacEy = (tpl === 'apac-ey-profile');
+var isWamUae = (tpl === 'global-profile-wam-uae');
 var isApacDealList = (tpl === 'apac-profile-deal-list');
 if (isApacDealList) { isApac = true; isApacUpdated = true; }
 var isApacV2 = (tpl === 'apac-profile-v2');
@@ -3722,6 +3798,7 @@ var apacEyJsonStr = '{"CANDIDATE_NAME":"","CURRENT_TITLE":"","CURRENT_EMPLOYER":
 var changeConsJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_1_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","INTERESTS_DETAIL":""}';
 var eaIndiaJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY_INTRO":"","EXP_SKILL_1":"","EXP_SKILL_2":"","EXP_SKILL_3":"","EXP_SKILL_4":"","EXP_SKILL_5":"","EXP_SKILL_6":"","LRR_SKILL_1":"","LRR_SKILL_2":"","LRR_SKILL_3":"","LRR_SKILL_4":"","LRR_SKILL_5":"","LRR_SKILL_6":"","LRR_SKILL_7":"","LRR_SKILL_8":"","LRR_SKILL_9":"","LRR_SKILL_10":"","LRR_SKILL_11":"","KEY_SKILL_1":"","KEY_SKILL_2":"","KEY_SKILL_3":"","KEY_SKILL_4":"","KEY_SKILL_5":"","KEY_SKILL_6":"","KEY_SKILL_7":"","KEY_SKILL_8":"","KEY_SKILL_9":"","KEY_SKILL_10":"","EXEC_OVERVIEW_BULLET_1":"","EXEC_OVERVIEW_BULLET_2":"","EXEC_OVERVIEW_BULLET_3":"","EXEC_OVERVIEW_BULLET_4":"","EXEC_OVERVIEW_BULLET_5":"","EXEC_OVERVIEW_BULLET_6":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","role_description":"","bullets":[""]}]}],"EDU_1_YEAR":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_1_EXTRA":"","EDU_2_YEAR":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","EDU_3_YEAR":"","EDU_3_INSTITUTION":"","EDU_3_LOCATION":"","EDU_3_DEGREE":"","EDU_3_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_2_YEAR":"","QUAL_2_TEXT":"","QUAL_3_YEAR":"","QUAL_3_TEXT":"","QUAL_4_YEAR":"","QUAL_4_TEXT":"","QUAL_5_YEAR":"","QUAL_5_TEXT":"","AFFIL_1_YEAR":"","AFFIL_1_TEXT":"","AFFIL_2_YEAR":"","AFFIL_2_TEXT":"","AFFIL_3_YEAR":"","AFFIL_3_TEXT":"","AFFIL_4_YEAR":"","AFFIL_4_TEXT":"","AFFIL_5_YEAR":"","AFFIL_5_TEXT":"","NATIONALITY":"","LANGUAGES":"","TECH_SKILLS":"","INTERESTS":"","volunteering":[{"dates":"","role":"","description":""}]}';
 var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","summary_bullets":[""],"companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","function":"","role_dates":"","role_description":"","bullets":[""]}]}],"projects":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","function":"","role_dates":"","role_description":"","bullets":[""]}]}],"education":[{"years":"","institution":"","location":"","degree":"","details":[""]}],"QUAL_1":"ALL qualification items joined by pipe, e.g. SFC License Type 1 | CFA Level II (2017) | Piano Band 9 — copy FULL string verbatim, every item, never split across other fields","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","PROJECT_1_TITLE":"","PROJECT_1_CLIENT":"","PROJECT_1_DATE":"","PROJECT_1_DESCRIPTION":"","PROJECT_2_TITLE":"","PROJECT_2_CLIENT":"","PROJECT_2_DATE":"","PROJECT_2_DESCRIPTION":"","PROJECT_3_TITLE":"","PROJECT_3_CLIENT":"","PROJECT_3_DATE":"","PROJECT_3_DESCRIPTION":"","PROJECT_4_TITLE":"","PROJECT_4_CLIENT":"","PROJECT_4_DATE":"","PROJECT_4_DESCRIPTION":"","PROJECT_5_TITLE":"","PROJECT_5_CLIENT":"","PROJECT_5_DATE":"","PROJECT_5_DESCRIPTION":"","PROJECT_6_TITLE":"","PROJECT_6_CLIENT":"","PROJECT_6_DATE":"","PROJECT_6_DESCRIPTION":"","PROJECT_7_TITLE":"","PROJECT_7_CLIENT":"","PROJECT_7_DATE":"","PROJECT_7_DESCRIPTION":"","PROJECT_8_TITLE":"","PROJECT_8_CLIENT":"","PROJECT_8_DATE":"","PROJECT_8_DESCRIPTION":"","PROJECT_9_TITLE":"","PROJECT_9_CLIENT":"","PROJECT_9_DATE":"","PROJECT_9_DESCRIPTION":"","PROJECT_10_TITLE":"","PROJECT_10_CLIENT":"","PROJECT_10_DATE":"","PROJECT_10_DESCRIPTION":""}';
+
 var csJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var globalJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CURRENT_TITLE":"","SEARCH_TITLE":"","CLIENT_COMPANY":"","MONTH_YEAR":"","SUMMARY":"","COMPANY_1_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_1_BULLET_1":"","COMPANY_1_BULLET_2":"","COMPANY_1_BULLET_3":"","COMPANY_1_BULLET_4":"","COMPANY_1_BULLET_5":"","COMPANY_1_BULLET_6":"","COMPANY_1_BULLET_7":"","COMPANY_1_BULLET_8":"","COMPANY_1_BULLET_9":"","COMPANY_1_BULLET_10":"","COMPANY_2_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_2_BULLET_1":"","COMPANY_2_BULLET_2":"","COMPANY_2_BULLET_3":"","COMPANY_2_BULLET_4":"","COMPANY_2_BULLET_5":"","COMPANY_2_BULLET_6":"","COMPANY_2_BULLET_7":"","COMPANY_2_BULLET_8":"","COMPANY_2_BULLET_9":"","COMPANY_2_BULLET_10":"","COMPANY_3_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_3_BULLET_1":"","COMPANY_3_BULLET_2":"","COMPANY_3_BULLET_3":"","COMPANY_3_BULLET_4":"","COMPANY_3_BULLET_5":"","COMPANY_3_BULLET_6":"","COMPANY_3_BULLET_7":"","COMPANY_3_BULLET_8":"","COMPANY_3_BULLET_9":"","COMPANY_3_BULLET_10":"","COMPANY_4_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_4_BULLET_1":"","COMPANY_4_BULLET_2":"","COMPANY_4_BULLET_3":"","COMPANY_4_BULLET_4":"","COMPANY_4_BULLET_5":"","COMPANY_4_BULLET_6":"","COMPANY_4_BULLET_7":"","COMPANY_4_BULLET_8":"","COMPANY_4_BULLET_9":"","COMPANY_4_BULLET_10":"","COMPANY_5_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_5_BULLET_1":"","COMPANY_5_BULLET_2":"","COMPANY_5_BULLET_3":"","COMPANY_5_BULLET_4":"","COMPANY_5_BULLET_5":"","COMPANY_5_BULLET_6":"","COMPANY_5_BULLET_7":"","COMPANY_5_BULLET_8":"","COMPANY_5_BULLET_9":"","COMPANY_5_BULLET_10":"","COMPANY_6_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_6_BULLET_1":"","COMPANY_6_BULLET_2":"","COMPANY_6_BULLET_3":"","COMPANY_6_BULLET_4":"","COMPANY_6_BULLET_5":"","COMPANY_6_BULLET_6":"","COMPANY_6_BULLET_7":"","COMPANY_6_BULLET_8":"","COMPANY_6_BULLET_9":"","COMPANY_6_BULLET_10":"","COMPANY_7_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_7_BULLET_1":"","COMPANY_7_BULLET_2":"","COMPANY_7_BULLET_3":"","COMPANY_7_BULLET_4":"","COMPANY_7_BULLET_5":"","COMPANY_7_BULLET_6":"","COMPANY_7_BULLET_7":"","COMPANY_7_BULLET_8":"","COMPANY_7_BULLET_9":"","COMPANY_7_BULLET_10":"","COMPANY_8_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_8_BULLET_1":"","COMPANY_8_BULLET_2":"","COMPANY_8_BULLET_3":"","COMPANY_8_BULLET_4":"","COMPANY_8_BULLET_5":"","COMPANY_8_BULLET_6":"","COMPANY_8_BULLET_7":"","COMPANY_8_BULLET_8":"","COMPANY_8_BULLET_9":"","COMPANY_8_BULLET_10":"","COMPANY_9_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_9_BULLET_1":"","COMPANY_9_BULLET_2":"","COMPANY_9_BULLET_3":"","COMPANY_9_BULLET_4":"","COMPANY_9_BULLET_5":"","COMPANY_9_BULLET_6":"","COMPANY_9_BULLET_7":"","COMPANY_9_BULLET_8":"","COMPANY_9_BULLET_9":"","COMPANY_9_BULLET_10":"","COMPANY_10_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_10_BULLET_1":"","COMPANY_10_BULLET_2":"","COMPANY_10_BULLET_3":"","COMPANY_10_BULLET_4":"","COMPANY_10_BULLET_5":"","COMPANY_10_BULLET_6":"","COMPANY_10_BULLET_7":"","COMPANY_10_BULLET_8":"","COMPANY_10_BULLET_9":"","COMPANY_10_BULLET_10":"","COMPANY_11_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_11_BULLET_1":"","COMPANY_11_BULLET_2":"","COMPANY_11_BULLET_3":"","COMPANY_11_BULLET_4":"","COMPANY_11_BULLET_5":"","COMPANY_11_BULLET_6":"","COMPANY_11_BULLET_7":"","COMPANY_11_BULLET_8":"","COMPANY_11_BULLET_9":"","COMPANY_11_BULLET_10":"","COMPANY_12_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_12_BULLET_1":"","COMPANY_12_BULLET_2":"","COMPANY_12_BULLET_3":"","COMPANY_12_BULLET_4":"","COMPANY_12_BULLET_5":"","COMPANY_12_BULLET_6":"","COMPANY_12_BULLET_7":"","COMPANY_12_BULLET_8":"","COMPANY_12_BULLET_9":"","COMPANY_12_BULLET_10":"","COMPANY_13_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_13_BULLET_1":"","COMPANY_13_BULLET_2":"","COMPANY_13_BULLET_3":"","COMPANY_13_BULLET_4":"","COMPANY_13_BULLET_5":"","COMPANY_13_BULLET_6":"","COMPANY_13_BULLET_7":"","COMPANY_13_BULLET_8":"","COMPANY_13_BULLET_9":"","COMPANY_13_BULLET_10":"","COMPANY_14_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_14_BULLET_1":"","COMPANY_14_BULLET_2":"","COMPANY_14_BULLET_3":"","COMPANY_14_BULLET_4":"","COMPANY_14_BULLET_5":"","COMPANY_14_BULLET_6":"","COMPANY_14_BULLET_7":"","COMPANY_14_BULLET_8":"","COMPANY_14_BULLET_9":"","COMPANY_14_BULLET_10":"","COMPANY_15_NAME":"","COMPANY_{n}_LOCATION":"","COMPANY_{n}_ROLE":"","COMPANY_{n}_FUNCTION":"","COMPANY_{n}_DATES":"","COMPANY_15_BULLET_1":"","COMPANY_15_BULLET_2":"","COMPANY_15_BULLET_3":"","COMPANY_15_BULLET_4":"","COMPANY_15_BULLET_5":"","COMPANY_15_BULLET_6":"","COMPANY_15_BULLET_7":"","COMPANY_15_BULLET_8":"","COMPANY_15_BULLET_9":"","COMPANY_15_BULLET_10":"","EDU_1_YEARS":"","EDU_1_INSTITUTION":"","EDU_1_DEGREE":"","EDU_2_YEARS":"","EDU_2_INSTITUTION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","QUAL_3":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","AFFILIATION_2":"","AFFILIATION_2_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
 var _eaIndiaMonthYear = (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})();
@@ -4389,7 +4466,9 @@ SOURCE DATA — extract every row from this pasted table:
 
 ` + inputText;
 
-var prompt = isApacEy
+var prompt = isWamUae
+  ? wamUaePrompt
+  : isApacEy
   ? apacEyPrompt
   : isEaIndiaV2
   ? eaIndiaV2Prompt
@@ -5202,7 +5281,7 @@ async function downloadHistory(index) {
   var fmt = item.fmt || 'd';
   // Override: project-report always downloads as xlsx
   if (item.template === 'project-report' || item.template === 'project-report-ext' || item.template === 'project-report-gb') fmt = 'x';
-  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'global-career-summary-wam-us' ? 'with Career Summary WAM US' : item.template === 'project-report-gb' ? 'GB' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile-v2' ? 'EA India v2' : item.template === 'ea-india-profile' ? 'EA India' : item.template === 'change-consulting-profile' ? 'Change Consulting' : item.template === 'apac-profile-deal-list' ? 'APAC Deal List' : item.template === 'apac-profile-v2' ? 'APAC v2' : item.template === 'apac-ey-profile' ? 'EY Shortlisted' : 'No Scorecard';
+  var _scorecardLabel = item.template === 'global-with-scorecard' ? 'with Scorecard' : item.template === 'apac-profile' ? 'English' : item.template === 'global-career-summary' ? 'with Career Summary' : item.template === 'global-career-summary-wam-us' ? 'with Career Summary WAM US' : item.template === 'project-report-gb' ? 'GB' : item.template === 'gb-profile' ? 'GB Profile' : item.template === 'services-profile' ? 'Services Profile' : item.template === 'ea-india-profile-v2' ? 'EA India v2' : item.template === 'ea-india-profile' ? 'EA India' : item.template === 'change-consulting-profile' ? 'Change Consulting' : item.template === 'apac-profile-deal-list' ? 'APAC Deal List' : item.template === 'apac-profile-v2' ? 'APAC v2' : item.template === 'apac-ey-profile' ? 'EY Shortlisted' : item.template === 'global-profile-wam-uae' ? 'WAM UAE' : 'No Scorecard';
   var _profilePrefix = item.template === 'apac-profile' ? 'APAC Profile' : item.template === 'gb-profile' ? 'GB' : item.template === 'services-profile' ? 'Services' : item.template === 'ea-india-profile' ? 'Global' : 'Global';
   var _candidateLabel = item.type === 'combined'
     ? 'Multiple Profiles'
@@ -8537,6 +8616,101 @@ async function downloadHistory(index) {
         } catch(_apErr) {
           console.error('[APAC] docxtemplater error:', _apErr.message);
           out = _apZip.generate({type: 'blob', mimeType: _docMimeSingle});
+        }
+
+      } else if (item.template === 'global-profile-wam-uae') {
+        // ── Global Candidate Profile — WAM UAE — uses native docxtemplater loop syntax ──
+        var _wuZip = new PizZip(ab);
+        var _wuCv = Object.assign({}, item.content);
+        _wuCv.companies = _wuCv.companies || [];
+        _wuCv.education = _wuCv.education || [];
+
+        // Pre-render normalization. This template shows YEAR-ONLY date ranges (e.g. "2014 - 2025"),
+        // unlike APAC's "Mon YYYY" format — a different normalizer is needed rather than reusing
+        // APAC's month-aware one, which would try to fabricate a month component that doesn't belong
+        // in this template's own date style.
+        (function() {
+          function extractYear(s) {
+            if (!s) return '';
+            var str = String(s).trim();
+            if (/present|now/i.test(str)) return str.match(/present|now/i)[0];
+            var m = str.match(/(\d{4})/);
+            return m ? m[1] : str;
+          }
+          function normYearRange(s) {
+            if (!s) return '';
+            var str = String(s);
+            var parts = str.split(/\s*[\u2013\u2014-]+\s*/);
+            if (parts.length === 2) return extractYear(parts[0]) + ' - ' + extractYear(parts[1]);
+            return extractYear(str);
+          }
+          function ensureFullStop(t) {
+            var s = String(t || '').replace(/\s+$/, '');
+            if (!s) return s;
+            if (/[.!?:\u2026]$/.test(s)) return s;
+            return s + '.';
+          }
+          (_wuCv.companies || []).forEach(function(co) {
+            if (!co) return;
+            if (co.dates) co.dates = normYearRange(co.dates);
+            (co.roles || []).forEach(function(r) {
+              if (!r) return;
+              if (r.role_dates) r.role_dates = normYearRange(r.role_dates);
+              if (Array.isArray(r.bullets)) r.bullets = r.bullets.map(function(b) { return ensureFullStop(b); });
+            });
+          });
+          (_wuCv.education || []).forEach(function(ed) {
+            if (!ed) return;
+            if (ed.year) ed.year = extractYear(ed.year);
+          });
+        })();
+
+        try {
+          var _wuDoc = new window.docxtemplater(_wuZip, {
+            paragraphLoop: true, linebreaks: true,
+            delimiters: {start: '{{', end: '}}'},
+            nullGetter: function() { return ''; }
+          });
+          _wuDoc.render(_wuCv);
+          // Post-render: convert **bold** markup preserved from the source CV into real bold runs.
+          // Identical mechanism to the APAC template's — see the extended comment there for why this
+          // uses literal "</w:r>" splitting rather than a single regex with an optional group, which
+          // has previously failed silently at full-document scale despite working in isolated tests.
+          (function() {
+            var _wuOutZip = _wuDoc.getZip();
+            var _wuOutXml = _wuOutZip.files['word/document.xml'].asText();
+            if (_wuOutXml.indexOf('**') === -1) { return; }
+            var _wuParts = _wuOutXml.split('</w:r>');
+            for (var pi = 0; pi < _wuParts.length; pi++) {
+              var part = _wuParts[pi];
+              var runStart = part.lastIndexOf('<w:r>');
+              if (runStart === -1) continue;
+              var runXml = part.substring(runStart) + '</w:r>';
+              if (runXml.indexOf('**') === -1) continue;
+              var m = runXml.match(/^<w:r>(?:<w:rPr>([\s\S]*)<\/w:rPr>)?<w:t([^>]*)>([^<]*)<\/w:t><\/w:r>$/);
+              if (!m) continue;
+              var rPrInner = m[1], tAttrs = m[2], text = m[3];
+              var segs = text.split(/\*\*(.+?)\*\*/g);
+              var runs = '';
+              for (var i = 0; i < segs.length; i++) {
+                if (!segs[i]) continue;
+                var isBold = (i % 2 === 1);
+                var rPr = rPrInner || '';
+                if (isBold && rPr.indexOf('<w:b') === -1) rPr += '<w:b/><w:bCs/>';
+                runs += '<w:r>' + (rPr ? '<w:rPr>' + rPr + '</w:rPr>' : '') + '<w:t' + tAttrs + '>' + segs[i] + '</w:t></w:r>';
+              }
+              if (runs) {
+                runs = runs.slice(0, -'</w:r>'.length);
+                _wuParts[pi] = part.substring(0, runStart) + runs;
+              }
+            }
+            _wuOutXml = _wuParts.join('</w:r>');
+            _wuOutZip.file('word/document.xml', _wuOutXml);
+          })();
+          out = _wuDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
+        } catch(_wuErr) {
+          console.error('[WAM UAE] docxtemplater error:', _wuErr.message);
+          out = _wuZip.generate({type: 'blob', mimeType: _docMimeSingle});
         }
 
       } else {
