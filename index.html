@@ -2343,6 +2343,11 @@ function normDateRange(s) {
       } else {
         xml += '<w:p>' + ROL_PPR_P + '<w:r>' + ROL_RPR + '<w:t>' + xe(role.role) + '</w:t></w:r></w:p>';
       }
+      // Match the blank-line SPACER already used between company/role-title above, and between
+      // role-title/bullets in the company-level overview-bullets branch just above this one — the
+      // 120-twip w:spacing w:after on the role title paragraph alone was not enough to visually match
+      // that same-document convention, which is what made it read as "no space" by comparison.
+      xml += SPACER;
       var bullets = role.bullets || [];
       for (var bi = 0; bi < bullets.length; bi++) {
         var b = (bullets[bi] || '').trim();
