@@ -2303,9 +2303,18 @@ function normDateRange(s) {
         +  (coDates ? '<w:r>' + CO_RPR + '<w:tab/><w:t xml:space="preserve">' + xe(coDates) + '</w:t></w:r>' : '')
         +  '</w:p>';
     if (co.description) {
+      // Safety net: strip a redundant "COMPANY NAME – " label prefix from the description if the
+      // AI still included it despite the prompt instruction — the company name is already rendered
+      // on the line above, so repeating it as a bare label prefix here is always redundant, never
+      // wanted. Only strips a plain case-insensitive name+dash match, not a genuine sentence that
+      // happens to mention the company (e.g. "FactSet is a global provider..." is left alone).
+      var _desc = co.description;
+      var _nameEsc = co.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      var _prefixRe = new RegExp('^\\s*' + _nameEsc + '\\s*[\\u2013\\u2014-]\\s*', 'i');
+      _desc = _desc.replace(_prefixRe, '');
       var DESC_PPR = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
       var DESC_RPR = '<w:rPr><w:i/><w:iCs/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
-      xml += '<w:p>' + DESC_PPR + '<w:r>' + DESC_RPR + '<w:t xml:space="preserve">' + xe(co.description) + '</w:t></w:r></w:p>';
+      xml += '<w:p>' + DESC_PPR + '<w:r>' + DESC_RPR + '<w:t xml:space="preserve">' + xe(_desc) + '</w:t></w:r></w:p>';
     }
     xml += SPACER;
     var overviewBullets = co.overview_bullets || [];
@@ -3641,6 +3650,7 @@ Then the correct extraction is THREE separate companies, each with its OWN role 
 The trailing blurb after each block of bullets tells you which company that block belongs to — use it to correctly LABEL the block you just finished reading, then continue to the next role title as the start of the next entry. Never let a trailing blurb's company name attach to the bullets that follow it, and never let the dates of one company bleed into another company's date field.
 CRITICAL — DO NOT DROP ANY BULLET BLOCK: this trailing-blurb pattern is the single most common cause of entire accomplishment blocks going missing. Before finalizing your output, count the number of distinct "Challenge:"/"Accomplishments:"-style blocks in the source and confirm your companies array has the SAME number of role entries with non-empty bullets — a company block with a role title, a Challenge line, and Accomplishments bullets in the source must NEVER end up with bullets=[] in your output. If you find yourself about to output a role with an empty bullets array despite the source clearly having Challenge/Accomplishments text for it, STOP and re-scan the source — you have almost certainly mis-attributed that block's bullets to the wrong company.
 - company.description: The company's descriptive blurb (ticker, industry description, "an S&P 500 company" etc.), captured VERBATIM, regardless of whether it appeared before or after the role's bullets in the source. Leave "" if the CV has none.
+CRITICAL — DO NOT REPEAT THE COMPANY NAME AS A LABEL PREFIX: many CVs write the company line as "COMPANY NAME – description" (e.g. "ASCENDEX UNDERWRITERS – Tech-enabled Managing General Underwriter (MGU)", "HISCOX USA – Leading specialist insurance company..."), where the capitalized company name before the dash is just a bare repeat of the label, not part of a sentence. In this case, company.description = ONLY the part after the dash (e.g. "Tech-enabled Managing General Underwriter (MGU)") — do NOT include "ASCENDEX UNDERWRITERS – " at the start, since the company name is already captured separately in company.name and will already render directly above the description. This is different from the FactSet-style trailing-blurb example above, where the company name is genuinely repeated as the subject of a real sentence ("FactSet...is a global provider...") — only strip the prefix when it is a bare label with no sentence around it.
 CRITICAL — COMPANY GROUPING: If a candidate held multiple roles at the same company back-to-back with NO other employer in between, ALL those roles must go under ONE company entry. Judge by company name only — ignore location differences. For example, if the CV lists "Barclays Bank | London" and "Barclays Bank | London / India" and "Barclays Bank | London" as consecutive, back-to-back entries — these are the same company "Barclays Bank" and must be grouped into one entry with multiple roles.
 CRITICAL EXCEPTION — REJOINING: If the candidate worked at a company, then left to work somewhere ELSE, then LATER rejoined the SAME company — this is TWO SEPARATE company entries at their correct chronological positions, NOT one merged entry. Never merge across a gap where a different employer appears in between, even if the company name is identical.
 HOW TO CHECK THIS: process the CV's work history in strict chronological order, one entry at a time, exactly as the CV lists it. Before grouping a role into an existing company entry, check whether a DIFFERENT employer appears anywhere between this role and that company's most recent previously-seen role. If yes, this is a NEW, separate company entry — do not merge it backward into the earlier one.
