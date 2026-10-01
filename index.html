@@ -2285,8 +2285,12 @@ function normDateRange(s) {
   var TAB_STOP  = '<w:tabs><w:tab w:val="right" w:pos="9900"/></w:tabs>';
   var CO_PPR    = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
   var CO_RPR    = '<w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
-  var ROL_PPR_D = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="120"/>' + TAB_STOP + '</w:pPr>';
-  var ROL_PPR_P = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="120"/></w:pPr>';
+  // w:after=0, matching CO_PPR above — the role title must rely purely on the SPACER paragraph
+  // that follows it for its gap, same as the company line does, not carry its own extra 120-twip
+  // height on top of that spacer. That mismatch (company: spacer alone; role: spacer + 120 twips)
+  // is exactly what made the role-to-bullets gap render visibly taller than the company-to-role gap.
+  var ROL_PPR_D = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/>' + TAB_STOP + '</w:pPr>';
+  var ROL_PPR_P = '<w:pPr><w:pStyle w:val="SHText"/><w:spacing w:after="0"/></w:pPr>';
   var ROL_RPR   = '<w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>';
   var BUL_RPR   = '<w:rPr><w:rFonts w:ascii="Raleway Medium" w:eastAsiaTheme="minorHAnsi" w:hAnsi="Raleway Medium"/><w:lang w:eastAsia="en-US"/></w:rPr>';
   var BUL_PPR   = '<w:pStyle w:val="SHBullets"/>';
