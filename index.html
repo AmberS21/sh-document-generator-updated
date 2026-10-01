@@ -2356,8 +2356,11 @@ function normDateRange(s) {
       // role-title/bullets in the company-level overview-bullets branch just above this one — the
       // 120-twip w:spacing w:after on the role title paragraph alone was not enough to visually match
       // that same-document convention, which is what made it read as "no space" by comparison.
-      xml += SPACER;
+      // Conditional on bullets actually existing: when a role has none, this spacer served no
+      // purpose and was stacking with the next company's own leading spacer, producing a visibly
+      // doubled gap before the next company instead of the single gap used everywhere else.
       var bullets = role.bullets || [];
+      if (bullets.length > 0) { xml += SPACER; }
       for (var bi = 0; bi < bullets.length; bi++) {
         var b = (bullets[bi] || '').trim();
         if (!b) continue;
