@@ -2150,8 +2150,10 @@ function eaIndiaTitleCaseIfCaps(str) {
   var up = (str.match(/[A-Z]/g) || []).length, lo = (str.match(/[a-z]/g) || []).length;
   // Only touch text that is (almost) entirely capitals — e.g. "BOARD MEMBER & CO-CHAIR of GRANTS COMMITTEE"
   if (up < 4 || lo / (up + lo) > 0.15) return str;
+  // A single all-caps word is far more likely a brand or acronym (PIMCO, KKR, UBS) than shouting — leave it alone
+  if ((str.match(/[A-Za-z][A-Za-z0-9'\u2019.]*/g) || []).length < 2) return str;
   var SMALL = {a:1,an:1,and:1,as:1,at:1,but:1,by:1,for:1,from:1,in:1,into:1,nor:1,of:1,on:1,or:1,per:1,the:1,to:1,via:1,with:1,vs:1};
-  var KEEP = {HFOF:1,AIMA:1,EMEA:1,APAC:1,FINRA:1,LIBOR:1,SOFR:1,ISDA:1,IFRS:1,GAAP:1,CFTC:1,UK:1,US:1,EU:1,UN:1,UAE:1,USA:1,II:1,III:1,IV:1};
+  var KEEP = {PIMCO:1,HFOF:1,AIMA:1,EMEA:1,APAC:1,FINRA:1,LIBOR:1,SOFR:1,ISDA:1,IFRS:1,GAAP:1,CFTC:1,UK:1,US:1,EU:1,UN:1,UAE:1,USA:1,II:1,III:1,IV:1};
   var SHORTWORD = {new:1,old:1,top:1,big:1,one:1,two:1,set:1,pre:1,lab:1,bay:1,gas:1,oil:1,air:1,sea:1,end:1,out:1,all:1,far:1,low:1,key:1,way:1,web:1,net:1,pro:1,max:1,red:1,sun:1,sky:1,art:1,age:1,law:1,tax:1,fee:1,co:1,ex:1,re:1,non:1,due:1,day:1,pay:1,job:1,sub:1,buy:1,fix:1,gap:1,mid:1,man:1,own:1,use:1,fox:1,ace:1,arc:1,ark:1,box:1,cap:1,car:1,eye:1,fit:1,hub:1,ion:1,jet:1,mix:1,map:1,pan:1,rim:1,run:1,tip:1,tri:1,van:1,wax:1};
   var idx = 0;
   return str.replace(/[A-Za-z][A-Za-z0-9'\u2019.]*/g, function(tok) {
@@ -2172,6 +2174,7 @@ function eaIndiaAbbrevMonths(str) {
 function eaIndiaNormalizeContent(c) {
   c = Object.assign({}, c || {});
   c.CURRENT_EMPLOYER = eaIndiaTitleCaseIfCaps(c.CURRENT_EMPLOYER);
+  c.SUMMARY_INTRO = eaIndiaJoinWrappedLines(c.SUMMARY_INTRO);   // no hard line breaks inside a paragraph
   c.companies = (c.companies || []).map(function(co) {
     if (!co) return co;
     var n = Object.assign({}, co);
@@ -2193,13 +2196,224 @@ function eaIndiaNormalizeContent(c) {
     return m;
   });
   for (var i = 1; i <= 5; i++) {
-    var tk = 'AFFIL_' + i + '_TEXT';
-    if (c[tk]) { var ln = String(c[tk]).split('\n'); ln[0] = eaIndiaTitleCaseIfCaps(ln[0]); c[tk] = ln.join('\n'); }
-    var yk = ['AFFIL_' + i + '_YEAR', 'QUAL_' + i + '_YEAR'];
+    var tk = 'AFFIL_' + i + '_TEXT', yk0 = 'AFFIL_' + i + '_YEAR';
+    if (c[tk] || c[yk0]) {
+      var fx = eaIndiaFixAffil(c[yk0], c[tk]);          // dates out of the text, range into the date column
+      var ln = String(fx.text).split('\n'); ln[0] = eaIndiaTitleCaseIfCaps(ln[0]);
+      c[tk] = ln.join('\n'); c[yk0] = fx.year;
+    }
+    var yk = ['QUAL_' + i + '_YEAR'];
     for (var y = 0; y < yk.length; y++) { if (c[yk[y]]) c[yk[y]] = eaIndiaAbbrevMonths(c[yk[y]]); }
   }
+  c.SUMMARY_GROUPS_HEADING = eaIndiaTitleCaseIfCaps(c.SUMMARY_GROUPS_HEADING);
+  c.SUMMARY_GROUPS = (Array.isArray(c.SUMMARY_GROUPS) ? c.SUMMARY_GROUPS : []).map(function(g) {
+    if (!g) return g; var m = Object.assign({}, g); m.heading = eaIndiaTitleCaseIfCaps(m.heading); return m;
+  });
   for (var j = 1; j <= 3; j++) { if (c['EDU_' + j + '_YEAR']) c['EDU_' + j + '_YEAR'] = eaIndiaAbbrevMonths(c['EDU_' + j + '_YEAR']); }
   return c;
+}
+
+// ── EA India (non-Reg): date ranges, affiliation date clean-up, dynamic Summary groups ──
+function eaIndiaNormRange(d) {
+  d = String(d == null ? '' : d).trim();
+  if (!d) return d;
+  d = d.replace(/\b(\d{2})(\d{2})\s*[-\u2013\u2014]\s*(\d{2})(?!\d)/g, function(m, c, y1, y2) { return c + y1 + ' \u2013 ' + c + y2; });
+  d = d.replace(/\b(\d{4})\s*[-\u2013\u2014]\s*(\d{4})\b/g, '$1 \u2013 $2');
+  d = d.replace(/\b(\d{4})\s*[-\u2013\u2014]\s*(present|current|ongoing|now|to date)\b/gi, '$1 \u2013 Present');
+  d = d.replace(/\b(\d{4})\s*[-\u2013\u2014]\s*$/, '$1 \u2013 Present');
+  return d.replace(/\b(present|current|ongoing)\b/gi, 'Present');
+}
+// If the AI left an affiliation's dates in its text ("(2018–2023)" on its own line, or after the title),
+// move them into the date column and drop them from the text.
+function eaIndiaFixAffil(year, text) {
+  year = String(year == null ? '' : year).trim();
+  var lines = String(text == null ? '' : text).split('\n').map(function(l) { return l.trim(); });
+  var END = '(?:(?:19|20)?\\d{2,4}|present|current|ongoing|now)';
+  var LONE = new RegExp('^\\(?\\s*((?:19|20)\\d{2}(?:\\s*[-\\u2013\\u2014]\\s*' + END + ')?)\\s*\\)?$', 'i');
+  var TAIL = new RegExp('\\s*\\(\\s*((?:19|20)\\d{2}\\s*[-\\u2013\\u2014]\\s*' + END + ')\\s*\\)\\s*$', 'i');
+  var found = '';
+  for (var i = lines.length - 1; i >= 1; i--) {
+    var m = lines[i].match(LONE);
+    if (m) { found = found || m[1]; lines.splice(i, 1); }
+  }
+  if (lines.length) {
+    var t = lines[0].match(TAIL);
+    if (t) { found = found || t[1]; lines[0] = lines[0].replace(TAIL, ''); }
+  }
+  if (found && (!year || !/[-\u2013\u2014]/.test(year))) year = found;
+  return {year: eaIndiaNormRange(year), text: lines.filter(function(l, i) { return i === 0 || l; }).join('\n')};
+}
+// Summary region: (1) drop the four fixed sections (Experience / Legal, Risk & Regulatory Expertise / Key Skills /
+// Executive Overview) when they have nothing in them, (2) insert the CV's own named highlight groups.
+function eaIndiaBuildSummaryRegion(xml, cv) {
+  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function ptext(p) { return (p.match(/<w:t[^>]*>[^<]*<\/w:t>/g) || []).map(function(t) { return t.replace(/<[^>]+>/g, ''); }).join('').replace(/&amp;/g, '&').trim(); }
+  function bounds(idx) {
+    var ps = idx;
+    while (ps > 0) { var c = xml.lastIndexOf('<w:p', ps - 1); if (c < 0) break; var n = xml.charAt(c + 4); if (n === '>' || n === ' ') { ps = c; break; } ps = c; }
+    return [ps, xml.indexOf('</w:p>', idx) + 6];
+  }
+  // bullet paragraph cloned from the template's own first skills bullet
+  var bTpl = '';
+  var ei = xml.indexOf('{{EXP_SKILL_1}}');
+  if (ei !== -1) { var bb = bounds(ei); bTpl = xml.slice(bb[0], bb[1]).replace(/^<w:p [^>]*>/, '<w:p>'); }
+  var HEAD_RPR = '<w:rPr><w:color w:val="2C2E82"/></w:rPr>';
+  var BLANK = '<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/>' + HEAD_RPR + '</w:pPr></w:p>';
+  function head(t) { return '<w:p><w:pPr><w:keepNext/><w:spacing w:after="0"/><w:jc w:val="both"/>' + HEAD_RPR + '</w:pPr><w:r>' + HEAD_RPR + '<w:t xml:space="preserve">' + esc(t) + '</w:t></w:r></w:p>'; }
+  function bullet(t) {
+    t = String(t || '').replace(/\*\*/g, '').trim();
+    if (!t) return '';
+    if (bTpl) return bTpl.replace('{{EXP_SKILL_1}}', esc(t));
+    return '<w:p><w:pPr><w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="4"/></w:numPr><w:spacing w:after="0"/><w:jc w:val="both"/></w:pPr><w:r><w:t xml:space="preserve">' + esc(t) + '</w:t></w:r></w:p>';
+  }
+  // (1) remove empty fixed blocks
+  var blocks = [
+    {h: 'Experience', p: 'EXP_SKILL_', n: 6}, {h: 'Legal, Risk & Regulatory Expertise', p: 'LRR_SKILL_', n: 11},
+    {h: 'Key Skills', p: 'KEY_SKILL_', n: 10}, {h: 'Executive Overview', p: 'EXEC_OVERVIEW_BULLET_', n: 6}];
+  var paras = [], m, re = /<w:p[ >][\s\S]*?<\/w:p>/g;
+  while ((m = re.exec(xml)) !== null) paras.push({s: m.index, e: m.index + m[0].length, t: ptext(m[0]), raw: m[0]});
+  var drop = {}, keptFixed = false;
+  blocks.forEach(function(b) {
+    var has = false;
+    for (var i = 1; i <= b.n; i++) if (String(cv[b.p + i] || '').trim()) { has = true; break; }
+    var hi = -1;
+    for (var k = 0; k < paras.length; k++) if (paras[k].t === b.h && paras[k].raw.indexOf('{{') === -1) { hi = k; break; }
+    if (hi < 0) return;
+    if (has) { keptFixed = true; return; }
+    drop[hi] = true;
+    var prev = paras[hi - 1];
+    if (prev && !prev.t && !/<w:drawing|sectPr|w:br w:type="page"/.test(prev.raw)) drop[hi - 1] = true;
+  });
+  var out = '', pos = 0;
+  paras.forEach(function(p, i) { if (drop[i]) { out += xml.slice(pos, p.s); pos = p.e; } });
+  out += xml.slice(pos);
+  xml = out;
+  // (2) dynamic highlight groups, right after the summary intro paragraph
+  var groups = (Array.isArray(cv.SUMMARY_GROUPS) ? cv.SUMMARY_GROUPS : []).filter(function(g) { return g && Array.isArray(g.items) && g.items.some(function(x) { return String(x || '').trim(); }); });
+  if (groups.length) {
+    var gx = BLANK;
+    var gh = String(cv.SUMMARY_GROUPS_HEADING || '').trim();
+    if (gh) gx += head(gh);
+    groups.forEach(function(g, gi) {
+      if (gi > 0) gx += BLANK;
+      if (String(g.heading || '').trim()) gx += head(String(g.heading).trim());
+      g.items.forEach(function(it) { gx += bullet(it); });
+    });
+    if (keptFixed) gx += BLANK;
+    var ii = xml.indexOf('{{SUMMARY_INTRO}}');
+    if (ii !== -1) { var ib = bounds(ii); xml = xml.slice(0, ib[1]) + gx + xml.slice(ib[1]); }
+  }
+  return xml;
+}
+
+// Remove template sections/rows that have nothing in them (headings with no entries, empty label rows such as
+// "Technical Skills" / "Interests"), so the profile doesn't carry empty headings.
+function eaIndiaDropEmptySections(xml, cv) {
+  function ptext(p) { return (p.match(/<w:t[^>]*>[^<]*<\/w:t>/g) || []).map(function(t) { return t.replace(/<[^>]+>/g, ''); }).join('').replace(/&amp;/g, '&').trim(); }
+  function has(prefix, suffix, n) { for (var i = 1; i <= n; i++) if (String(cv[prefix + i + suffix] || '').trim()) return true; return false; }
+  function filled(v) { return !!String(v == null ? '' : v).trim(); }
+  var volHas = (Array.isArray(cv.volunteering) ? cv.volunteering : []).some(function(v) { return v && (filled(v.role) || filled(v.description) || filled(v.dates)); });
+  var rules = [
+    {t: 'Professional Qualifications', keep: has('QUAL_', '_TEXT', 5)},
+    {t: 'Professional Affiliations', keep: has('AFFIL_', '_TEXT', 5)},
+    {t: 'Volunteering', keep: volHas},
+    {t: 'Technical Skills{{TECH_SKILLS}}', keep: filled(cv.TECH_SKILLS)},
+    {t: 'Nationality{{NATIONALITY}}', keep: filled(cv.NATIONALITY)},
+    {t: 'Languages{{LANGUAGES}}', keep: filled(cv.LANGUAGES)},
+    {t: 'Interests{{INTERESTS}}', keep: filled(cv.INTERESTS)}];
+  var paras = [], m, re = /<w:p[ >][\s\S]*?<\/w:p>/g;
+  while ((m = re.exec(xml)) !== null) paras.push({s: m.index, e: m.index + m[0].length, t: ptext(m[0]), raw: m[0]});
+  var drop = {};
+  rules.forEach(function(r) {
+    if (r.keep) return;
+    for (var k = 0; k < paras.length; k++) {
+      if (paras[k].t !== r.t) continue;
+      drop[k] = true;
+      var nx = paras[k + 1];                                   // the blank line that follows the heading / row goes with it
+      if (nx && !nx.t && !/<w:drawing|sectPr|w:br w:type="page"/.test(nx.raw)) drop[k + 1] = true;
+      break;
+    }
+  });
+  var out = '', pos = 0;
+  paras.forEach(function(p, i) { if (drop[i]) { out += xml.slice(pos, p.s); pos = p.e; } });
+  out = out + xml.slice(pos);
+  if (rules[1].keep) {
+    // The template has no gap around the Affiliations heading (empty qualification rows used to supply one):
+    // give it one blank line before and one after, cloned from the template's own blank line.
+    var ps2 = [], m2, re2 = /<w:p[ >][\s\S]*?<\/w:p>/g;
+    while ((m2 = re2.exec(out)) !== null) ps2.push({s: m2.index, e: m2.index + m2[0].length, t: ptext(m2[0]), raw: m2[0]});
+    var blank = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
+    for (var q = 0; q < ps2.length - 1; q++) {
+      if (ps2[q].t === 'Education' && !ps2[q + 1].t && ps2[q + 1].raw.indexOf('{{') === -1) { blank = ps2[q + 1].raw.replace(/^<w:p [^>]*>/, '<w:p>'); break; }
+    }
+    for (var h = 0; h < ps2.length; h++) {
+      if (ps2[h].t === 'Professional Affiliations' && ps2[h].raw.indexOf('{{') === -1) {
+        out = out.slice(0, ps2[h].s) + blank + ps2[h].raw + blank + out.slice(ps2[h].e);
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+// ── EA India (non-Reg): wrapped-line join, rank-bullet placement, blank-line collapse ──
+// The CV's line breaks are visual wrapping — join them into one flowing paragraph. A blank line (\n\n) is kept as a real
+// paragraph break.
+function eaIndiaJoinWrappedLines(str) {
+  str = String(str == null ? '' : str).replace(/\r\n?/g, '\n');
+  if (!str.trim()) return '';
+  return str.split(/\n[ \t]*\n/).map(function(par) { return par.replace(/\s*\n\s*/g, ' ').replace(/[ \t]{2,}/g, ' ').trim(); })
+            .filter(Boolean).join('\n\n');
+}
+// When the source has ONE line listing 2+ rank titles that each carry years (e.g. "Executive Vice President (2015–present) |
+// Senior Vice President (2012) | Vice President (2008)") and the sentence printed directly under it was attached to a rank
+// other than the LAST one, move it to the last rank. Deterministic safety net behind prompt Rule 6c.
+function eaIndiaFixRankBullets(out, src) {
+  if (!out || !Array.isArray(out.companies) || !src) return;
+  var norm = function(t) { return String(t || '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim().toLowerCase(); };
+  var lines = String(src).split(/\r?\n/);
+  var SEG = '[^|\\n]{3,80}\\(\\s*(?:19|20)\\d{2}[^)]*\\)';
+  var RANKS = new RegExp('^\\s*' + SEG + '(?:\\s*\\|\\s*' + SEG + ')+\\s*$');
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].replace(/\*\*/g, '');
+    if (!RANKS.test(line)) continue;
+    var titles = line.split('|').map(function(p) { return norm(p.replace(/\([^)]*\)/g, '')); });
+    var nextLine = '';
+    for (var k = i + 1; k < lines.length; k++) { if (lines[k].trim()) { nextLine = norm(lines[k]); break; } }
+    if (!nextLine) continue;
+    var lastT = titles[titles.length - 1];
+    out.companies.forEach(function(co) {
+      var roles = (co && co.roles) || [];
+      var li = -1;
+      roles.forEach(function(r, ri) { if (r && norm(r.role) === lastT) li = ri; });
+      if (li < 0) return;
+      roles.forEach(function(r, ri) {
+        if (ri === li || !r || !Array.isArray(r.bullets) || !titles.some(function(t) { return t === norm(r.role); })) return;
+        var keep = [], move = [];
+        r.bullets.forEach(function(b) { (norm(b) && nextLine.indexOf(norm(b).slice(0, 40)) === 0 ? move : keep).push(b); });
+        if (move.length) { r.bullets = keep; roles[li].bullets = (roles[li].bullets || []).concat(move); }
+      });
+    });
+  }
+}
+// One blank line is the standard gap: collapse runs of blank paragraphs that follow the given heading into a single one
+// (left-over blanks from removed empty slots otherwise stack up). Never touches paragraphs holding text, images, breaks,
+// bullets or section properties.
+function eaIndiaCollapseBlanks(xml, afterText) {
+  var paras = [], m, re = /<w:p[ >][\s\S]*?<\/w:p>/g;
+  while ((m = re.exec(xml)) !== null) paras.push({s: m.index, e: m.index + m[0].length, raw: m[0]});
+  function vis(p) { return p.raw.replace(/<[^>]+>/g, '').replace(/\s+/g, ''); }
+  function isBlank(p) { return !vis(p) && !/<w:drawing|<w:pict|sectPr|<w:br|<w:numPr|w:fldChar|w:instrText/.test(p.raw); }
+  var target = afterText.replace(/\s+/g, ''), start = -1;
+  for (var i = 0; i < paras.length; i++) { if (vis(paras[i]) === target) { start = i; break; } }
+  if (start < 0) return xml;
+  var drop = {}, prevBlank = false;
+  for (var j = start + 1; j < paras.length; j++) {
+    if (isBlank(paras[j])) { if (prevBlank) drop[j] = true; else prevBlank = true; } else { prevBlank = false; }
+  }
+  var out = '', pos = 0;
+  paras.forEach(function(p, idx) { if (drop[idx]) { out += xml.slice(pos, p.s); pos = p.e; } });
+  return out + xml.slice(pos);
 }
 
 function buildEaIndiaBizExp(companies) {
@@ -3951,7 +4165,7 @@ var isApacV2 = (tpl === 'apac-profile-v2');
 if (isApacV2) { isApac = true; isApacUpdated = true; }
 var apacEyJsonStr = '{"CANDIDATE_NAME":"","CURRENT_TITLE":"","CURRENT_EMPLOYER":"","PROFILE_DATE":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"executive_experience":[{"section":"","bullets":[""]}],"EDU_1_INSTITUTION":"","EDU_1_START":"","EDU_1_END":"","EDU_1_DEGREE":"","EDU_2_INSTITUTION":"","EDU_2_START":"","EDU_2_END":"","EDU_2_DEGREE":"","EDU_1_BULLETS":"","EDU_2_BULLETS":"","QUAL_1_TEXT":"","QUAL_1_START":"","QUAL_1_END":"","QUAL_1_DETAIL":"","QUAL_2_TEXT":"","QUAL_2_START":"","QUAL_2_END":"","QUAL_2_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","CANDIDATE_SUMMARY":""}';
 var changeConsJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_1_DETAIL":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","INTERESTS_DETAIL":""}';
-var eaIndiaJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY_INTRO":"","EXP_SKILL_1":"","EXP_SKILL_2":"","EXP_SKILL_3":"","EXP_SKILL_4":"","EXP_SKILL_5":"","EXP_SKILL_6":"","LRR_SKILL_1":"","LRR_SKILL_2":"","LRR_SKILL_3":"","LRR_SKILL_4":"","LRR_SKILL_5":"","LRR_SKILL_6":"","LRR_SKILL_7":"","LRR_SKILL_8":"","LRR_SKILL_9":"","LRR_SKILL_10":"","LRR_SKILL_11":"","KEY_SKILL_1":"","KEY_SKILL_2":"","KEY_SKILL_3":"","KEY_SKILL_4":"","KEY_SKILL_5":"","KEY_SKILL_6":"","KEY_SKILL_7":"","KEY_SKILL_8":"","KEY_SKILL_9":"","KEY_SKILL_10":"","EXEC_OVERVIEW_BULLET_1":"","EXEC_OVERVIEW_BULLET_2":"","EXEC_OVERVIEW_BULLET_3":"","EXEC_OVERVIEW_BULLET_4":"","EXEC_OVERVIEW_BULLET_5":"","EXEC_OVERVIEW_BULLET_6":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","role_description":"","bullets":[""]}]}],"EDU_1_YEAR":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_1_EXTRA":"","EDU_2_YEAR":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","EDU_3_YEAR":"","EDU_3_INSTITUTION":"","EDU_3_LOCATION":"","EDU_3_DEGREE":"","EDU_3_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_2_YEAR":"","QUAL_2_TEXT":"","QUAL_3_YEAR":"","QUAL_3_TEXT":"","QUAL_4_YEAR":"","QUAL_4_TEXT":"","QUAL_5_YEAR":"","QUAL_5_TEXT":"","AFFIL_1_YEAR":"","AFFIL_1_TEXT":"","AFFIL_2_YEAR":"","AFFIL_2_TEXT":"","AFFIL_3_YEAR":"","AFFIL_3_TEXT":"","AFFIL_4_YEAR":"","AFFIL_4_TEXT":"","AFFIL_5_YEAR":"","AFFIL_5_TEXT":"","NATIONALITY":"","LANGUAGES":"","TECH_SKILLS":"","INTERESTS":"","volunteering":[{"dates":"","role":"","description":""}]}';
+var eaIndiaJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","PROFILE_MONTH":"","SUMMARY_INTRO":"","SUMMARY_GROUPS_HEADING":"","SUMMARY_GROUPS":[{"heading":"","items":[""]}],"EXP_SKILL_1":"","EXP_SKILL_2":"","EXP_SKILL_3":"","EXP_SKILL_4":"","EXP_SKILL_5":"","EXP_SKILL_6":"","LRR_SKILL_1":"","LRR_SKILL_2":"","LRR_SKILL_3":"","LRR_SKILL_4":"","LRR_SKILL_5":"","LRR_SKILL_6":"","LRR_SKILL_7":"","LRR_SKILL_8":"","LRR_SKILL_9":"","LRR_SKILL_10":"","LRR_SKILL_11":"","KEY_SKILL_1":"","KEY_SKILL_2":"","KEY_SKILL_3":"","KEY_SKILL_4":"","KEY_SKILL_5":"","KEY_SKILL_6":"","KEY_SKILL_7":"","KEY_SKILL_8":"","KEY_SKILL_9":"","KEY_SKILL_10":"","EXEC_OVERVIEW_BULLET_1":"","EXEC_OVERVIEW_BULLET_2":"","EXEC_OVERVIEW_BULLET_3":"","EXEC_OVERVIEW_BULLET_4":"","EXEC_OVERVIEW_BULLET_5":"","EXEC_OVERVIEW_BULLET_6":"","companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","role_dates":"","role_description":"","bullets":[""]}]}],"EDU_1_YEAR":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_1_EXTRA":"","EDU_2_YEAR":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","EDU_2_EXTRA":"","EDU_3_YEAR":"","EDU_3_INSTITUTION":"","EDU_3_LOCATION":"","EDU_3_DEGREE":"","EDU_3_EXTRA":"","QUAL_1_YEAR":"","QUAL_1_TEXT":"","QUAL_2_YEAR":"","QUAL_2_TEXT":"","QUAL_3_YEAR":"","QUAL_3_TEXT":"","QUAL_4_YEAR":"","QUAL_4_TEXT":"","QUAL_5_YEAR":"","QUAL_5_TEXT":"","AFFIL_1_YEAR":"","AFFIL_1_TEXT":"","AFFIL_2_YEAR":"","AFFIL_2_TEXT":"","AFFIL_3_YEAR":"","AFFIL_3_TEXT":"","AFFIL_4_YEAR":"","AFFIL_4_TEXT":"","AFFIL_5_YEAR":"","AFFIL_5_TEXT":"","NATIONALITY":"","LANGUAGES":"","TECH_SKILLS":"","INTERESTS":"","volunteering":[{"dates":"","role":"","description":""}]}';
 var apacJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","SUMMARY":"","summary_bullets":[""],"companies":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","function":"","role_dates":"","role_description":"","bullets":[""]}]}],"projects":[{"name":"","location":"","dates":"","description":"","roles":[{"role":"","function":"","role_dates":"","role_description":"","bullets":[""]}]}],"education":[{"years":"","institution":"","location":"","degree":"","details":[""]}],"QUAL_1":"ALL qualification items joined by pipe, e.g. SFC License Type 1 | CFA Level II (2017) | Piano Band 9 — copy FULL string verbatim, every item, never split across other fields","NATIONALITY":"","LANGUAGES":"","INTERESTS":"","PROJECT_1_TITLE":"","PROJECT_1_CLIENT":"","PROJECT_1_DATE":"","PROJECT_1_DESCRIPTION":"","PROJECT_2_TITLE":"","PROJECT_2_CLIENT":"","PROJECT_2_DATE":"","PROJECT_2_DESCRIPTION":"","PROJECT_3_TITLE":"","PROJECT_3_CLIENT":"","PROJECT_3_DATE":"","PROJECT_3_DESCRIPTION":"","PROJECT_4_TITLE":"","PROJECT_4_CLIENT":"","PROJECT_4_DATE":"","PROJECT_4_DESCRIPTION":"","PROJECT_5_TITLE":"","PROJECT_5_CLIENT":"","PROJECT_5_DATE":"","PROJECT_5_DESCRIPTION":"","PROJECT_6_TITLE":"","PROJECT_6_CLIENT":"","PROJECT_6_DATE":"","PROJECT_6_DESCRIPTION":"","PROJECT_7_TITLE":"","PROJECT_7_CLIENT":"","PROJECT_7_DATE":"","PROJECT_7_DESCRIPTION":"","PROJECT_8_TITLE":"","PROJECT_8_CLIENT":"","PROJECT_8_DATE":"","PROJECT_8_DESCRIPTION":"","PROJECT_9_TITLE":"","PROJECT_9_CLIENT":"","PROJECT_9_DATE":"","PROJECT_9_DESCRIPTION":"","PROJECT_10_TITLE":"","PROJECT_10_CLIENT":"","PROJECT_10_DATE":"","PROJECT_10_DESCRIPTION":""}';
 
 var csJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","CLIENT_COMPANY":"","SEARCH_TITLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","roles":[{"role":"","role_dates":"","bullets":[""]}]}],"EDU_1_START":"","EDU_1_END":"","EDU_1_INSTITUTION":"","EDU_1_LOCATION":"","EDU_1_DEGREE":"","EDU_2_START":"","EDU_2_END":"","EDU_2_INSTITUTION":"","EDU_2_LOCATION":"","EDU_2_DEGREE":"","QUAL_1":"","QUAL_2":"","AFFILIATION_1":"","AFFILIATION_1_DATES":"","NATIONALITY":"","LANGUAGES":"","INTERESTS":""}';
@@ -3975,7 +4189,7 @@ CLIENT_COMPANY: Always "".
 SEARCH_TITLE: Always "".
 PROFILE_MONTH: "` + _eaIndiaMonthYear + `". Always use this exact value.
 
-SUMMARY_INTRO: Copy the candidate's opening personal profile / executive summary VERBATIM — every word, no changes. This is the paragraph(s) at the top of the CV describing who they are. If multiple paragraphs, join with \n. Do NOT include bullet points or skills lists — prose only. Leave "" if no summary exists.
+SUMMARY_INTRO: Copy the candidate's opening personal profile / executive summary VERBATIM — every word, no changes. This is the paragraph(s) at the top of the CV describing who they are. Write wrapped lines as ONE flowing paragraph: the CV's line breaks are only visual wrapping, so join them with a single space and put NO line breaks inside a paragraph. Only if the CV has genuinely separate paragraphs, separate them with a blank line (two line breaks in a row). Do NOT include bullet points or skills lists — prose only. Leave "" if no summary exists.
 
 SKILLS SECTIONS — the CV may have up to 3 separate named skills groups. Extract each group into its own set of fields:
 
@@ -3985,7 +4199,12 @@ LRR_SKILL_1 through LRR_SKILL_11: Extract items from the "Legal, Risk & Regulato
 
 KEY_SKILL_1 through KEY_SKILL_10: Extract items from the "Key Skills" (or "Skills", "Core Competencies") group VERBATIM, one per field. Leave unused fields as "". Leave all as "" if no such group exists.
 
-If the CV has only one skills section, put all items into KEY_SKILL_1 onwards and leave EXP_SKILL_* and LRR_SKILL_* empty.
+If the CV has only one skills section, put all items into KEY_SKILL_1 onwards and leave EXP_SKILL_* and LRR_SKILL_* empty (unless it is a set of NAMED GROUPS — see below).
+
+HIGHLIGHT GROUPS (SUMMARY_GROUPS_HEADING and SUMMARY_GROUPS): many CVs have a section after the opening summary — headed e.g. "HIGHLIGHTS OF QUALIFICATIONS", "Key Achievements", "Career Highlights", "Areas of Expertise" — made of several NAMED GROUPS, each with its own sub-heading and bullet points (e.g. sub-headings "Fundraising", "Franchise Building", "Senior Relationships & Client Coverage", "Business and Team Leadership"). Capture the whole section here, never drop it:
+- SUMMARY_GROUPS_HEADING: the CV's own heading for that section, in Title Case (e.g. "Highlights of Qualifications"). "" if the groups have no overall heading.
+- SUMMARY_GROUPS: array of {heading, items}, one object per named group, in the CV's order. heading = the group's sub-heading VERBATIM (Title Case if printed in capitals). items = array of ALL that group's bullets VERBATIM — every bullet, none merged, none dropped, none reworded.
+- If a group's heading is exactly "Experience", "Legal, Risk & Regulatory Expertise", "Key Skills" or "Executive Overview", use the fixed fields above for it instead. Never put the same content in both. Leave SUMMARY_GROUPS [] and SUMMARY_GROUPS_HEADING "" if the CV has no such section.
 
 EXEC_OVERVIEW_BULLET_1 through EXEC_OVERVIEW_BULLET_6:
 Extract up to 6 bullet points from the Executive Overview / Core Strengths bullet list — the capability statement bullets that appear directly under the opening summary paragraphs — VERBATIM. One bullet per field. Leave unused fields as "". Leave all as "" if no such bullet section exists.
@@ -4017,15 +4236,17 @@ Rule 5 — company.description: the company's own descriptive blurb — what the
   (c) written as "COMPANY NAME – description" → description = ONLY the text after the dash, never repeating the company name;
   (d) as a sentence about the company sitting under a job title (e.g. "An AU$2bn ASX-listed payment services & mortgage services settlement platform").
 It describes the COMPANY, so it ALWAYS goes in company.description — never in role_description and never in a bullet. A company with several roles still has only ONE company.description. Leave "" if the CV has no company-level blurb.
-Rule 5b — role.role_description: prose written AFTER the role title and BEFORE the bullet points that describes THAT ROLE or project itself (e.g. "Working for a leading government IT contractor on a project to provide a new highly secure Cisco SD-WAN network for the UK government:"). Copy VERBATIM. Do NOT put the company blurb here (it belongs in company.description). Leave "" if there is no such role-specific prose.
+Rule 5b — role.role_description: prose written AFTER the role title and BEFORE the bullet points that describes THAT ROLE or project itself (e.g. "Working for a leading government IT contractor on a project to provide a new highly secure Cisco SD-WAN network for the UK government:"). Copy VERBATIM. Do NOT put the company blurb here (it belongs in company.description). Use role_description ONLY for an introductory line that is followed by a bullet list — if the text under the title IS the role's whole content and no bullet list follows, it is a bullet (see Rule 8). Leave "" if there is no such role-specific prose.
 Rule 6 — role.role: Exact job title as written in the CV. Nothing added or removed.
 Rule 6b — OVERALL (UMBRELLA) TITLE: many CVs print a title line directly above or below the company name that describes the person's overall function at that company (e.g. "HEDGE FUND C-SUITE PRACTITIONER" above "TAULA CAPITAL MANAGEMENT (UK) LLP", or "INSTITUTIONAL ALLOCATOR" above "KEDGE CAPITAL SERVICES"), followed by separate specific titles that each have their own bullets. Capture that umbrella title as the FIRST object in the company's roles[]: role = the title (in Title Case per the CAPITALS rule), role_dates = "", role_description = "", bullets = []. NEVER drop it and never merge it into another title; then list the specific titles after it as usual. (A heading that covers several different companies, e.g. "PRIME BROKERAGE - SALES, CLIENT SERVICE, ONBOARDING" above Barclays, BNP Paribas and Lehman Brothers, is a career-section heading, not a title — ignore it.)
+Rule 6c — RANK / GRADE TITLES LISTED TOGETHER: some CVs list the candidate's rank titles with their years on ONE line under the company (e.g. "Executive Vice President (2015–present) | Senior Vice President (2012) | Vice President (2008)"), followed by the specific job titles. Capture each rank as its own role (role = the title, role_dates = its years) and place them FIRST in roles[], together and in the order the line gives them — do NOT interleave them with the specific job titles by date. A sentence printed directly under that line (e.g. "Twenty-year tenure across Munich, Newport Beach and London.") describes the whole line, so it goes in bullets of the LAST rank on that line — here "Vice President" — NEVER on the first or most senior rank. Worked example for that CV: roles[0] = {"role":"Executive Vice President","role_dates":"2015 – Present","bullets":[]}, roles[1] = {"role":"Senior Vice President","role_dates":"2012","bullets":[]}, roles[2] = {"role":"Vice President","role_dates":"2008","bullets":["Twenty-year tenure across Munich, Newport Beach and London."]}, then the specific job titles after them.
 
 Rule 7 — role.role_dates: REQUIRED when the company has 2 or more roles (except the umbrella title from Rule 6b, which has none). Same 3-letter month format. Leave "" ONLY if this company has exactly ONE role.
 
 Rule 8 — role.bullets — CRITICAL:
 Capture ALL bullet points, achievements, and responsibilities written DIRECTLY under that specific role title in the work history section. Copy VERBATIM — word for word, no changes.
-If no bullet points are written under a role, leave bullets as [].
+If no bullet points AND no descriptive text are written under a role, leave bullets as [].
+DESCRIPTION INSTEAD OF BULLETS: when a role has no bullet list but the text under its title is a short descriptive paragraph (one or two sentences about what the person did or achieved), that paragraph IS the role's content — put it in bullets as ONE bullet per paragraph/line (keep a two-sentence paragraph together as a single bullet, do not split or reword it) and leave role_description "".
 Do NOT invent bullets. Do NOT move content from other sections into bullets.
 Do NOT leave bullets empty if the CV has bullet points under that role.
 
@@ -4066,7 +4287,7 @@ LANGUAGES: Languages and proficiency levels exactly as stated. Leave "" if not f
 TECH_SKILLS: Extract technical skills, software tools, systems, programming languages exactly as stated (e.g. "Highly proficient in Microsoft Office, Salesforce CRM, ChatGPT, Claude"). Leave "" if not found.
 INTERESTS: Extract ONLY outside-work hobbies, sports, personal interests (e.g. "travelling, tennis, fitness"). Do NOT include professional memberships, awards, or affiliations here. Leave "" if not found.
 AFFILIATIONS: Extract professional memberships, awards, honours, fellowships — things like "Member of the Law Society", "Fellow of the Royal Society of the Arts", "Admitted to Freedom of the City of London". These are professional, NOT personal hobbies.
-Map each entry to AFFIL_N_YEAR (year only e.g. "2022", leave "" if not stated) and AFFIL_N_TEXT (formatted as described under PROFESSIONAL AFFILIATIONS below). Up to 5 entries, most recent first. Leave unused AFFIL fields as "".
+Map each entry to AFFIL_N_YEAR (the date or date range, e.g. "2022" or "2018 – 2023", leave "" if not stated) and AFFIL_N_TEXT (formatted as described under PROFESSIONAL AFFILIATIONS below). Up to 5 entries, most recent first. Leave unused AFFIL fields as "".
 
 VOLUNTEERING ARRAY:
 Extract volunteering, charitable roles, ambassadorships if a dedicated section exists.
@@ -4078,9 +4299,9 @@ Up to 3 entries, most recent first. Return [] if no volunteering section exists.
 PROFESSIONAL AFFILIATIONS — up to 5 entries:
 Extract ALL professional memberships, awards, honours, fellowships and affiliations (e.g. "Fellow of the Royal Society of the Arts (2016)", "Member of the Law Society of England & Wales (2000)", "Admitted to the Freedom of the City of London Solicitors' Company (2022)").
 This section is often labelled "Affiliations, Memberships & Awards" or "Professional Affiliations" in the CV.
-- AFFIL_N_YEAR: Year if stated (e.g. "2022", "2016"). Leave "" if not stated.
+- AFFIL_N_YEAR: the date or date range the CV gives for the entry — BOTH start and end. Write ranges as "YYYY – YYYY" or "YYYY – Present" (e.g. "(2018–2023)" becomes "2018 – 2023", "2022-24" becomes "2022 – 2024"); a single year as "YYYY". Dates the CV prints in brackets after the title belong HERE, never in AFFIL_N_TEXT. Leave "" if not stated.
 - AFFIL_N_TEXT: each entry has a TITLE and may have descriptive lines or bullets under it (e.g. title "Responsible Investing Committee" with the line "Member of a working group which comments on behalf of the industry on proposed FCA regulations…" underneath). Write AFFIL_N_TEXT as the entry's TITLE exactly as written in the CV, then a newline (\\n), then EACH descriptive line or bullet under it VERBATIM, one per line, joined with \\n.
-  * The title is ONLY the entry's own title. Do NOT put the parent organisation or group heading in front of it (e.g. a heading such as "INDUSTRY LEADERSHIP - AIMA" is NOT part of the entry titles) and do NOT add the year to the title — the year goes in AFFIL_N_YEAR.
+  * The title is ONLY the entry's own title. Do NOT put the parent organisation or group heading in front of it (e.g. a heading such as "INDUSTRY LEADERSHIP - AIMA" is NOT part of the entry titles) and do NOT add the year or any dates to the title or description, not even in brackets such as "(2018–2023)" — dates go in AFFIL_N_YEAR.
   * Never join the title and its description with a dash or comma — the description starts on a new line.
   * Capture EVERY descriptive line or bullet under the entry — never drop one.
   * If the title is in ALL CAPITALS, write it in Title Case (see the CAPITALS rule).
@@ -4958,6 +5179,7 @@ try {
           var _now = new Date();
           var _mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
           output.PROFILE_MONTH = _mNames[_now.getMonth()] + ' ' + _now.getFullYear();
+          if (isEaIndia) { try { eaIndiaFixRankBullets(output, inputText); } catch (_rbErr) { console.warn('[EA India] rank-bullet check skipped:', _rbErr.message); } }
           // Default placeholders for CS so template style renders correctly
           if (isCareerSummary || isChangeCons) {
             if (!output.CLIENT_COMPANY) output.CLIENT_COMPANY = '[Client Company]';
@@ -8546,6 +8768,10 @@ async function downloadHistory(index) {
             _eiDocXml = _eiDocXml.substring(0, _eiEePStart) + _eiSpacer + _eiDocXml.substring(_eiEePEnd);
           }
         }
+        // Step 2b: Summary region — insert the CV's named highlight groups; drop empty fixed sections
+        _eiDocXml = eaIndiaBuildSummaryRegion(_eiDocXml, _eiCv);
+        // Step 2c: drop sections with no data (empty headings / label rows)
+        _eiDocXml = eaIndiaDropEmptySections(_eiDocXml, _eiCv);
         _eiZip.file('word/document.xml', _eiDocXml);
 
         // Step 3: build volunteering tokens (up to 3 entries)
@@ -8644,10 +8870,17 @@ async function downloadHistory(index) {
             var _eiP = _eiPm[0];
             var _eiTs = _eiP.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [];
             var _eiHasContent = _eiTs.some(function(t){ return t.replace(/<[^>]+>/g,'').trim().length > 0; });
-            if (!_eiTs.length || _eiHasContent) { _eiClean += _eiP; }
+            // docxtemplater renders an empty value as a self-closing <w:t/>, which the match above does not see as
+            // text — so ALSO drop (a) bulleted paragraphs with no visible text (empty list items) and (b) rows whose
+            // only visible text is punctuation (e.g. a lone ":" left by an unused "year: text" slot)
+            var _eiVis = _eiP.replace(/<[^>]+>/g, '').replace(/\s+/g, '');
+            var _eiEmptyBullet = !_eiVis && /<w:numPr>/.test(_eiP);
+            var _eiPunctOnly = !!_eiVis && !/[\p{L}\p{N}]/u.test(_eiVis);
+            if ((!_eiTs.length || _eiHasContent) && !_eiEmptyBullet && !_eiPunctOnly) { _eiClean += _eiP; }
             _eiPos = _eiPm.index + _eiPm[0].length;
           }
           _eiClean += _eiOutXml.slice(_eiPos);
+          _eiClean = eaIndiaCollapseBlanks(_eiClean, 'Personal Details');   // one blank line is the standard gap
           _eiDoc.getZip().file('word/document.xml', _eiClean);
           out = _eiDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
         } catch(_eiErr) {
