@@ -2174,6 +2174,7 @@ function eaIndiaAbbrevMonths(str) {
 function eaIndiaNormalizeContent(c) {
   c = Object.assign({}, c || {});
   c.CURRENT_EMPLOYER = eaIndiaTitleCaseIfCaps(c.CURRENT_EMPLOYER);
+  c.SUMMARY_INTRO = eaIndiaJoinWrappedLines(c.SUMMARY_INTRO);   // no hard line breaks inside a paragraph
   c.companies = (c.companies || []).map(function(co) {
     if (!co) return co;
     var n = Object.assign({}, co);
@@ -2258,7 +2259,7 @@ function eaIndiaBuildSummaryRegion(xml, cv) {
   if (ei !== -1) { var bb = bounds(ei); bTpl = xml.slice(bb[0], bb[1]).replace(/^<w:p [^>]*>/, '<w:p>'); }
   var HEAD_RPR = '<w:rPr><w:color w:val="2C2E82"/></w:rPr>';
   var BLANK = '<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/>' + HEAD_RPR + '</w:pPr></w:p>';
-  function head(t) { return '<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="both"/>' + HEAD_RPR + '</w:pPr><w:r>' + HEAD_RPR + '<w:t xml:space="preserve">' + esc(t) + '</w:t></w:r></w:p>'; }
+  function head(t) { return '<w:p><w:pPr><w:keepNext/><w:spacing w:after="0"/><w:jc w:val="both"/>' + HEAD_RPR + '</w:pPr><w:r>' + HEAD_RPR + '<w:t xml:space="preserve">' + esc(t) + '</w:t></w:r></w:p>'; }
   function bullet(t) {
     t = String(t || '').replace(/\*\*/g, '').trim();
     if (!t) return '';
@@ -2335,6 +2336,83 @@ function eaIndiaDropEmptySections(xml, cv) {
   });
   var out = '', pos = 0;
   paras.forEach(function(p, i) { if (drop[i]) { out += xml.slice(pos, p.s); pos = p.e; } });
+  out = out + xml.slice(pos);
+  if (rules[1].keep) {
+    // The template has no gap around the Affiliations heading (empty qualification rows used to supply one):
+    // give it one blank line before and one after, cloned from the template's own blank line.
+    var ps2 = [], m2, re2 = /<w:p[ >][\s\S]*?<\/w:p>/g;
+    while ((m2 = re2.exec(out)) !== null) ps2.push({s: m2.index, e: m2.index + m2[0].length, t: ptext(m2[0]), raw: m2[0]});
+    var blank = '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr></w:p>';
+    for (var q = 0; q < ps2.length - 1; q++) {
+      if (ps2[q].t === 'Education' && !ps2[q + 1].t && ps2[q + 1].raw.indexOf('{{') === -1) { blank = ps2[q + 1].raw.replace(/^<w:p [^>]*>/, '<w:p>'); break; }
+    }
+    for (var h = 0; h < ps2.length; h++) {
+      if (ps2[h].t === 'Professional Affiliations' && ps2[h].raw.indexOf('{{') === -1) {
+        out = out.slice(0, ps2[h].s) + blank + ps2[h].raw + blank + out.slice(ps2[h].e);
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+// ── EA India (non-Reg): wrapped-line join, rank-bullet placement, blank-line collapse ──
+// The CV's line breaks are visual wrapping — join them into one flowing paragraph. A blank line (\n\n) is kept as a real
+// paragraph break.
+function eaIndiaJoinWrappedLines(str) {
+  str = String(str == null ? '' : str).replace(/\r\n?/g, '\n');
+  if (!str.trim()) return '';
+  return str.split(/\n[ \t]*\n/).map(function(par) { return par.replace(/\s*\n\s*/g, ' ').replace(/[ \t]{2,}/g, ' ').trim(); })
+            .filter(Boolean).join('\n\n');
+}
+// When the source has ONE line listing 2+ rank titles that each carry years (e.g. "Executive Vice President (2015–present) |
+// Senior Vice President (2012) | Vice President (2008)") and the sentence printed directly under it was attached to a rank
+// other than the LAST one, move it to the last rank. Deterministic safety net behind prompt Rule 6c.
+function eaIndiaFixRankBullets(out, src) {
+  if (!out || !Array.isArray(out.companies) || !src) return;
+  var norm = function(t) { return String(t || '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim().toLowerCase(); };
+  var lines = String(src).split(/\r?\n/);
+  var SEG = '[^|\\n]{3,80}\\(\\s*(?:19|20)\\d{2}[^)]*\\)';
+  var RANKS = new RegExp('^\\s*' + SEG + '(?:\\s*\\|\\s*' + SEG + ')+\\s*$');
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].replace(/\*\*/g, '');
+    if (!RANKS.test(line)) continue;
+    var titles = line.split('|').map(function(p) { return norm(p.replace(/\([^)]*\)/g, '')); });
+    var nextLine = '';
+    for (var k = i + 1; k < lines.length; k++) { if (lines[k].trim()) { nextLine = norm(lines[k]); break; } }
+    if (!nextLine) continue;
+    var lastT = titles[titles.length - 1];
+    out.companies.forEach(function(co) {
+      var roles = (co && co.roles) || [];
+      var li = -1;
+      roles.forEach(function(r, ri) { if (r && norm(r.role) === lastT) li = ri; });
+      if (li < 0) return;
+      roles.forEach(function(r, ri) {
+        if (ri === li || !r || !Array.isArray(r.bullets) || !titles.some(function(t) { return t === norm(r.role); })) return;
+        var keep = [], move = [];
+        r.bullets.forEach(function(b) { (norm(b) && nextLine.indexOf(norm(b).slice(0, 40)) === 0 ? move : keep).push(b); });
+        if (move.length) { r.bullets = keep; roles[li].bullets = (roles[li].bullets || []).concat(move); }
+      });
+    });
+  }
+}
+// One blank line is the standard gap: collapse runs of blank paragraphs that follow the given heading into a single one
+// (left-over blanks from removed empty slots otherwise stack up). Never touches paragraphs holding text, images, breaks,
+// bullets or section properties.
+function eaIndiaCollapseBlanks(xml, afterText) {
+  var paras = [], m, re = /<w:p[ >][\s\S]*?<\/w:p>/g;
+  while ((m = re.exec(xml)) !== null) paras.push({s: m.index, e: m.index + m[0].length, raw: m[0]});
+  function vis(p) { return p.raw.replace(/<[^>]+>/g, '').replace(/\s+/g, ''); }
+  function isBlank(p) { return !vis(p) && !/<w:drawing|<w:pict|sectPr|<w:br|<w:numPr|w:fldChar|w:instrText/.test(p.raw); }
+  var target = afterText.replace(/\s+/g, ''), start = -1;
+  for (var i = 0; i < paras.length; i++) { if (vis(paras[i]) === target) { start = i; break; } }
+  if (start < 0) return xml;
+  var drop = {}, prevBlank = false;
+  for (var j = start + 1; j < paras.length; j++) {
+    if (isBlank(paras[j])) { if (prevBlank) drop[j] = true; else prevBlank = true; } else { prevBlank = false; }
+  }
+  var out = '', pos = 0;
+  paras.forEach(function(p, idx) { if (drop[idx]) { out += xml.slice(pos, p.s); pos = p.e; } });
   return out + xml.slice(pos);
 }
 
@@ -4111,7 +4189,7 @@ CLIENT_COMPANY: Always "".
 SEARCH_TITLE: Always "".
 PROFILE_MONTH: "` + _eaIndiaMonthYear + `". Always use this exact value.
 
-SUMMARY_INTRO: Copy the candidate's opening personal profile / executive summary VERBATIM — every word, no changes. This is the paragraph(s) at the top of the CV describing who they are. If multiple paragraphs, join with \n. Do NOT include bullet points or skills lists — prose only. Leave "" if no summary exists.
+SUMMARY_INTRO: Copy the candidate's opening personal profile / executive summary VERBATIM — every word, no changes. This is the paragraph(s) at the top of the CV describing who they are. Write wrapped lines as ONE flowing paragraph: the CV's line breaks are only visual wrapping, so join them with a single space and put NO line breaks inside a paragraph. Only if the CV has genuinely separate paragraphs, separate them with a blank line (two line breaks in a row). Do NOT include bullet points or skills lists — prose only. Leave "" if no summary exists.
 
 SKILLS SECTIONS — the CV may have up to 3 separate named skills groups. Extract each group into its own set of fields:
 
@@ -4161,7 +4239,7 @@ It describes the COMPANY, so it ALWAYS goes in company.description — never in 
 Rule 5b — role.role_description: prose written AFTER the role title and BEFORE the bullet points that describes THAT ROLE or project itself (e.g. "Working for a leading government IT contractor on a project to provide a new highly secure Cisco SD-WAN network for the UK government:"). Copy VERBATIM. Do NOT put the company blurb here (it belongs in company.description). Use role_description ONLY for an introductory line that is followed by a bullet list — if the text under the title IS the role's whole content and no bullet list follows, it is a bullet (see Rule 8). Leave "" if there is no such role-specific prose.
 Rule 6 — role.role: Exact job title as written in the CV. Nothing added or removed.
 Rule 6b — OVERALL (UMBRELLA) TITLE: many CVs print a title line directly above or below the company name that describes the person's overall function at that company (e.g. "HEDGE FUND C-SUITE PRACTITIONER" above "TAULA CAPITAL MANAGEMENT (UK) LLP", or "INSTITUTIONAL ALLOCATOR" above "KEDGE CAPITAL SERVICES"), followed by separate specific titles that each have their own bullets. Capture that umbrella title as the FIRST object in the company's roles[]: role = the title (in Title Case per the CAPITALS rule), role_dates = "", role_description = "", bullets = []. NEVER drop it and never merge it into another title; then list the specific titles after it as usual. (A heading that covers several different companies, e.g. "PRIME BROKERAGE - SALES, CLIENT SERVICE, ONBOARDING" above Barclays, BNP Paribas and Lehman Brothers, is a career-section heading, not a title — ignore it.)
-Rule 6c — RANK / GRADE TITLES LISTED TOGETHER: some CVs list the candidate's rank titles with their years on ONE line under the company (e.g. "Executive Vice President (2015–present) | Senior Vice President (2012) | Vice President (2008)"), followed by the specific job titles. Capture each rank as its own role (role = the title, role_dates = its years) and place them FIRST in roles[], together and in the order the line gives them — do NOT interleave them with the specific job titles by date. A sentence printed directly under that line (e.g. "Twenty-year tenure across Munich, Newport Beach and London.") goes in bullets of the LAST of those rank roles.
+Rule 6c — RANK / GRADE TITLES LISTED TOGETHER: some CVs list the candidate's rank titles with their years on ONE line under the company (e.g. "Executive Vice President (2015–present) | Senior Vice President (2012) | Vice President (2008)"), followed by the specific job titles. Capture each rank as its own role (role = the title, role_dates = its years) and place them FIRST in roles[], together and in the order the line gives them — do NOT interleave them with the specific job titles by date. A sentence printed directly under that line (e.g. "Twenty-year tenure across Munich, Newport Beach and London.") describes the whole line, so it goes in bullets of the LAST rank on that line — here "Vice President" — NEVER on the first or most senior rank. Worked example for that CV: roles[0] = {"role":"Executive Vice President","role_dates":"2015 – Present","bullets":[]}, roles[1] = {"role":"Senior Vice President","role_dates":"2012","bullets":[]}, roles[2] = {"role":"Vice President","role_dates":"2008","bullets":["Twenty-year tenure across Munich, Newport Beach and London."]}, then the specific job titles after them.
 
 Rule 7 — role.role_dates: REQUIRED when the company has 2 or more roles (except the umbrella title from Rule 6b, which has none). Same 3-letter month format. Leave "" ONLY if this company has exactly ONE role.
 
@@ -5101,6 +5179,7 @@ try {
           var _now = new Date();
           var _mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
           output.PROFILE_MONTH = _mNames[_now.getMonth()] + ' ' + _now.getFullYear();
+          if (isEaIndia) { try { eaIndiaFixRankBullets(output, inputText); } catch (_rbErr) { console.warn('[EA India] rank-bullet check skipped:', _rbErr.message); } }
           // Default placeholders for CS so template style renders correctly
           if (isCareerSummary || isChangeCons) {
             if (!output.CLIENT_COMPANY) output.CLIENT_COMPANY = '[Client Company]';
@@ -8801,6 +8880,7 @@ async function downloadHistory(index) {
             _eiPos = _eiPm.index + _eiPm[0].length;
           }
           _eiClean += _eiOutXml.slice(_eiPos);
+          _eiClean = eaIndiaCollapseBlanks(_eiClean, 'Personal Details');   // one blank line is the standard gap
           _eiDoc.getZip().file('word/document.xml', _eiClean);
           out = _eiDoc.getZip().generate({type: 'blob', mimeType: _docMimeSingle});
         } catch(_eiErr) {
