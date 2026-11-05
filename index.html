@@ -1744,12 +1744,218 @@ function csXmlEsc(s) {
   return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// ── GB Profile helpers: numeric dates → "Dec 2024", education years, transaction tables ──
+// ── Scanned (image-only) PDFs: pdf.js finds no text, so render each page to an image and have the AI transcribe it ──
+// Each page is its own request: keeps every request small (the server sits behind nginx, default limit 1 MB), keeps each
+// call fast, and means one bad page cannot sink the whole CV.
+var OCR_SYSTEM = 'You are an OCR engine. Transcribe ALL the text on this page image exactly as printed, in reading order. '
+  + 'Rules: copy every word, number, date and symbol exactly - do not summarise, correct, translate or add anything. '
+  + 'Keep each heading and each line break as printed. Write bullet points as "\u2022 " at the start of the line. '
+  + 'For tables write one row per line with the cells separated by " | ", keeping the header row. '
+  + 'For two-column layouts finish the left column completely before the right column. '
+  + 'If a part of the page is unreadable write [illegible]. If the page has no text at all, return an empty reply. '
+  + 'Return ONLY the transcription - no introduction, no comments, no markdown formatting, no code fences.';
+
+function ocrCleanText(t) {
+  t = String(t == null ? '' : t).replace(/\r\n?/g, '\n').trim();
+  t = t.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '').trim();               // stray code fences
+  if (/^\[?\s*(blank|empty)( page)?\s*\]?\.?$/i.test(t)) return '';                // "blank page" answers
+  return t;
+}
+
+// Render one pdf.js page to a JPEG (base64, no data: prefix). Longest edge ~1568 px (the AI's recommended size); if the
+// result is bigger than ~700 KB it is re-rendered smaller / more compressed so the request stays well under 1 MB.
+async function ocrRenderPage(page, makeCanvas) {
+  var base = page.getViewport({ scale: 1 });
+  var scale = Math.min(2.5, 1568 / Math.max(base.width, base.height));
+  var quality = 0.85, b64 = '';
+  for (var attempt = 0; attempt < 4; attempt++) {
+    var vp = page.getViewport({ scale: scale });
+    var canvas = makeCanvas();
+    canvas.width = Math.max(1, Math.floor(vp.width));
+    canvas.height = Math.max(1, Math.floor(vp.height));
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';                                                      // JPEG has no transparency: avoid black pages
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    b64 = canvas.toDataURL('image/jpeg', quality).replace(/^data:image\/jpeg;base64,/, '');
+    if (b64.length <= 700000) return b64;
+    scale *= 0.8;
+    quality = Math.max(0.6, quality - 0.1);
+  }
+  return b64;
+}
+
+// One page image -> text, through the app's own proxy (same route and sign-in as the main generation call).
+async function ocrCallApi(b64, opts) {
+  opts = opts || {};
+  var sleep = opts.sleep || function(ms) { return new Promise(function(res) { setTimeout(res, ms); }); };
+  var body = JSON.stringify({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 4000,
+    system: OCR_SYSTEM,
+    messages: [{ role: 'user', content: [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+      { type: 'text', text: 'Transcribe this page.' }
+    ] }]
+  });
+  for (var attempt = 0; attempt < 3; attempt++) {
+    var r = await fetch('/api/proxy', { method: 'POST', headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' }, body: body });
+    if (r.status === 429 || r.status === 529) {
+      var wait = (parseInt((r.headers && r.headers.get && r.headers.get('retry-after')) || '10', 10) || 10) * 1000;
+      await sleep(wait);
+      continue;
+    }
+    var data = await r.json().catch(function() { return {}; });
+    if (!r.ok || data.error) {
+      var em = data.error && (data.error.message || data.error);
+      throw new Error(em ? String(em) : ('API error ' + r.status));
+    }
+    return (Array.isArray(data.content) ? data.content : []).filter(function(b) { return b && b.type === 'text'; })
+      .map(function(b) { return b.text; }).join('\n');
+  }
+  throw new Error('the AI service is busy - please try again in a minute');
+}
+
+async function ocrScannedPdf(pdf, opts) {
+  opts = opts || {};
+  var MAX_PAGES = opts.maxPages || 10;
+  var makeCanvas = opts.makeCanvas || function() { return document.createElement('canvas'); };
+  var callApi = opts.callApi || ocrCallApi;
+  var say = opts.onProgress || function(m) { try { notify(m); } catch (e) {} };
+  var n = Math.min(pdf.numPages, MAX_PAGES), texts = [];
+  for (var p = 1; p <= n; p++) {
+    say('Scanned PDF detected - reading page ' + p + ' of ' + n + ' with AI' + (p === 1 ? ' (a few seconds per page)...' : '...'));
+    var page = await pdf.getPage(p);
+    var b64 = await ocrRenderPage(page, makeCanvas);
+    texts.push(ocrCleanText(await callApi(b64)));
+  }
+  if (pdf.numPages > MAX_PAGES) say('Note: only the first ' + MAX_PAGES + ' of ' + pdf.numPages + ' pages of the scanned PDF were read.');
+  return texts.filter(Boolean).join('\n\n').trim();
+}
+
+// GB Profile: true when the AI answer has company names but not a single job title or bullet (a sign the CV text it was
+// given was incomplete) — handles both the companies[] shape and the older flat COMPANY_N_* shape.
+function gbLooksIncomplete(out) {
+  if (!out || typeof out !== 'object') return false;
+  function filled(v) { return Array.isArray(v) ? v.some(filled) : !!String(v == null ? '' : v).trim(); }
+  if (Array.isArray(out.companies) && out.companies.length) {
+    return !out.companies.some(function(c) {
+      return c && Array.isArray(c.roles) && c.roles.some(function(r) { return r && typeof r === 'object' && (filled(r.role) || filled(r.bullets)); });
+    });
+  }
+  if (out.COMPANY_1_NAME) {
+    for (var n = 1; n <= 15; n++) {
+      if (filled(out['COMPANY_' + n + '_ROLE'])) return false;
+      for (var b = 1; b <= 10; b++) if (filled(out['COMPANY_' + n + '_BULLET_' + b])) return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+function gbNormDateText(s) {
+  s = String(s == null ? '' : s).trim();
+  if (!s) return s;
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // numeric month/year → "Mon YYYY"  (12/2024, 6/2019, 06-2019, 06.2019)
+  s = s.replace(/\b(0?[1-9]|1[0-2])\s*[\/.\-]\s*((?:19|20)\d{2})\b/g, function(m, mo, y) { return MON[parseInt(mo, 10) - 1] + ' ' + y; });
+  // full month names → 3 letters
+  s = s.replace(/\b(January|February|March|April|June|July|August|September|Sept|October|November|December)\b/gi, function(m) {
+    var k = m.toLowerCase(); return k === 'sept' ? 'Sep' : MON[['january','february','march','april','may','june','july','august','september','october','november','december'].indexOf(k)];
+  });
+  // a hyphen between two dates → en dash with spaces
+  s = s.replace(/(\d{4})\s*[-\u2013\u2014]\s*(?=\d{4}|[A-Za-z]{3})/g, '$1 \u2013 ');
+  return s.replace(/\b(present|current|ongoing)\b/gi, 'Present');
+}
+// Education years: 4-digit years only (no months / numeric dates). One year, or "YYYY – YYYY".
+function gbEduYears(start, end, yrs) {
+  var t = String(yrs || (end ? (start || '') + ' \u2013 ' + end : (start || '')) || '').trim();
+  var ys = t.match(/(?:19|20)\d{2}/g) || [];
+  if (!ys.length) return t;
+  var last = ys[ys.length - 1];
+  if (ys.length === 1 && /present|current|ongoing/i.test(t)) return last + ' \u2013 Present';
+  return (ys.length === 1 || ys[0] === last) ? last : ys[0] + ' \u2013 ' + last;
+}
+// Transaction / engagement tables captured from the CV: bold heading + bordered table (bold header row, repeats across pages).
+function gbBuildTransactionTables(tables) {
+  function esc(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  var TEXT_W = 10128;                                  // width of the template's text block (A4 margins plus its negative indents), same as the manual's tables
+  var RPR = '<w:rPr><w:color w:val="222229"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>';
+  var RPR_B = '<w:rPr><w:b/><w:bCs/><w:color w:val="222229"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>';
+  var SIDES = ['top', 'left', 'bottom', 'right'];
+  var CELL_B = '<w:tcBorders>' + SIDES.map(function(sd) { return '<w:' + sd + ' w:val="single" w:sz="4" w:space="0" w:color="auto"/>'; }).join('') + '</w:tcBorders>';
+  var TBL_B = '<w:tblBorders>' + SIDES.concat(['insideH', 'insideV']).map(function(sd) { return '<w:' + sd + ' w:val="single" w:sz="4" w:space="0" w:color="auto"/>'; }).join('') + '</w:tblBorders>';
+  var out = '';
+  (Array.isArray(tables) ? tables : []).forEach(function(t) {
+    if (!t) return;
+    var cols = (Array.isArray(t.columns) ? t.columns : []).map(function(c) { return String(c == null ? '' : c); });
+    var rows = (Array.isArray(t.rows) ? t.rows : []).filter(function(r) { return Array.isArray(r) && r.some(function(c) { return String(c == null ? '' : c).trim(); }); });
+    var n = rows.reduce(function(m, r) { return Math.max(m, r.length); }, cols.length);
+    if (!n || !rows.length) return;
+    while (cols.length < n) cols.push('');
+    // Column widths: every column gets at least the width of its longest UNBREAKABLE text (a whole short value such as
+    // "Jan 2026" / "Preparation", otherwise its longest word), so words never split mid-word; the remaining width is shared
+    // by how much extra room each column's longest text would like.
+    var c, mins = [], wants = [], CH = 132, PAD = 170;
+    for (c = 0; c < n; c++) {
+      var cells = [cols[c]].concat(rows.map(function(r) { return r[c]; })), unb = 0, mxAll = 0;
+      cells.forEach(function(tx) {
+        tx = String(tx == null ? '' : tx).trim();
+        unb = Math.max(unb, tx.length <= 12 ? tx.length : tx.split(/\s+/).reduce(function(m, w) { return Math.max(m, w.length); }, 0));
+        mxAll = Math.max(mxAll, tx.length);
+      });
+      mins.push(unb * CH + PAD);
+      wants.push(Math.min(46, mxAll) * 105 + PAD);
+    }
+    var sumOf = function(a) { return a.reduce(function(x, y) { return x + y; }, 0); };
+    var minSum = sumOf(mins), widths;
+    if (minSum >= TEXT_W) {
+      widths = mins.map(function(m) { return Math.floor(m * TEXT_W / minSum); });
+    } else {
+      var extra = TEXT_W - minSum, gaps = wants.map(function(w, i) { return Math.max(0, w - mins[i]); }), gapSum = sumOf(gaps);
+      widths = mins.map(function(m, i) { return m + Math.round(gapSum ? extra * gaps[i] / gapSum : extra / n); });
+    }
+    widths[n - 1] += TEXT_W - sumOf(widths);                // absorb rounding
+    function cell(w, text, bold) {
+      return '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + CELL_B + '<w:vAlign w:val="center"/></w:tcPr>'
+           + '<w:p><w:pPr><w:spacing w:before="40" w:after="40"/>' + (bold ? RPR_B : RPR) + '</w:pPr>'
+           + (String(text).trim() ? '<w:r>' + (bold ? RPR_B : RPR) + '<w:t xml:space="preserve">' + esc(text) + '</w:t></w:r>' : '') + '</w:p></w:tc>';
+    }
+    if (String(t.heading || '').trim()) {
+      out += '<w:p><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="60"/><w:rPr><w:b/><w:bCs/><w:color w:val="222229"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:pPr>'
+           + '<w:r><w:rPr><w:b/><w:bCs/><w:color w:val="222229"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr><w:t xml:space="preserve">' + esc(String(t.heading).trim()) + '</w:t></w:r></w:p>';
+    }
+    out += '<w:tbl><w:tblPr><w:tblW w:w="' + TEXT_W + '" w:type="dxa"/><w:jc w:val="center"/>' + TBL_B
+         + '<w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="80" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>'
+         + widths.map(function(w) { return '<w:gridCol w:w="' + w + '"/>'; }).join('') + '</w:tblGrid>';
+    if (cols.some(function(h) { return h.trim(); })) {
+      out += '<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>' + cols.map(function(h, i) { return cell(widths[i], h, true); }).join('') + '</w:tr>';
+    }
+    rows.forEach(function(r) {
+      out += '<w:tr><w:trPr><w:cantSplit/></w:trPr>' + widths.map(function(w, i) { return cell(w, r[i] == null ? '' : r[i], false); }).join('') + '</w:tr>';
+    });
+    out += '</w:tbl><w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>';
+  });
+  return out;
+}
+
 function buildGbBizExp(companies) {
   if (!companies || companies.length === 0) return '';
   var xml = '';
   function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   var TAB_STOP = '<w:tabs><w:tab w:val="right" w:pos="9072"/></w:tabs>';
   var DASH = ' – ';
+  // Shorten full month names in dates (March -> Mar). This was being CALLED below but never defined in this function
+  // (it only existed inside buildSvcBizExp), so every GB profile with a company that has 2+ dated roles threw a
+  // ReferenceError and the whole Business Experience section was replaced by "Business experience error".
+  function abbrvDates(s) {
+    if (!s) return s;
+    return s.replace(/January/g,'Jan').replace(/February/g,'Feb').replace(/March/g,'Mar')
+            .replace(/April/g,'Apr').replace(/June/g,'Jun')
+            .replace(/July/g,'Jul').replace(/August/g,'Aug').replace(/September/g,'Sep')
+            .replace(/October/g,'Oct').replace(/November/g,'Nov').replace(/December/g,'Dec');
+  }
 
   for (var ci = 0; ci < companies.length; ci++) {
     var co = companies[ci];
@@ -1768,32 +1974,47 @@ function buildGbBizExp(companies) {
         + '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">' + xe(co.name)
         + (co.location ? ', ' + xe(co.location) : '') + '</w:t></w:r>'
         + '<w:r><w:tab/></w:r>'
-        + '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>' + xe(co.dates||'') + '</w:t></w:r>'
+        + '<w:r><w:rPr><w:b/><w:bCs/></w:rPr><w:t>' + xe(gbNormDateText(co.dates||'')) + '</w:t></w:r>'
         + '</w:p>';
 
     // Roles
+    var prevHadBullets = false;
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
-      if (!role || !role.role) continue;
+      if (!role) continue;
+      // bullets may arrive as an array or (older shape) as one string split by | or line breaks
+      var bullets = Array.isArray(role.bullets) ? role.bullets
+                  : (typeof role.bullets === 'string' ? role.bullets.split(/\s*\|\s*|\n+/) : []);
+      // A role with no title used to be skipped together with ALL of its bullets. Skip it only when it has neither.
+      if (!role.role && !bullets.some(function(b) { return String(b == null ? '' : b).trim(); })) continue;
       var roleDates = role.role_dates || role.dates || '';
+      // One blank line between the previous role's bullets and this role's title (it used to sit right under the bullets)
+      if (prevHadBullets) {
+        xml += '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>';
+        prevHadBullets = false;
+      }
 
+      if (role.role) {
       // Role line: role title, TAB, role dates (only if multi-role)
       xml += '<w:p><w:pPr><w:pStyle w:val="SHText"/>' + TAB_STOP
           + '<w:spacing w:before="0" w:after="0"/></w:pPr>'
           + '<w:r><w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
-          + (multiRole && roleDates ? '<w:r><w:tab/></w:r><w:r><w:t>' + xe(abbrvDates(roleDates)) + '</w:t></w:r>' : '')
+          + (multiRole && roleDates ? '<w:r><w:tab/></w:r><w:r><w:t>' + xe(gbNormDateText(roleDates)) + '</w:t></w:r>' : '')
           + '</w:p>';
+      }
 
       // Bullets (only under first/most recent role)
-      var bullets = role.bullets || [];
       if (bullets.length > 0) {
         // Spacer after role line before bullets
         xml += '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>';
         for (var bi = 0; bi < bullets.length; bi++) {
           var b = bullets[bi];
-          if (!b || !b.trim()) continue;
+          if (b == null) continue;
+          b = String(b);
+          if (!b.trim()) continue;
           xml += '<w:p><w:pPr><w:pStyle w:val="SHBullets"/><w:spacing w:before="0" w:after="0"/></w:pPr>'
               + '<w:r><w:t xml:space="preserve">' + xe(b) + '</w:t></w:r></w:p>';
+          prevHadBullets = true;
         }
       }
     }
@@ -3705,7 +3926,15 @@ async function generate() {
                 }
                 var extracted = txt.replace(/[ \t]{2,}/g, ' ').trim();
                 if (!extracted || extracted.length < 50) {
-                  throw new Error('This PDF appears to be image-based (scanned). PDF.js cannot extract text from image PDFs.\n\nPlease either:\n• Copy and paste the CV text directly using the Paste Text tab\n• Convert the PDF to a text-based PDF first\n• Use a Word (.docx) version of the CV');
+                  // Scanned / image-only PDF (no text layer): read the page images with the AI instead of giving up.
+                  var _scanMsg = 'This PDF appears to be image-based (scanned). PDF.js cannot extract text from image PDFs.\n\nPlease either:\n• Copy and paste the CV text directly using the Paste Text tab\n• Convert the PDF to a text-based PDF first\n• Use a Word (.docx) version of the CV';
+                  try {
+                    var _ocrText = await ocrScannedPdf(pdf);
+                    if (_ocrText && _ocrText.length >= 50) return _ocrText;
+                    throw new Error('the AI could not read any text on the pages');
+                  } catch (_ocrErr) {
+                    throw new Error(_scanMsg + '\n\n(Automatic reading of scanned PDFs was tried but failed: ' + _ocrErr.message + ')');
+                  }
                 }
                 return extracted;
               })();
@@ -4931,64 +5160,6 @@ JSON structure to use:
 CANDIDATE SOURCE:
 
 ` + inputText
-: isGbProfile
-  ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
-
-ABSOLUTE RULES:
-- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
-- CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
-- CAREER SUMMARY fields: Do NOT fill — leave as empty strings.
-- Extract EVERY work history entry WITHOUT EXCEPTION.
-- CRITICAL — BULLETS PER ROLE: Each role's bullets array must contain ONLY the bullet points written directly under THAT specific role in the CV. NEVER mix bullets from different roles. If the CV lists 3 bullets under Role A and 5 bullets under Role B, Role A gets exactly those 3 bullets and Role B gets exactly those 5 bullets.
-- Copy ALL bullet points VERBATIM — word for word, no changes.
-
-COMPANIES ARRAY RULES:
-- Group ALL roles held at the same company under ONE company entry.
-- Each role is a separate object in the roles array with its own bullets.
-- role_dates: always fill for EVERY role — e.g. "Mar 2019 – Nov 2025". Only leave "" if the company has exactly ONE role (dates already shown in company header).
-- "Results:" lines: include as their own bullet string. Sub-results follow as separate bullet strings immediately after.
-- Most recent company first.
-
-JSON STRUCTURE — return exactly this, filled with real data:
-
-{
-  "CANDIDATE_NAME": "",
-  "CURRENT_EMPLOYER": "",
-  "CLIENT_COMPANY": "",
-  "SEARCH_TITLE": "",
-  "PROFILE_MONTH": "` + (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})() + `",
-  "companies": [
-    {
-      "name": "Full company legal name",
-      "location": "City, Country",
-      "dates": "YYYY – Present",
-      "roles": [
-        {
-          "role": "Exact job title as written in CV",
-          "role_dates": "Mon YYYY – Mon YYYY",
-          "bullets": [
-            "ONLY bullets written under THIS role in the CV — verbatim"
-          ]
-        }
-      ]
-    }
-  ],
-  "EDU_1_START": "", "EDU_1_END": "", "EDU_1_INSTITUTION": "", "EDU_1_LOCATION": "", "EDU_1_DEGREE": "",
-  "EDU_2_START": "", "EDU_2_END": "", "EDU_2_INSTITUTION": "", "EDU_2_LOCATION": "", "EDU_2_DEGREE": "",
-  "QUAL_1": "",
-  "TECH_SKILLS": "",
-  "AFFILIATION_1": "",
-  "MEDIA_1": "",
-  "PUBLICATIONS": "",
-  "NATIONALITY": "",
-  "LANGUAGES": "",
-  "LANGUAGES_LEVEL": "",
-  "INTERESTS": ""
-}
-
-CANDIDATE SOURCE:
-
-` + inputText
 : (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
     `You are a Sheffield Haworth executive search document assistant. Your task is to extract information from the candidate source below and fill the APAC Candidate Profile template fields EXACTLY as described.
 
@@ -5029,6 +5200,73 @@ FORMATTING RULES:
 - Return ONLY valid JSON. No markdown. No code blocks. No explanation.
 
 Use this exact JSON structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ extract ALL information from this text:\n\n' + inputText
+  : isGbProfile
+  ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
+
+ABSOLUTE RULES:
+- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
+- CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
+- CAREER SUMMARY fields: Do NOT fill — leave as empty strings.
+- Extract EVERY work history entry WITHOUT EXCEPTION.
+- CRITICAL — BULLETS PER ROLE: Each role's bullets array must contain ONLY the bullet points written directly under THAT specific role in the CV. NEVER mix bullets from different roles. If the CV lists 3 bullets under Role A and 5 bullets under Role B, Role A gets exactly those 3 bullets and Role B gets exactly those 5 bullets.
+- Copy ALL bullet points VERBATIM — word for word, no changes.
+- EDUCATION: capture EVERY degree or qualification the CV lists as its own entry — EDU_1 = most recent, then EDU_2, EDU_3, EDU_4. Never merge two degrees into one entry and never drop one. Put the year range in EDU_n_START and EDU_n_END; if the CV gives a single year, put it in EDU_n_START and leave EDU_n_END empty. YEARS ONLY for education: 4-digit years, never months or numeric dates (a CV showing 5/2005 – 8/2007 gives START "2005" and END "2007").
+- DATES everywhere else: 3-letter month + 4-digit year, e.g. "Dec 2024 – Present", "Jun 2019 – Dec 2024". Convert numeric dates such as 12/2024 or 6/2019 to this form — never leave them as 12/2024. Use months only when the CV gives them: if the CV shows years only, keep years only — never invent a month. The company "dates" are the overall tenure at that company (for a company with one role, that role's dates).
+- PERSONAL DETAILS: QUAL_1 = ONE string holding EVERY licence, certification and accreditation the CV lists (e.g. FINRA licences, CFA charterholder, CPA), separated by commas or semicolons — never drop one, even when they sit on separate lines or under separate sub-headings. INTERESTS = the text after "Interests" / "Other interests" (often under "Additional Information"), without the label. NATIONALITY and LANGUAGES = as stated in the CV; leave "" when the CV doesn't state them.
+- TRANSACTION TABLES: if the CV contains tables or lists of deals, transactions, mandates or engagements (headings such as "Active Engagements", "Representative Transaction Experience", "Selected Transactions"), capture EACH one as one object in TRANSACTION_TABLES: heading = the CV's own heading in Title Case; columns = the column headers exactly as printed (e.g. ["#","Date","Target","Buyer","Role"]); rows = one array per row with one string per column, in the CV's order, copied VERBATIM — EVERY row, none skipped or merged. Keep any row numbering (1), 2) …) in the first column as printed. Dates in 3-letter-month form. Leave TRANSACTION_TABLES [] when the CV has none. Bullets inside a role's description stay in that role's bullets — this field is only for stand-alone tables or lists of deals.
+
+COMPANIES ARRAY RULES:
+- Group ALL roles held at the same company under ONE company entry.
+- Each role is a separate object in the roles array with its own bullets.
+- role_dates: always fill for EVERY role — e.g. "Mar 2019 – Nov 2025". Only leave "" if the company has exactly ONE role (dates already shown in company header).
+- "Results:" lines: include as their own bullet string. Sub-results follow as separate bullet strings immediately after.
+- Most recent company first.
+
+JSON STRUCTURE — return exactly this, filled with real data:
+
+{
+  "CANDIDATE_NAME": "",
+  "CURRENT_EMPLOYER": "",
+  "CLIENT_COMPANY": "",
+  "SEARCH_TITLE": "",
+  "PROFILE_MONTH": "` + (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})() + `",
+  "companies": [
+    {
+      "name": "Full company legal name",
+      "location": "City, Country",
+      "dates": "Mon YYYY – Present",
+      "roles": [
+        {
+          "role": "Exact job title as written in CV",
+          "role_dates": "Mon YYYY – Mon YYYY",
+          "bullets": [
+            "ONLY bullets written under THIS role in the CV — verbatim"
+          ]
+        }
+      ]
+    }
+  ],
+  "EDU_1_START": "", "EDU_1_END": "", "EDU_1_INSTITUTION": "", "EDU_1_LOCATION": "", "EDU_1_DEGREE": "",
+  "EDU_2_START": "", "EDU_2_END": "", "EDU_2_INSTITUTION": "", "EDU_2_LOCATION": "", "EDU_2_DEGREE": "",
+  "EDU_3_START": "", "EDU_3_END": "", "EDU_3_INSTITUTION": "", "EDU_3_LOCATION": "", "EDU_3_DEGREE": "",
+  "EDU_4_START": "", "EDU_4_END": "", "EDU_4_INSTITUTION": "", "EDU_4_LOCATION": "", "EDU_4_DEGREE": "",
+  "QUAL_1": "",
+  "TECH_SKILLS": "",
+  "AFFILIATION_1": "",
+  "MEDIA_1": "",
+  "PUBLICATIONS": "",
+  "NATIONALITY": "",
+  "LANGUAGES": "",
+  "LANGUAGES_LEVEL": "",
+  "INTERESTS": "",
+  "TRANSACTION_TABLES": [
+    {"heading": "", "columns": [""], "rows": [[""]]}
+  ]
+}
+
+CANDIDATE SOURCE:
+
+` + inputText
   : isGmBasic
   ? gmBasicPrompt
   : isAdvisorProfile
@@ -5079,7 +5317,7 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
           model: 'claude-sonnet-4-6',
           max_tokens: 12000,
           messages: [{ role: 'user', content: prompt }],
-          system: (isGbProfile || isServicesProfile ? 'Return ONLY raw JSON. CRITICAL RULES: (1) Each role at same company = SEPARATE COMPANY_N entry. (2) If a company has NO explicit role title (only bullets/description), use empty string for COMPANY_N_ROLE and put ALL bullets under COMPANY_N_BULLET_1 etc. (3) ALWAYS capture COMPANY_N_DATES from the CV. (4) Capture ALL companies and ALL bullets - do not skip any. No markdown.' : 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.')
+          system: (isGbProfile ? 'Return ONLY raw JSON. CRITICAL RULES: (1) Follow the JSON structure given in the prompt exactly: ONE entry per company in the companies array, with every role held at that company as a separate object in that company\'s roles array. (2) If a company has NO explicit role title (only bullets/description), use an empty string for the role and put ALL bullets in that role\'s bullets array. (3) ALWAYS capture the dates from the CV: the company dates and, when a company has 2 or more roles, each role\'s own dates. (4) Capture ALL companies, ALL roles, ALL education entries and ALL bullets - do not skip any. No markdown.' : isServicesProfile ? 'Return ONLY raw JSON. CRITICAL RULES: (1) Each role at same company = SEPARATE COMPANY_N entry. (2) If a company has NO explicit role title (only bullets/description), use empty string for COMPANY_N_ROLE and put ALL bullets under COMPANY_N_BULLET_1 etc. (3) ALWAYS capture COMPANY_N_DATES from the CV. (4) Capture ALL companies and ALL bullets - do not skip any. No markdown.' : 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.')
         })
       });
       if (_r.status === 429) {
@@ -5192,9 +5430,13 @@ try {
             }
           }
           // Safety check: if companies is empty, warn the user clearly
-          if (!output.companies || output.companies.length === 0) {
+          if ((!output.companies || output.companies.length === 0) && !output.COMPANY_1_NAME) {
             notify('Warning: No work history was extracted. Please try again — the CV may have been too long.');
             console.warn('Career Summary: companies array is empty. Full output:', JSON.stringify(output));
+          }
+          if (isGbProfile && gbLooksIncomplete(output)) {
+            notify('Warning: only company names were found - no job titles, dates or bullet points. DocGen received ' + String(inputText || '').length + ' characters of CV text. If the CV is longer than that, the text is incomplete - please check it (all pages) and try again.');
+            console.warn('[GB] AI answer has company names but no roles/bullets. Input length:', String(inputText || '').length, 'Answer:', JSON.stringify(output).slice(0, 1500));
           }
         }
         if (returnOnly) { return output; }
@@ -7835,7 +8077,16 @@ async function downloadHistory(index) {
             var _gbPEnd = _gbDocXml.indexOf('</w:p>', _gbBeIdx) + 6;
             if (_gbPStart >= 0 && _gbPEnd > _gbPStart) {
               console.log('[GB] Replacing para', _gbPStart, '-', _gbPEnd);
-              _gbDocXml = _gbDocXml.substring(0, _gbPStart) + _gbBizXml + _gbDocXml.substring(_gbPEnd);
+              // The template leaves two EMPTY bullet-style paragraphs right after the block (Word draws them as stray
+              // bullet dots) — turn them into plain blank lines.
+              var _gbTail = _gbDocXml.substring(_gbPEnd), _gbTailFix = '';
+              for (var _tk = 0; _tk < 3; _tk++) {
+                var _tm = _gbTail.match(/^<w:p[ >][\s\S]*?<\/w:p>/);
+                if (!_tm || _tm[0].replace(/<[^>]+>/g, '').trim() || !/<w:numPr>/.test(_tm[0])) break;
+                _gbTailFix += '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
+                _gbTail = _gbTail.slice(_tm[0].length);
+              }
+              _gbDocXml = _gbDocXml.substring(0, _gbPStart) + _gbBizXml + _gbTailFix + _gbTail;
             } else {
               console.error('[GB] Could not find paragraph boundaries', _gbPStart, _gbPEnd);
             }
@@ -7859,11 +8110,57 @@ async function downloadHistory(index) {
                     .replace(/^Master of Science/i,'MS').replace(/^Master of Arts/i,'MA')
                     .replace(/^Doctor of Philosophy/i,'PhD').replace(/^Juris Doctor/i,'JD');
           }
-          var _gbEdu1Yrs = (_cv.EDU_1_YEARS||'') || (_cv.EDU_1_END ? (_cv.EDU_1_START||'') + ' – ' + _cv.EDU_1_END : (_cv.EDU_1_START||''));
-          var _gbEdu2Yrs = _cv.EDU_2_END ? (_cv.EDU_2_START||'') + ' – ' + _cv.EDU_2_END : (_cv.EDU_2_START||'');
+          // Education: the GB template has ONE {{EDU_1_*}} slot, so a second degree used to be silently thrown away.
+          // With 2+ entries, clone that slot (years + institution line, degree line) for every entry.
+          (function() {
+            function _ex(t) { return String(t || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+            var rows = [];
+            for (var en = 1; en <= 4; en++) {
+              var eInst = String(_cv['EDU_' + en + '_INSTITUTION'] || '').trim();
+              var eDeg  = _abbrevDeg(_cv['EDU_' + en + '_DEGREE']);
+              var eEnd  = _cv['EDU_' + en + '_END'] || '', eSta = _cv['EDU_' + en + '_START'] || '';
+              var eYrs  = gbEduYears(eSta, eEnd, _cv['EDU_' + en + '_YEARS']);
+              if (eInst || eDeg) rows.push({yrs: eYrs, inst: eInst, deg: eDeg});
+            }
+            if (rows.length < 2) return;                                   // one entry: the template slot already handles it
+            var i1 = _gbDocXml.indexOf('{{EDU_1_YEARS}}'), i2 = _gbDocXml.indexOf('{{EDU_1_DEGREE}}');
+            if (i1 === -1 || i2 === -1) return;
+            function _pb(idx) {
+              var ps = -1, from = idx;
+              while (from > 0) { var c = _gbDocXml.lastIndexOf('<w:p', from - 1); if (c < 0) break; var ch = _gbDocXml.charAt(c + 4); if (ch === '>' || ch === ' ') { ps = c; break; } from = c; }
+              return [ps, _gbDocXml.indexOf('</w:p>', idx) + 6];
+            }
+            var b1 = _pb(i1), b2 = _pb(i2);
+            if (b1[0] < 0 || b2[0] !== b1[1]) return;                      // degree line must directly follow the years line
+            var yearsP = _gbDocXml.slice(b1[0], b1[1]), degreeP = _gbDocXml.slice(b2[0], b2[1]);
+            var blankP = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
+            var nb = _gbDocXml.slice(b2[1]).match(/^<w:p[ >][\s\S]*?<\/w:p>/);   // reuse the template's own blank line after the entry
+            if (nb && !/<w:t[ >]/.test(nb[0])) blankP = nb[0].replace(/^<w:p [^>]*>/, '<w:p>');
+            var built = '';
+            rows.forEach(function(r, ri) {
+              if (ri > 0) built += blankP;
+              built += yearsP.split('{{EDU_1_YEARS}}').join(_ex(r.yrs)).split('{{EDU_1_INSTITUTION}}').join(_ex(r.inst))
+                     + degreeP.split('{{EDU_1_DEGREE}}').join(_ex(r.deg));
+            });
+            _gbDocXml = _gbDocXml.slice(0, b1[0]) + built + _gbDocXml.slice(b2[1]);
+            _gbZip.file('word/document.xml', _gbDocXml);
+          })();
+          // Transaction / engagement tables from the CV: inserted after the Interests row (only when the CV has them)
+          (function() {
+            var tx = gbBuildTransactionTables(_cv.TRANSACTION_TABLES);
+            if (!tx) return;
+            var ii = _gbDocXml.indexOf('{{INTERESTS}}');
+            if (ii === -1) return;
+            var pe = _gbDocXml.indexOf('</w:p>', ii) + 6;
+            _gbDocXml = _gbDocXml.slice(0, pe) + tx + _gbDocXml.slice(pe);
+            _gbZip.file('word/document.xml', _gbDocXml);
+          })();
+          var _gbEdu1Yrs = gbEduYears(_cv.EDU_1_START, _cv.EDU_1_END, _cv.EDU_1_YEARS);
+          var _gbEdu2Yrs = gbEduYears(_cv.EDU_2_START, _cv.EDU_2_END, _cv.EDU_2_YEARS);
           var _curTitle = (_cv.companies && _cv.companies[0] && _cv.companies[0].roles && _cv.companies[0].roles[0]) ? _cv.companies[0].roles[0].role : (_cv.CURRENT_TITLE || '');
           var _gbRender = Object.assign({}, _cv, {
             CURRENT_TITLE: _curTitle,
+            SEARCH_TITLE: _cv.SEARCH_TITLE || 'Search Title',   // visible placeholder for the team to overwrite (the AI is told to leave it empty)
             EDU_1_YEARS: _gbEdu1Yrs, EDU_1_INSTITUTION: _cv.EDU_1_INSTITUTION||'',
             EDU_1_DEGREE: _abbrevDeg(_cv.EDU_1_DEGREE),
             EDU_2_YEARS: _gbEdu2Yrs, EDU_2_INSTITUTION: _cv.EDU_2_INSTITUTION||'',
