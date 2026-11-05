@@ -5160,73 +5160,6 @@ JSON structure to use:
 CANDIDATE SOURCE:
 
 ` + inputText
-: isGbProfile
-  ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
-
-ABSOLUTE RULES:
-- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
-- CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
-- CAREER SUMMARY fields: Do NOT fill — leave as empty strings.
-- Extract EVERY work history entry WITHOUT EXCEPTION.
-- CRITICAL — BULLETS PER ROLE: Each role's bullets array must contain ONLY the bullet points written directly under THAT specific role in the CV. NEVER mix bullets from different roles. If the CV lists 3 bullets under Role A and 5 bullets under Role B, Role A gets exactly those 3 bullets and Role B gets exactly those 5 bullets.
-- Copy ALL bullet points VERBATIM — word for word, no changes.
-- EDUCATION: capture EVERY degree or qualification the CV lists as its own entry — EDU_1 = most recent, then EDU_2, EDU_3, EDU_4. Never merge two degrees into one entry and never drop one. Put the year range in EDU_n_START and EDU_n_END; if the CV gives a single year, put it in EDU_n_START and leave EDU_n_END empty. YEARS ONLY for education: 4-digit years, never months or numeric dates (a CV showing 5/2005 – 8/2007 gives START "2005" and END "2007").
-- DATES everywhere else: 3-letter month + 4-digit year, e.g. "Dec 2024 – Present", "Jun 2019 – Dec 2024". Convert numeric dates such as 12/2024 or 6/2019 to this form — never leave them as 12/2024.
-- PERSONAL DETAILS: QUAL_1 = ONE string holding EVERY licence, certification and accreditation the CV lists (e.g. FINRA licences, CFA charterholder, CPA), separated by commas or semicolons — never drop one, even when they sit on separate lines or under separate sub-headings. INTERESTS = the text after "Interests" / "Other interests" (often under "Additional Information"), without the label. NATIONALITY and LANGUAGES = as stated in the CV; leave "" when the CV doesn't state them.
-- TRANSACTION TABLES: if the CV contains tables or lists of deals, transactions, mandates or engagements (headings such as "Active Engagements", "Representative Transaction Experience", "Selected Transactions"), capture EACH one as one object in TRANSACTION_TABLES: heading = the CV's own heading in Title Case; columns = the column headers exactly as printed (e.g. ["#","Date","Target","Buyer","Role"]); rows = one array per row with one string per column, in the CV's order, copied VERBATIM — EVERY row, none skipped or merged. Keep any row numbering (1), 2) …) in the first column as printed. Dates in 3-letter-month form. Leave TRANSACTION_TABLES [] when the CV has none. Bullets inside a role's description stay in that role's bullets — this field is only for stand-alone tables or lists of deals.
-
-COMPANIES ARRAY RULES:
-- Group ALL roles held at the same company under ONE company entry.
-- Each role is a separate object in the roles array with its own bullets.
-- role_dates: always fill for EVERY role — e.g. "Mar 2019 – Nov 2025". Only leave "" if the company has exactly ONE role (dates already shown in company header).
-- "Results:" lines: include as their own bullet string. Sub-results follow as separate bullet strings immediately after.
-- Most recent company first.
-
-JSON STRUCTURE — return exactly this, filled with real data:
-
-{
-  "CANDIDATE_NAME": "",
-  "CURRENT_EMPLOYER": "",
-  "CLIENT_COMPANY": "",
-  "SEARCH_TITLE": "",
-  "PROFILE_MONTH": "` + (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})() + `",
-  "companies": [
-    {
-      "name": "Full company legal name",
-      "location": "City, Country",
-      "dates": "YYYY – Present",
-      "roles": [
-        {
-          "role": "Exact job title as written in CV",
-          "role_dates": "Mon YYYY – Mon YYYY",
-          "bullets": [
-            "ONLY bullets written under THIS role in the CV — verbatim"
-          ]
-        }
-      ]
-    }
-  ],
-  "EDU_1_START": "", "EDU_1_END": "", "EDU_1_INSTITUTION": "", "EDU_1_LOCATION": "", "EDU_1_DEGREE": "",
-  "EDU_2_START": "", "EDU_2_END": "", "EDU_2_INSTITUTION": "", "EDU_2_LOCATION": "", "EDU_2_DEGREE": "",
-  "EDU_3_START": "", "EDU_3_END": "", "EDU_3_INSTITUTION": "", "EDU_3_LOCATION": "", "EDU_3_DEGREE": "",
-  "EDU_4_START": "", "EDU_4_END": "", "EDU_4_INSTITUTION": "", "EDU_4_LOCATION": "", "EDU_4_DEGREE": "",
-  "QUAL_1": "",
-  "TECH_SKILLS": "",
-  "AFFILIATION_1": "",
-  "MEDIA_1": "",
-  "PUBLICATIONS": "",
-  "NATIONALITY": "",
-  "LANGUAGES": "",
-  "LANGUAGES_LEVEL": "",
-  "INTERESTS": "",
-  "TRANSACTION_TABLES": [
-    {"heading": "", "columns": [""], "rows": [[""]]}
-  ]
-}
-
-CANDIDATE SOURCE:
-
-` + inputText
 : (isChineseApac ? 'IMPORTANT: Output ALL text field values IN SIMPLIFIED CHINESE. Translate English content to Chinese.\n\n' : '') +
     `You are a Sheffield Haworth executive search document assistant. Your task is to extract information from the candidate source below and fill the APAC Candidate Profile template fields EXACTLY as described.
 
@@ -5267,6 +5200,73 @@ FORMATTING RULES:
 - Return ONLY valid JSON. No markdown. No code blocks. No explanation.
 
 Use this exact JSON structure:\n` + globalJsonStr + '\n\nCANDIDATE SOURCE ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ extract ALL information from this text:\n\n' + inputText
+  : isGbProfile
+  ? `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate CV and extract ALL information into a structured JSON object.
+
+ABSOLUTE RULES:
+- Return ONLY raw JSON. No markdown, no code blocks, no commentary.
+- CLIENT_COMPANY and SEARCH_TITLE: always empty string "".
+- CAREER SUMMARY fields: Do NOT fill — leave as empty strings.
+- Extract EVERY work history entry WITHOUT EXCEPTION.
+- CRITICAL — BULLETS PER ROLE: Each role's bullets array must contain ONLY the bullet points written directly under THAT specific role in the CV. NEVER mix bullets from different roles. If the CV lists 3 bullets under Role A and 5 bullets under Role B, Role A gets exactly those 3 bullets and Role B gets exactly those 5 bullets.
+- Copy ALL bullet points VERBATIM — word for word, no changes.
+- EDUCATION: capture EVERY degree or qualification the CV lists as its own entry — EDU_1 = most recent, then EDU_2, EDU_3, EDU_4. Never merge two degrees into one entry and never drop one. Put the year range in EDU_n_START and EDU_n_END; if the CV gives a single year, put it in EDU_n_START and leave EDU_n_END empty. YEARS ONLY for education: 4-digit years, never months or numeric dates (a CV showing 5/2005 – 8/2007 gives START "2005" and END "2007").
+- DATES everywhere else: 3-letter month + 4-digit year, e.g. "Dec 2024 – Present", "Jun 2019 – Dec 2024". Convert numeric dates such as 12/2024 or 6/2019 to this form — never leave them as 12/2024. Use months only when the CV gives them: if the CV shows years only, keep years only — never invent a month. The company "dates" are the overall tenure at that company (for a company with one role, that role's dates).
+- PERSONAL DETAILS: QUAL_1 = ONE string holding EVERY licence, certification and accreditation the CV lists (e.g. FINRA licences, CFA charterholder, CPA), separated by commas or semicolons — never drop one, even when they sit on separate lines or under separate sub-headings. INTERESTS = the text after "Interests" / "Other interests" (often under "Additional Information"), without the label. NATIONALITY and LANGUAGES = as stated in the CV; leave "" when the CV doesn't state them.
+- TRANSACTION TABLES: if the CV contains tables or lists of deals, transactions, mandates or engagements (headings such as "Active Engagements", "Representative Transaction Experience", "Selected Transactions"), capture EACH one as one object in TRANSACTION_TABLES: heading = the CV's own heading in Title Case; columns = the column headers exactly as printed (e.g. ["#","Date","Target","Buyer","Role"]); rows = one array per row with one string per column, in the CV's order, copied VERBATIM — EVERY row, none skipped or merged. Keep any row numbering (1), 2) …) in the first column as printed. Dates in 3-letter-month form. Leave TRANSACTION_TABLES [] when the CV has none. Bullets inside a role's description stay in that role's bullets — this field is only for stand-alone tables or lists of deals.
+
+COMPANIES ARRAY RULES:
+- Group ALL roles held at the same company under ONE company entry.
+- Each role is a separate object in the roles array with its own bullets.
+- role_dates: always fill for EVERY role — e.g. "Mar 2019 – Nov 2025". Only leave "" if the company has exactly ONE role (dates already shown in company header).
+- "Results:" lines: include as their own bullet string. Sub-results follow as separate bullet strings immediately after.
+- Most recent company first.
+
+JSON STRUCTURE — return exactly this, filled with real data:
+
+{
+  "CANDIDATE_NAME": "",
+  "CURRENT_EMPLOYER": "",
+  "CLIENT_COMPANY": "",
+  "SEARCH_TITLE": "",
+  "PROFILE_MONTH": "` + (function(){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];var d=new Date();return m[d.getMonth()]+' '+d.getFullYear();})() + `",
+  "companies": [
+    {
+      "name": "Full company legal name",
+      "location": "City, Country",
+      "dates": "Mon YYYY – Present",
+      "roles": [
+        {
+          "role": "Exact job title as written in CV",
+          "role_dates": "Mon YYYY – Mon YYYY",
+          "bullets": [
+            "ONLY bullets written under THIS role in the CV — verbatim"
+          ]
+        }
+      ]
+    }
+  ],
+  "EDU_1_START": "", "EDU_1_END": "", "EDU_1_INSTITUTION": "", "EDU_1_LOCATION": "", "EDU_1_DEGREE": "",
+  "EDU_2_START": "", "EDU_2_END": "", "EDU_2_INSTITUTION": "", "EDU_2_LOCATION": "", "EDU_2_DEGREE": "",
+  "EDU_3_START": "", "EDU_3_END": "", "EDU_3_INSTITUTION": "", "EDU_3_LOCATION": "", "EDU_3_DEGREE": "",
+  "EDU_4_START": "", "EDU_4_END": "", "EDU_4_INSTITUTION": "", "EDU_4_LOCATION": "", "EDU_4_DEGREE": "",
+  "QUAL_1": "",
+  "TECH_SKILLS": "",
+  "AFFILIATION_1": "",
+  "MEDIA_1": "",
+  "PUBLICATIONS": "",
+  "NATIONALITY": "",
+  "LANGUAGES": "",
+  "LANGUAGES_LEVEL": "",
+  "INTERESTS": "",
+  "TRANSACTION_TABLES": [
+    {"heading": "", "columns": [""], "rows": [[""]]}
+  ]
+}
+
+CANDIDATE SOURCE:
+
+` + inputText
   : isGmBasic
   ? gmBasicPrompt
   : isAdvisorProfile
