@@ -1745,6 +1745,115 @@ function csXmlEsc(s) {
 }
 
 // ── GB Profile helpers: numeric dates → "Dec 2024", education years, transaction tables ──
+// ── Scanned (image-only) PDFs: pdf.js finds no text, so render each page to an image and have the AI transcribe it ──
+// Each page is its own request: keeps every request small (the server sits behind nginx, default limit 1 MB), keeps each
+// call fast, and means one bad page cannot sink the whole CV.
+var OCR_SYSTEM = 'You are an OCR engine. Transcribe ALL the text on this page image exactly as printed, in reading order. '
+  + 'Rules: copy every word, number, date and symbol exactly - do not summarise, correct, translate or add anything. '
+  + 'Keep each heading and each line break as printed. Write bullet points as "\u2022 " at the start of the line. '
+  + 'For tables write one row per line with the cells separated by " | ", keeping the header row. '
+  + 'For two-column layouts finish the left column completely before the right column. '
+  + 'If a part of the page is unreadable write [illegible]. If the page has no text at all, return an empty reply. '
+  + 'Return ONLY the transcription - no introduction, no comments, no markdown formatting, no code fences.';
+
+function ocrCleanText(t) {
+  t = String(t == null ? '' : t).replace(/\r\n?/g, '\n').trim();
+  t = t.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '').trim();               // stray code fences
+  if (/^\[?\s*(blank|empty)( page)?\s*\]?\.?$/i.test(t)) return '';                // "blank page" answers
+  return t;
+}
+
+// Render one pdf.js page to a JPEG (base64, no data: prefix). Longest edge ~1568 px (the AI's recommended size); if the
+// result is bigger than ~700 KB it is re-rendered smaller / more compressed so the request stays well under 1 MB.
+async function ocrRenderPage(page, makeCanvas) {
+  var base = page.getViewport({ scale: 1 });
+  var scale = Math.min(2.5, 1568 / Math.max(base.width, base.height));
+  var quality = 0.85, b64 = '';
+  for (var attempt = 0; attempt < 4; attempt++) {
+    var vp = page.getViewport({ scale: scale });
+    var canvas = makeCanvas();
+    canvas.width = Math.max(1, Math.floor(vp.width));
+    canvas.height = Math.max(1, Math.floor(vp.height));
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';                                                      // JPEG has no transparency: avoid black pages
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    b64 = canvas.toDataURL('image/jpeg', quality).replace(/^data:image\/jpeg;base64,/, '');
+    if (b64.length <= 700000) return b64;
+    scale *= 0.8;
+    quality = Math.max(0.6, quality - 0.1);
+  }
+  return b64;
+}
+
+// One page image -> text, through the app's own proxy (same route and sign-in as the main generation call).
+async function ocrCallApi(b64, opts) {
+  opts = opts || {};
+  var sleep = opts.sleep || function(ms) { return new Promise(function(res) { setTimeout(res, ms); }); };
+  var body = JSON.stringify({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 4000,
+    system: OCR_SYSTEM,
+    messages: [{ role: 'user', content: [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+      { type: 'text', text: 'Transcribe this page.' }
+    ] }]
+  });
+  for (var attempt = 0; attempt < 3; attempt++) {
+    var r = await fetch('/api/proxy', { method: 'POST', headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' }, body: body });
+    if (r.status === 429 || r.status === 529) {
+      var wait = (parseInt((r.headers && r.headers.get && r.headers.get('retry-after')) || '10', 10) || 10) * 1000;
+      await sleep(wait);
+      continue;
+    }
+    var data = await r.json().catch(function() { return {}; });
+    if (!r.ok || data.error) {
+      var em = data.error && (data.error.message || data.error);
+      throw new Error(em ? String(em) : ('API error ' + r.status));
+    }
+    return (Array.isArray(data.content) ? data.content : []).filter(function(b) { return b && b.type === 'text'; })
+      .map(function(b) { return b.text; }).join('\n');
+  }
+  throw new Error('the AI service is busy - please try again in a minute');
+}
+
+async function ocrScannedPdf(pdf, opts) {
+  opts = opts || {};
+  var MAX_PAGES = opts.maxPages || 10;
+  var makeCanvas = opts.makeCanvas || function() { return document.createElement('canvas'); };
+  var callApi = opts.callApi || ocrCallApi;
+  var say = opts.onProgress || function(m) { try { notify(m); } catch (e) {} };
+  var n = Math.min(pdf.numPages, MAX_PAGES), texts = [];
+  for (var p = 1; p <= n; p++) {
+    say('Scanned PDF detected - reading page ' + p + ' of ' + n + ' with AI' + (p === 1 ? ' (a few seconds per page)...' : '...'));
+    var page = await pdf.getPage(p);
+    var b64 = await ocrRenderPage(page, makeCanvas);
+    texts.push(ocrCleanText(await callApi(b64)));
+  }
+  if (pdf.numPages > MAX_PAGES) say('Note: only the first ' + MAX_PAGES + ' of ' + pdf.numPages + ' pages of the scanned PDF were read.');
+  return texts.filter(Boolean).join('\n\n').trim();
+}
+
+// GB Profile: true when the AI answer has company names but not a single job title or bullet (a sign the CV text it was
+// given was incomplete) — handles both the companies[] shape and the older flat COMPANY_N_* shape.
+function gbLooksIncomplete(out) {
+  if (!out || typeof out !== 'object') return false;
+  function filled(v) { return Array.isArray(v) ? v.some(filled) : !!String(v == null ? '' : v).trim(); }
+  if (Array.isArray(out.companies) && out.companies.length) {
+    return !out.companies.some(function(c) {
+      return c && Array.isArray(c.roles) && c.roles.some(function(r) { return r && typeof r === 'object' && (filled(r.role) || filled(r.bullets)); });
+    });
+  }
+  if (out.COMPANY_1_NAME) {
+    for (var n = 1; n <= 15; n++) {
+      if (filled(out['COMPANY_' + n + '_ROLE'])) return false;
+      for (var b = 1; b <= 10; b++) if (filled(out['COMPANY_' + n + '_BULLET_' + b])) return false;
+    }
+    return true;
+  }
+  return false;
+}
+
 function gbNormDateText(s) {
   s = String(s == null ? '' : s).trim();
   if (!s) return s;
@@ -1872,7 +1981,12 @@ function buildGbBizExp(companies) {
     var prevHadBullets = false;
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
-      if (!role || !role.role) continue;
+      if (!role) continue;
+      // bullets may arrive as an array or (older shape) as one string split by | or line breaks
+      var bullets = Array.isArray(role.bullets) ? role.bullets
+                  : (typeof role.bullets === 'string' ? role.bullets.split(/\s*\|\s*|\n+/) : []);
+      // A role with no title used to be skipped together with ALL of its bullets. Skip it only when it has neither.
+      if (!role.role && !bullets.some(function(b) { return String(b == null ? '' : b).trim(); })) continue;
       var roleDates = role.role_dates || role.dates || '';
       // One blank line between the previous role's bullets and this role's title (it used to sit right under the bullets)
       if (prevHadBullets) {
@@ -1880,21 +1994,24 @@ function buildGbBizExp(companies) {
         prevHadBullets = false;
       }
 
+      if (role.role) {
       // Role line: role title, TAB, role dates (only if multi-role)
       xml += '<w:p><w:pPr><w:pStyle w:val="SHText"/>' + TAB_STOP
           + '<w:spacing w:before="0" w:after="0"/></w:pPr>'
           + '<w:r><w:t xml:space="preserve">' + xe(role.role) + '</w:t></w:r>'
           + (multiRole && roleDates ? '<w:r><w:tab/></w:r><w:r><w:t>' + xe(gbNormDateText(roleDates)) + '</w:t></w:r>' : '')
           + '</w:p>';
+      }
 
       // Bullets (only under first/most recent role)
-      var bullets = role.bullets || [];
       if (bullets.length > 0) {
         // Spacer after role line before bullets
         xml += '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>';
         for (var bi = 0; bi < bullets.length; bi++) {
           var b = bullets[bi];
-          if (!b || !b.trim()) continue;
+          if (b == null) continue;
+          b = String(b);
+          if (!b.trim()) continue;
           xml += '<w:p><w:pPr><w:pStyle w:val="SHBullets"/><w:spacing w:before="0" w:after="0"/></w:pPr>'
               + '<w:r><w:t xml:space="preserve">' + xe(b) + '</w:t></w:r></w:p>';
           prevHadBullets = true;
@@ -3809,7 +3926,15 @@ async function generate() {
                 }
                 var extracted = txt.replace(/[ \t]{2,}/g, ' ').trim();
                 if (!extracted || extracted.length < 50) {
-                  throw new Error('This PDF appears to be image-based (scanned). PDF.js cannot extract text from image PDFs.\n\nPlease either:\n• Copy and paste the CV text directly using the Paste Text tab\n• Convert the PDF to a text-based PDF first\n• Use a Word (.docx) version of the CV');
+                  // Scanned / image-only PDF (no text layer): read the page images with the AI instead of giving up.
+                  var _scanMsg = 'This PDF appears to be image-based (scanned). PDF.js cannot extract text from image PDFs.\n\nPlease either:\n• Copy and paste the CV text directly using the Paste Text tab\n• Convert the PDF to a text-based PDF first\n• Use a Word (.docx) version of the CV';
+                  try {
+                    var _ocrText = await ocrScannedPdf(pdf);
+                    if (_ocrText && _ocrText.length >= 50) return _ocrText;
+                    throw new Error('the AI could not read any text on the pages');
+                  } catch (_ocrErr) {
+                    throw new Error(_scanMsg + '\n\n(Automatic reading of scanned PDFs was tried but failed: ' + _ocrErr.message + ')');
+                  }
                 }
                 return extracted;
               })();
@@ -5308,6 +5433,10 @@ try {
           if ((!output.companies || output.companies.length === 0) && !output.COMPANY_1_NAME) {
             notify('Warning: No work history was extracted. Please try again — the CV may have been too long.');
             console.warn('Career Summary: companies array is empty. Full output:', JSON.stringify(output));
+          }
+          if (isGbProfile && gbLooksIncomplete(output)) {
+            notify('Warning: only company names were found - no job titles, dates or bullet points. DocGen received ' + String(inputText || '').length + ' characters of CV text. If the CV is longer than that, the text is incomplete - please check it (all pages) and try again.');
+            console.warn('[GB] AI answer has company names but no roles/bullets. Input length:', String(inputText || '').length, 'Answer:', JSON.stringify(output).slice(0, 1500));
           }
         }
         if (returnOnly) { return output; }
