@@ -1750,6 +1750,16 @@ function buildGbBizExp(companies) {
   function xe(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   var TAB_STOP = '<w:tabs><w:tab w:val="right" w:pos="9072"/></w:tabs>';
   var DASH = ' – ';
+  // Shorten full month names in dates (March -> Mar). This was being CALLED below but never defined in this function
+  // (it only existed inside buildSvcBizExp), so every GB profile with a company that has 2+ dated roles threw a
+  // ReferenceError and the whole Business Experience section was replaced by "Business experience error".
+  function abbrvDates(s) {
+    if (!s) return s;
+    return s.replace(/January/g,'Jan').replace(/February/g,'Feb').replace(/March/g,'Mar')
+            .replace(/April/g,'Apr').replace(/June/g,'Jun')
+            .replace(/July/g,'Jul').replace(/August/g,'Aug').replace(/September/g,'Sep')
+            .replace(/October/g,'Oct').replace(/November/g,'Nov').replace(/December/g,'Dec');
+  }
 
   for (var ci = 0; ci < companies.length; ci++) {
     var co = companies[ci];
@@ -1772,10 +1782,16 @@ function buildGbBizExp(companies) {
         + '</w:p>';
 
     // Roles
+    var prevHadBullets = false;
     for (var ri = 0; ri < roles.length; ri++) {
       var role = roles[ri];
       if (!role || !role.role) continue;
       var roleDates = role.role_dates || role.dates || '';
+      // One blank line between the previous role's bullets and this role's title (it used to sit right under the bullets)
+      if (prevHadBullets) {
+        xml += '<w:p><w:pPr><w:pStyle w:val="SHText"/><w:spacing w:before="0" w:after="0"/></w:pPr></w:p>';
+        prevHadBullets = false;
+      }
 
       // Role line: role title, TAB, role dates (only if multi-role)
       xml += '<w:p><w:pPr><w:pStyle w:val="SHText"/>' + TAB_STOP
@@ -1794,6 +1810,7 @@ function buildGbBizExp(companies) {
           if (!b || !b.trim()) continue;
           xml += '<w:p><w:pPr><w:pStyle w:val="SHBullets"/><w:spacing w:before="0" w:after="0"/></w:pPr>'
               + '<w:r><w:t xml:space="preserve">' + xe(b) + '</w:t></w:r></w:p>';
+          prevHadBullets = true;
         }
       }
     }
@@ -4941,6 +4958,7 @@ ABSOLUTE RULES:
 - Extract EVERY work history entry WITHOUT EXCEPTION.
 - CRITICAL — BULLETS PER ROLE: Each role's bullets array must contain ONLY the bullet points written directly under THAT specific role in the CV. NEVER mix bullets from different roles. If the CV lists 3 bullets under Role A and 5 bullets under Role B, Role A gets exactly those 3 bullets and Role B gets exactly those 5 bullets.
 - Copy ALL bullet points VERBATIM — word for word, no changes.
+- EDUCATION: capture EVERY degree or qualification the CV lists as its own entry — EDU_1 = most recent, then EDU_2, EDU_3, EDU_4. Never merge two degrees into one entry and never drop one. Put the year range in EDU_n_START and EDU_n_END; if the CV gives a single year, put it in EDU_n_START and leave EDU_n_END empty.
 
 COMPANIES ARRAY RULES:
 - Group ALL roles held at the same company under ONE company entry.
@@ -4975,6 +4993,8 @@ JSON STRUCTURE — return exactly this, filled with real data:
   ],
   "EDU_1_START": "", "EDU_1_END": "", "EDU_1_INSTITUTION": "", "EDU_1_LOCATION": "", "EDU_1_DEGREE": "",
   "EDU_2_START": "", "EDU_2_END": "", "EDU_2_INSTITUTION": "", "EDU_2_LOCATION": "", "EDU_2_DEGREE": "",
+  "EDU_3_START": "", "EDU_3_END": "", "EDU_3_INSTITUTION": "", "EDU_3_LOCATION": "", "EDU_3_DEGREE": "",
+  "EDU_4_START": "", "EDU_4_END": "", "EDU_4_INSTITUTION": "", "EDU_4_LOCATION": "", "EDU_4_DEGREE": "",
   "QUAL_1": "",
   "TECH_SKILLS": "",
   "AFFILIATION_1": "",
@@ -5079,7 +5099,7 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
           model: 'claude-sonnet-4-6',
           max_tokens: 12000,
           messages: [{ role: 'user', content: prompt }],
-          system: (isGbProfile || isServicesProfile ? 'Return ONLY raw JSON. CRITICAL RULES: (1) Each role at same company = SEPARATE COMPANY_N entry. (2) If a company has NO explicit role title (only bullets/description), use empty string for COMPANY_N_ROLE and put ALL bullets under COMPANY_N_BULLET_1 etc. (3) ALWAYS capture COMPANY_N_DATES from the CV. (4) Capture ALL companies and ALL bullets - do not skip any. No markdown.' : 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.')
+          system: (isGbProfile ? 'Return ONLY raw JSON. CRITICAL RULES: (1) Follow the JSON structure given in the prompt exactly: ONE entry per company in the companies array, with every role held at that company as a separate object in that company\'s roles array. (2) If a company has NO explicit role title (only bullets/description), use an empty string for the role and put ALL bullets in that role\'s bullets array. (3) ALWAYS capture the dates from the CV: the company dates and, when a company has 2 or more roles, each role\'s own dates. (4) Capture ALL companies, ALL roles, ALL education entries and ALL bullets - do not skip any. No markdown.' : isServicesProfile ? 'Return ONLY raw JSON. CRITICAL RULES: (1) Each role at same company = SEPARATE COMPANY_N entry. (2) If a company has NO explicit role title (only bullets/description), use empty string for COMPANY_N_ROLE and put ALL bullets under COMPANY_N_BULLET_1 etc. (3) ALWAYS capture COMPANY_N_DATES from the CV. (4) Capture ALL companies and ALL bullets - do not skip any. No markdown.' : 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.')
         })
       });
       if (_r.status === 429) {
@@ -5192,7 +5212,7 @@ try {
             }
           }
           // Safety check: if companies is empty, warn the user clearly
-          if (!output.companies || output.companies.length === 0) {
+          if ((!output.companies || output.companies.length === 0) && !output.COMPANY_1_NAME) {
             notify('Warning: No work history was extracted. Please try again — the CV may have been too long.');
             console.warn('Career Summary: companies array is empty. Full output:', JSON.stringify(output));
           }
@@ -7835,7 +7855,16 @@ async function downloadHistory(index) {
             var _gbPEnd = _gbDocXml.indexOf('</w:p>', _gbBeIdx) + 6;
             if (_gbPStart >= 0 && _gbPEnd > _gbPStart) {
               console.log('[GB] Replacing para', _gbPStart, '-', _gbPEnd);
-              _gbDocXml = _gbDocXml.substring(0, _gbPStart) + _gbBizXml + _gbDocXml.substring(_gbPEnd);
+              // The template leaves two EMPTY bullet-style paragraphs right after the block (Word draws them as stray
+              // bullet dots) — turn them into plain blank lines.
+              var _gbTail = _gbDocXml.substring(_gbPEnd), _gbTailFix = '';
+              for (var _tk = 0; _tk < 3; _tk++) {
+                var _tm = _gbTail.match(/^<w:p[ >][\s\S]*?<\/w:p>/);
+                if (!_tm || _tm[0].replace(/<[^>]+>/g, '').trim() || !/<w:numPr>/.test(_tm[0])) break;
+                _gbTailFix += '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
+                _gbTail = _gbTail.slice(_tm[0].length);
+              }
+              _gbDocXml = _gbDocXml.substring(0, _gbPStart) + _gbBizXml + _gbTailFix + _gbTail;
             } else {
               console.error('[GB] Could not find paragraph boundaries', _gbPStart, _gbPEnd);
             }
@@ -7859,6 +7888,41 @@ async function downloadHistory(index) {
                     .replace(/^Master of Science/i,'MS').replace(/^Master of Arts/i,'MA')
                     .replace(/^Doctor of Philosophy/i,'PhD').replace(/^Juris Doctor/i,'JD');
           }
+          // Education: the GB template has ONE {{EDU_1_*}} slot, so a second degree used to be silently thrown away.
+          // With 2+ entries, clone that slot (years + institution line, degree line) for every entry.
+          (function() {
+            function _ex(t) { return String(t || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+            var rows = [];
+            for (var en = 1; en <= 4; en++) {
+              var eInst = String(_cv['EDU_' + en + '_INSTITUTION'] || '').trim();
+              var eDeg  = _abbrevDeg(_cv['EDU_' + en + '_DEGREE']);
+              var eEnd  = _cv['EDU_' + en + '_END'] || '', eSta = _cv['EDU_' + en + '_START'] || '';
+              var eYrs  = (_cv['EDU_' + en + '_YEARS'] || '') || (eEnd ? eSta + ' \u2013 ' + eEnd : eSta);
+              if (eInst || eDeg) rows.push({yrs: eYrs, inst: eInst, deg: eDeg});
+            }
+            if (rows.length < 2) return;                                   // one entry: the template slot already handles it
+            var i1 = _gbDocXml.indexOf('{{EDU_1_YEARS}}'), i2 = _gbDocXml.indexOf('{{EDU_1_DEGREE}}');
+            if (i1 === -1 || i2 === -1) return;
+            function _pb(idx) {
+              var ps = -1, from = idx;
+              while (from > 0) { var c = _gbDocXml.lastIndexOf('<w:p', from - 1); if (c < 0) break; var ch = _gbDocXml.charAt(c + 4); if (ch === '>' || ch === ' ') { ps = c; break; } from = c; }
+              return [ps, _gbDocXml.indexOf('</w:p>', idx) + 6];
+            }
+            var b1 = _pb(i1), b2 = _pb(i2);
+            if (b1[0] < 0 || b2[0] !== b1[1]) return;                      // degree line must directly follow the years line
+            var yearsP = _gbDocXml.slice(b1[0], b1[1]), degreeP = _gbDocXml.slice(b2[0], b2[1]);
+            var blankP = '<w:p><w:pPr><w:pStyle w:val="SHText"/></w:pPr></w:p>';
+            var nb = _gbDocXml.slice(b2[1]).match(/^<w:p[ >][\s\S]*?<\/w:p>/);   // reuse the template's own blank line after the entry
+            if (nb && !/<w:t[ >]/.test(nb[0])) blankP = nb[0].replace(/^<w:p [^>]*>/, '<w:p>');
+            var built = '';
+            rows.forEach(function(r, ri) {
+              if (ri > 0) built += blankP;
+              built += yearsP.split('{{EDU_1_YEARS}}').join(_ex(r.yrs)).split('{{EDU_1_INSTITUTION}}').join(_ex(r.inst))
+                     + degreeP.split('{{EDU_1_DEGREE}}').join(_ex(r.deg));
+            });
+            _gbDocXml = _gbDocXml.slice(0, b1[0]) + built + _gbDocXml.slice(b2[1]);
+            _gbZip.file('word/document.xml', _gbDocXml);
+          })();
           var _gbEdu1Yrs = (_cv.EDU_1_YEARS||'') || (_cv.EDU_1_END ? (_cv.EDU_1_START||'') + ' – ' + _cv.EDU_1_END : (_cv.EDU_1_START||''));
           var _gbEdu2Yrs = _cv.EDU_2_END ? (_cv.EDU_2_START||'') + ' – ' + _cv.EDU_2_END : (_cv.EDU_2_START||'');
           var _curTitle = (_cv.companies && _cv.companies[0] && _cv.companies[0].roles && _cv.companies[0].roles[0]) ? _cv.companies[0].roles[0].role : (_cv.CURRENT_TITLE || '');
