@@ -1745,6 +1745,53 @@ function csXmlEsc(s) {
 }
 
 // ── GB Profile helpers: numeric dates → "Dec 2024", education years, transaction tables ──
+// ── Long CVs: read the AI's answer as a stream (so the connection is never idle), plus clear errors ──
+// A non-streamed request sits silent until the whole answer is ready; for a very long CV that can exceed the server's
+// 120 s idle limit and come back as an HTML "504" page. A streamed request keeps data flowing, so it never idles.
+async function docgenReadJson(r) {
+  var raw = await r.text(), data;
+  try { data = JSON.parse(raw); }
+  catch (e) {
+    if (r.status === 502 || r.status === 503 || r.status === 504 || r.status === 524) {
+      throw new Error('The AI server took too long to answer (HTTP ' + r.status + '). This usually means the CV is very long - please try again.');
+    }
+    throw new Error('Unexpected reply from the server (HTTP ' + r.status + ').');
+  }
+  return data;
+}
+async function docgenReadStream(r) {
+  var reader = r.body.getReader(), dec = new TextDecoder('utf-8'), buf = '', text = '', stop = null, err = null;
+  function handle(block) {
+    var ev = '', dataStr = '';
+    block.split('\n').forEach(function(line) {
+      if (line.indexOf('event:') === 0) ev = line.slice(6).trim();
+      else if (line.indexOf('data:') === 0) dataStr += line.slice(5).trim();
+    });
+    if (!dataStr) return;
+    var d; try { d = JSON.parse(dataStr); } catch (e) { return; }
+    if (d.type === 'content_block_delta' && d.delta && d.delta.type === 'text_delta') text += d.delta.text;
+    else if (d.type === 'message_delta' && d.delta && d.delta.stop_reason) stop = d.delta.stop_reason;
+    else if (d.type === 'error' || ev === 'error') err = (d.error && (d.error.message || d.error.type)) || 'stream error';
+  }
+  for (;;) {
+    var chunk = await reader.read();
+    if (chunk.done) break;
+    buf += dec.decode(chunk.value, { stream: true }).replace(/\r\n/g, '\n');
+    var idx;
+    while ((idx = buf.indexOf('\n\n')) >= 0) { handle(buf.slice(0, idx)); buf = buf.slice(idx + 2); }
+  }
+  if (buf.trim()) handle(buf);
+  if (err) throw new Error(err);
+  return { content: [{ type: 'text', text: text }], stop_reason: stop };
+}
+// PDF text clean-up: drop standalone "Page N of M" footer lines (LinkedIn / Word exports put them in the middle of
+// paragraphs), and the "(1 year 7 months)" duration LinkedIn appends to a date range.
+function docgenCleanPdfText(t) {
+  var DUR = /^(.*\b(?:19|20)\d{2}\s*[-\u2013\u2014]\s*(?:Present|(?:[A-Z][a-z]+ )?(?:19|20)\d{2}))\s*\((?:\d+ years?|\d+ months?)(?: \d+ months?)?\)\s*$/;
+  return String(t == null ? '' : t).split('\n').filter(function(l) { return !/^\s*Page \d+ of \d+\s*$/i.test(l); })
+    .map(function(l) { var m = l.match(DUR); return m ? m[1] : l; }).join('\n');
+}
+
 // ── Scanned (image-only) PDFs: pdf.js finds no text, so render each page to an image and have the AI transcribe it ──
 // Each page is its own request: keeps every request small (the server sits behind nginx, default limit 1 MB), keeps each
 // call fast, and means one bad page cannot sink the whole CV.
@@ -3936,7 +3983,7 @@ async function generate() {
                     throw new Error(_scanMsg + '\n\n(Automatic reading of scanned PDFs was tried but failed: ' + _ocrErr.message + ')');
                   }
                 }
-                return extracted;
+                return docgenCleanPdfText(extracted);
               })();
             } else if (ext === 'xlsx' || ext === 'xls') {
               inputText = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){var wb2=XLSX.read(e.target.result,{type:'array'});var txt2='';wb2.SheetNames.forEach(function(sn){var ws2=wb2.Sheets[sn];txt2+=XLSX.utils.sheet_to_csv(ws2)+' ';});res(txt2.trim());};rd.onerror=rej;rd.readAsArrayBuffer(file);});
@@ -5309,16 +5356,18 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
     _hdrs['anthropic-dangerous-direct-browser-access'] = 'true';
   }
   var _callApi = async function() {
+    // Long CVs (12,000+ characters) are streamed so the request never sits idle long enough to time out
+    var _stream = String(inputText || '').length >= 12000;
     for (var _ar = 0; _ar < 3; _ar++) {
       var _r = await fetch(_apiUrl, {
         method: 'POST',
         headers: _hdrs,
-        body: JSON.stringify({
+        body: JSON.stringify(Object.assign({
           model: 'claude-sonnet-4-6',
           max_tokens: 12000,
           messages: [{ role: 'user', content: prompt }],
           system: (isGbProfile ? 'Return ONLY raw JSON. CRITICAL RULES: (1) Follow the JSON structure given in the prompt exactly: ONE entry per company in the companies array, with every role held at that company as a separate object in that company\'s roles array. (2) If a company has NO explicit role title (only bullets/description), use an empty string for the role and put ALL bullets in that role\'s bullets array. (3) ALWAYS capture the dates from the CV: the company dates and, when a company has 2 or more roles, each role\'s own dates. (4) Capture ALL companies, ALL roles, ALL education entries and ALL bullets - do not skip any. No markdown.' : isServicesProfile ? 'Return ONLY raw JSON. CRITICAL RULES: (1) Each role at same company = SEPARATE COMPANY_N entry. (2) If a company has NO explicit role title (only bullets/description), use empty string for COMPANY_N_ROLE and put ALL bullets under COMPANY_N_BULLET_1 etc. (3) ALWAYS capture COMPANY_N_DATES from the CV. (4) Capture ALL companies and ALL bullets - do not skip any. No markdown.' : 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.')
-        })
+        }, _stream ? { stream: true } : {}))
       });
       if (_r.status === 429) {
         var _wait = (parseInt((_r.headers && _r.headers.get('retry-after')) || '10') || 10) * 1000;
@@ -5326,12 +5375,19 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
         await new Promise(function(res){ setTimeout(res, _wait); });
         continue;
       }
-      return _r.json();
+      return (_stream && _r.ok) ? docgenReadStream(_r) : docgenReadJson(_r);
     }
     throw new Error('API rate limit exceeded. Please wait 30 seconds and try again.');
   };
   return _callApi().then(function(data) { return data; })
   .then(function(data) {
+    // An error from the AI service used to be read as an empty answer ("{}") and produced a blank profile without a word.
+    if (data && data.error) {
+      throw new Error('The AI service returned an error: ' + String(data.error.message || data.error.type || JSON.stringify(data.error)).slice(0, 300));
+    }
+    if (data && data.stop_reason === 'max_tokens') {
+      throw new Error('The AI answer was cut off because this CV is very long. Please try again, or remove a few of the oldest roles from the CV and generate again.');
+    }
     var rawOutput = (data.content && data.content[0] && data.content[0].text) ? data.content[0].text : '{}';
 
 var output;
