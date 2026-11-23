@@ -1433,7 +1433,7 @@ var TPL = {
     bg:   'rgba(43,124,211,.12)',
     fmt:  'd',
     reg:  'Global',
-    flds: ['Candidate Name','Current Employer','New Employer','New Role','Month & Year','Summary (Current/Prior/Initial)','Business Experience','Education','Languages']
+    flds: ['Candidate Name','Current Employer','New Employer','New Role','Month & Year','Business Experience','Education','Languages']
   },
   'apac-profile': {
     name: 'APAC Candidate Profile (Updated)',
@@ -1745,6 +1745,53 @@ function csXmlEsc(s) {
 }
 
 // ── GB Profile helpers: numeric dates → "Dec 2024", education years, transaction tables ──
+// ── Long CVs: read the AI's answer as a stream (so the connection is never idle), plus clear errors ──
+// A non-streamed request sits silent until the whole answer is ready; for a very long CV that can exceed the server's
+// 120 s idle limit and come back as an HTML "504" page. A streamed request keeps data flowing, so it never idles.
+async function docgenReadJson(r) {
+  var raw = await r.text(), data;
+  try { data = JSON.parse(raw); }
+  catch (e) {
+    if (r.status === 502 || r.status === 503 || r.status === 504 || r.status === 524) {
+      throw new Error('The AI server took too long to answer (HTTP ' + r.status + '). This usually means the CV is very long - please try again.');
+    }
+    throw new Error('Unexpected reply from the server (HTTP ' + r.status + ').');
+  }
+  return data;
+}
+async function docgenReadStream(r) {
+  var reader = r.body.getReader(), dec = new TextDecoder('utf-8'), buf = '', text = '', stop = null, err = null;
+  function handle(block) {
+    var ev = '', dataStr = '';
+    block.split('\n').forEach(function(line) {
+      if (line.indexOf('event:') === 0) ev = line.slice(6).trim();
+      else if (line.indexOf('data:') === 0) dataStr += line.slice(5).trim();
+    });
+    if (!dataStr) return;
+    var d; try { d = JSON.parse(dataStr); } catch (e) { return; }
+    if (d.type === 'content_block_delta' && d.delta && d.delta.type === 'text_delta') text += d.delta.text;
+    else if (d.type === 'message_delta' && d.delta && d.delta.stop_reason) stop = d.delta.stop_reason;
+    else if (d.type === 'error' || ev === 'error') err = (d.error && (d.error.message || d.error.type)) || 'stream error';
+  }
+  for (;;) {
+    var chunk = await reader.read();
+    if (chunk.done) break;
+    buf += dec.decode(chunk.value, { stream: true }).replace(/\r\n/g, '\n');
+    var idx;
+    while ((idx = buf.indexOf('\n\n')) >= 0) { handle(buf.slice(0, idx)); buf = buf.slice(idx + 2); }
+  }
+  if (buf.trim()) handle(buf);
+  if (err) throw new Error(err);
+  return { content: [{ type: 'text', text: text }], stop_reason: stop };
+}
+// PDF text clean-up: drop standalone "Page N of M" footer lines (LinkedIn / Word exports put them in the middle of
+// paragraphs), and the "(1 year 7 months)" duration LinkedIn appends to a date range.
+function docgenCleanPdfText(t) {
+  var DUR = /^(.*\b(?:19|20)\d{2}\s*[-\u2013\u2014]\s*(?:Present|(?:[A-Z][a-z]+ )?(?:19|20)\d{2}))\s*\((?:\d+ years?|\d+ months?)(?: \d+ months?)?\)\s*$/;
+  return String(t == null ? '' : t).split('\n').filter(function(l) { return !/^\s*Page \d+ of \d+\s*$/i.test(l); })
+    .map(function(l) { var m = l.match(DUR); return m ? m[1] : l; }).join('\n');
+}
+
 // ── Scanned (image-only) PDFs: pdf.js finds no text, so render each page to an image and have the AI transcribe it ──
 // Each page is its own request: keeps every request small (the server sits behind nginx, default limit 1 MB), keeps each
 // call fast, and means one bad page cannot sink the whole CV.
@@ -3936,7 +3983,7 @@ async function generate() {
                     throw new Error(_scanMsg + '\n\n(Automatic reading of scanned PDFs was tried but failed: ' + _ocrErr.message + ')');
                   }
                 }
-                return extracted;
+                return docgenCleanPdfText(extracted);
               })();
             } else if (ext === 'xlsx' || ext === 'xls') {
               inputText = await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(e){var wb2=XLSX.read(e.target.result,{type:'array'});var txt2='';wb2.SheetNames.forEach(function(sn){var ws2=wb2.Sheets[sn];txt2+=XLSX.utils.sheet_to_csv(ws2)+' ';});res(txt2.trim());};rd.onerror=rej;rd.readAsArrayBuffer(file);});
@@ -4338,46 +4385,43 @@ var isChangeCons = (tpl === 'change-consulting-profile');
 // exactly the kind of cross-template coupling that has caused cascading breakage before.
 // Defined BEFORE wamUaePrompt below, since the prompt's template literal references this variable
 // directly and var declarations are not initialized until their assignment line actually runs.
-var wamUaeJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","NEW_EMPLOYER":"","NEW_ROLE":"","MONTH_YEAR":"","SUMMARY_CURRENT":"","SUMMARY_PRIOR":"","SUMMARY_INITIAL":"","companies":[{"name":"","location":"","dates":"","job_title":"","roles":[{"sub_role":"","role_dates":"","bullets":[""]}]}],"education":[{"year":"","institution":"","degree":""}],"LANGUAGES":""}';
+var wamUaeJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","NEW_EMPLOYER":"","NEW_ROLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","job_title":"","job_title_2":"","roles":[{"sub_role":"","role_dates":"","bullets":[""]}]}],"education":[{"year":"","institution":"","location":"","degree":""}],"LANGUAGES":""}';
 var wamUaePrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate source below and extract information into a structured JSON object for the Global Candidate Profile — WAM UAE template. This template is used when placing a candidate into a NEW role — the source may be the candidate's own CV (describing their past/current career) plus separate details of the new role they are moving into.
 
 ABSOLUTE RULES:
 - Return ONLY raw JSON. No markdown, no code blocks, no backticks, no commentary.
-- Copy factual details (company names, dates, deal specifics) VERBATIM — never invent a fact that isn't in the source.
-- The summary fields (SUMMARY_CURRENT/PRIOR/INITIAL) are the one place you synthesise rather than copy verbatim — write them as flowing prose in third person, in the style of an executive search profile, not copied CV bullets.
+- Copy factual details (company names, dates, job titles, bullet wording) VERBATIM from the source — never invent a fact that isn't in the source. Do not rewrite, merge, split or embellish bullets.
 - If the CV shows any word or phrase in bold, preserve it by wrapping that exact text in double asterisks, e.g. **Brookfield Asset Management**. Only mark text the CV itself renders bold.
-- Do NOT generate content for "Sheffield Haworth Comments", "General/ Positive Comments", or "Moving to [Employer]" — those are intentionally left blank in this template for a human to complete manually. Do not attempt to write anything for them.
+- The "Career Summary" page of this template (Summary, Sheffield Haworth Comments, General/Positive Comments, Moving to [Employer]) is intentionally left EMPTY — a consultant writes it by hand after generation. Do NOT write any summary or comment text; there are no JSON fields for it.
 
 FIELD-BY-FIELD INSTRUCTIONS:
 
 1. CANDIDATE_NAME: Full name exactly as written.
-2. CURRENT_EMPLOYER: The candidate's current/most recent employer name only — no location, no role. This appears on the cover page as "Ex - {{CURRENT_EMPLOYER}}", so give just the company name (e.g. "Brookfield Asset Management").
+2. CURRENT_EMPLOYER: The candidate's current/most recent employer name only — no location, no role. It appears on the cover page as "Candidate Name | Employer" (e.g. "Abdullah Al Rumaih | KFH Capital"), so give just the company name.
 3. NEW_EMPLOYER: The name of the company the candidate is moving TO. This is the new/target role's employer, not the current one — look for it in a section of the source describing the placement, offer, or new role, separate from the CV's own work history. Leave "" if genuinely not provided anywhere in the source — do not guess or reuse the current employer.
-4. NEW_ROLE: The job title of the new role the candidate is moving into. Same sourcing note as NEW_EMPLOYER — leave "" if not provided.
-5. MONTH_YEAR: Today's month and year, e.g. "October 2025".
+4. NEW_ROLE: The job title (and team/division/location if given) of the new role the candidate is moving into, e.g. "Client Solutions, Investor Engagement (Kuwait)". Same sourcing note as NEW_EMPLOYER — leave "" if not provided.
+5. MONTH_YEAR: Today's month and year, e.g. "November 2026".
 
-6. SUMMARY_CURRENT: A synthesised summary of the candidate's CURRENT/most recent role, in flowing third-person prose (not bullets). Approximately 80 words. Cover their current employer, title, scope of responsibility, and one or two standout achievements or figures (e.g. portfolio size, deal values) drawn from their most recent role's bullets.
-7. SUMMARY_PRIOR: A synthesised summary of the candidate's PRIOR work experience (the role(s) before their current one), approximately 50-60 words, same prose style.
-8. SUMMARY_INITIAL: A synthesised summary of the candidate's INITIAL/earliest career experience, approximately 45-55 words, same prose style. If the candidate has only two distinct employers/eras total (current + one prior), still write a short INITIAL summary covering how their career began; only leave it noticeably shorter if the source genuinely gives very little detail about their earliest experience.
-
-9. companies: Build an array of every employer, MOST RECENT FIRST, covering the candidate's full career with no gaps. Each entry = {"name": "", "location": "", "dates": "YYYY - YYYY", "job_title": "", "roles": [...]}.
+6. companies: Build an array of EVERY employer, MOST RECENT FIRST, covering the candidate's full career with no gaps. Each entry = {"name": "", "location": "", "dates": "", "job_title": "", "job_title_2": "", "roles": [...]}.
    - name: company name only, no location.
-   - location: city (and country if the CV distinguishes it), e.g. "Dubai".
-   - dates: the full date range of the candidate's ENTIRE tenure at this company, e.g. "2014 - 2025". Use "Present" only if the CV itself says so AND this is genuinely their current employer — for a candidate moving to a new role, their most recent past employer normally has a firm end date instead.
-   - job_title: the candidate's overall/most senior job title at this company, shown once beneath the company line. If the candidate held multiple sequential titles at the same company, use the most senior/final one here and capture the distinct periods as separate "roles" entries instead (see below).
+   - location: the country or city exactly as the CV gives it, e.g. "Kuwait" or "Dubai". "" if the CV gives none.
+   - dates: the candidate's ENTIRE tenure at this company in the form "Mon YYYY – Mon YYYY" when the CV shows months (e.g. "Jan 2022 – Present", "Apr 2017 – Jan 2022"). If the CV shows only a year for one end, use just that year for that end (e.g. "Sep 2008 – 2017"). If the CV shows only years, use years only (e.g. "2014 – 2020"). Use "Present" only if the CV itself says so and it is genuinely the current employer.
+   - job_title: the line shown directly under the company heading. Use the candidate's most senior / current job title at this company, copied verbatim (e.g. "Vice President, Head of Placement & Institutional Coverage"). If the CV gives no overall title but names a department or division (e.g. "Private Banking Department (Wealth Management)" or "Retail Banking Division"), put that department/division here instead.
+   - job_title_2: an optional second line directly under job_title — use it only for a second concurrent title (e.g. "Acting Head of Business Development & Corporate Strategy") or, when job_title is a title, the department/division. "" when there is nothing to add.
    - roles: one or more sub-sections under this company. MOST CVs will have exactly ONE roles entry per company with sub_role and role_dates left as "" — use this simple form whenever the CV just lists a title and bullets with no further internal breakdown.
-     Only use MULTIPLE roles entries when the CV itself explicitly breaks a company down into distinct named projects, platforms, or initiatives, each with its own date range (e.g. "Regional Funds Platform [2021-present]", "Strategic Initiatives – Middle East [2016-21]" as separate named sections within the same company). In that case:
-       - sub_role: the project/initiative/platform name exactly as the CV titles it.
-       - role_dates: that specific sub-section's own date range, e.g. "2016 - 2021".
-     When there is no such internal breakdown, set sub_role and role_dates to "" and put all of that role's bullets directly in the one roles entry.
-   - bullets: copy every bullet point for that role/sub-section VERBATIM, one array item each, preserving **bold** spans as instructed above. Do not merge multiple source bullets into one, and do not split one source bullet into several.
+     Only use MULTIPLE roles entries when the CV itself explicitly breaks a company down into distinct named roles, projects, platforms or initiatives, each with its own date range. In that case:
+       - sub_role: the role/project/initiative name exactly as the CV titles it.
+       - role_dates: that specific sub-section's own date range in the same "Mon YYYY – Mon YYYY" style.
+     When there is no such internal breakdown, set sub_role and role_dates to "" and put all of that company's bullets in the one roles entry.
+   - bullets: copy every bullet point for that role/sub-section VERBATIM, one array item each, preserving **bold** spans as instructed above. Do not merge multiple source bullets into one, and do not split one source bullet into several. Do not add a trailing full stop that the CV does not have. If the CV gives a company only a short paragraph rather than bullets, split it into its natural sentences, one per bullet, keeping the wording.
 
-10. education: Build an array of every degree, most recent first. Each entry = {"year": "", "institution": "", "degree": ""}.
-    - year: ONLY the year the candidate completed/graduated (the END year of their study period), not a range, e.g. a CV showing "2004-2006" becomes year "2006". This is a deliberate departure from most other Sheffield Haworth templates, which show a full range — this template shows completion year only.
-    - institution: full institution name.
-    - degree: the degree/qualification name and field, e.g. "Masters Business Administration" or "Bachelors of Technology, Electrical & Electronics". Expand common abbreviations the CV uses for its own degree name where unambiguous (e.g. "B.Tech" -> "Bachelors of Technology"), but do not invent a specialisation the source doesn't state.
+7. education: Build an array of every degree, most recent first. Each entry = {"year": "", "institution": "", "location": "", "degree": ""}.
+    - year: ONLY the year the candidate completed/graduated (the END year of their study period), not a range — a CV showing "2004-2006" becomes "2006". "" if the CV gives no date.
+    - institution: institution name only, without the location.
+    - location: the city where the institution is, as the CV gives it (e.g. "New Delhi"); if the CV gives only a country, use the country; "" if the CV gives no location. Do not repeat the country when a city is given.
+    - degree: the degree/qualification name and field as written, e.g. "MBA, Economics" or "Bachelor of Arts, Economics". Write the field after a comma, not in brackets — a CV showing "Bachelor of Arts (Economics)" becomes "Bachelor of Arts, Economics". Do not invent a specialisation the source doesn't state.
 
-11. LANGUAGES: Languages the candidate is fluent in, comma-separated if more than one, e.g. "English, Arabic". If the source states only one language, give just that one.
+8. LANGUAGES: Languages the candidate speaks, comma-separated, e.g. "English, Arabic". If the source states none, "".
 
 Return this exact JSON structure:
 ` + wamUaeJsonStr + `
@@ -5309,16 +5353,18 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
     _hdrs['anthropic-dangerous-direct-browser-access'] = 'true';
   }
   var _callApi = async function() {
+    // Long CVs (12,000+ characters) are streamed so the request never sits idle long enough to time out
+    var _stream = String(inputText || '').length >= 12000;
     for (var _ar = 0; _ar < 3; _ar++) {
       var _r = await fetch(_apiUrl, {
         method: 'POST',
         headers: _hdrs,
-        body: JSON.stringify({
+        body: JSON.stringify(Object.assign({
           model: 'claude-sonnet-4-6',
           max_tokens: 12000,
           messages: [{ role: 'user', content: prompt }],
           system: (isGbProfile ? 'Return ONLY raw JSON. CRITICAL RULES: (1) Follow the JSON structure given in the prompt exactly: ONE entry per company in the companies array, with every role held at that company as a separate object in that company\'s roles array. (2) If a company has NO explicit role title (only bullets/description), use an empty string for the role and put ALL bullets in that role\'s bullets array. (3) ALWAYS capture the dates from the CV: the company dates and, when a company has 2 or more roles, each role\'s own dates. (4) Capture ALL companies, ALL roles, ALL education entries and ALL bullets - do not skip any. No markdown.' : isServicesProfile ? 'Return ONLY raw JSON. CRITICAL RULES: (1) Each role at same company = SEPARATE COMPANY_N entry. (2) If a company has NO explicit role title (only bullets/description), use empty string for COMPANY_N_ROLE and put ALL bullets under COMPANY_N_BULLET_1 etc. (3) ALWAYS capture COMPANY_N_DATES from the CV. (4) Capture ALL companies and ALL bullets - do not skip any. No markdown.' : 'Return ONLY raw JSON. No markdown. No explanations. No code blocks. No additional text.')
-        })
+        }, _stream ? { stream: true } : {}))
       });
       if (_r.status === 429) {
         var _wait = (parseInt((_r.headers && _r.headers.get('retry-after')) || '10') || 10) * 1000;
@@ -5326,12 +5372,19 @@ Return ONLY valid JSON using this structure:\n` + globalJsonStr + '\n\nCANDIDATE
         await new Promise(function(res){ setTimeout(res, _wait); });
         continue;
       }
-      return _r.json();
+      return (_stream && _r.ok) ? docgenReadStream(_r) : docgenReadJson(_r);
     }
     throw new Error('API rate limit exceeded. Please wait 30 seconds and try again.');
   };
   return _callApi().then(function(data) { return data; })
   .then(function(data) {
+    // An error from the AI service used to be read as an empty answer ("{}") and produced a blank profile without a word.
+    if (data && data.error) {
+      throw new Error('The AI service returned an error: ' + String(data.error.message || data.error.type || JSON.stringify(data.error)).slice(0, 300));
+    }
+    if (data && data.stop_reason === 'max_tokens') {
+      throw new Error('The AI answer was cut off because this CV is very long. Please try again, or remove a few of the oldest roles from the CV and generate again.');
+    }
     var rawOutput = (data.content && data.content[0] && data.content[0].text) ? data.content[0].text : '{}';
 
 var output;
@@ -9424,43 +9477,56 @@ async function downloadHistory(index) {
         _wuCv.companies = _wuCv.companies || [];
         _wuCv.education = _wuCv.education || [];
 
-        // Pre-render normalization. This template shows YEAR-ONLY date ranges (e.g. "2014 - 2025"),
-        // unlike APAC's "Mon YYYY" format — a different normalizer is needed rather than reusing
-        // APAC's month-aware one, which would try to fabricate a month component that doesn't belong
-        // in this template's own date style.
+        // Pre-render normalization. Dates follow the manual WAM UAE profile: "Jan 2022 – Present",
+        // "Sep 2008 – 2017" (month + year when the CV gives a month, otherwise year only).
         (function() {
+          var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
           function extractYear(s) {
             if (!s) return '';
             var str = String(s).trim();
-            if (/present|now/i.test(str)) return str.match(/present|now/i)[0];
-            var m = str.match(/(\d{4})/);
-            return m ? m[1] : str;
+            if (/present|now/i.test(str)) return 'Present';
+            var ys = str.match(/\d{4}/g);
+            return ys ? ys[ys.length - 1] : str;
           }
-          function normYearRange(s) {
+          function fmtPart(s) {
+            var str = String(s || '').trim();
+            if (!str) return '';
+            if (/present|current|now|to date|till date/i.test(str)) return 'Present';
+            var y = str.match(/(\d{4})/);
+            if (!y) return str;
+            var mi = -1;
+            var nm = str.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?/i);
+            if (nm) mi = MON.indexOf(nm[1].charAt(0).toUpperCase() + nm[1].slice(1,3).toLowerCase());
+            else {
+              var nu = str.match(/^(\d{1,2})\s*[\/.\-]\s*\d{4}/);
+              if (nu && +nu[1] >= 1 && +nu[1] <= 12) mi = +nu[1] - 1;
+            }
+            return (mi >= 0 ? MON[mi] + ' ' : '') + y[1];
+          }
+          function normDateRange(s) {
             if (!s) return '';
-            var str = String(s);
-            var parts = str.split(/\s*[\u2013\u2014-]+\s*/);
-            if (parts.length === 2) return extractYear(parts[0]) + ' - ' + extractYear(parts[1]);
-            return extractYear(str);
-          }
-          function ensureFullStop(t) {
-            var s = String(t || '').replace(/\s+$/, '');
-            if (!s) return s;
-            if (/[.!?:\u2026]$/.test(s)) return s;
-            return s + '.';
+            var str = String(s).trim();
+            var m = str.match(/^(.+?)\s*(?:[–—]|\s-\s|\s+to\s+|(?<=\d)-(?=[A-Za-z\d]))\s*(.+)$/i);
+            if (m) return fmtPart(m[1]) + ' – ' + fmtPart(m[2]);
+            return fmtPart(str);
           }
           (_wuCv.companies || []).forEach(function(co) {
             if (!co) return;
-            if (co.dates) co.dates = normYearRange(co.dates);
-            (co.roles || []).forEach(function(r) {
+            if (co.dates) co.dates = normDateRange(co.dates);
+            co.name_loc = String(co.name || '').trim() + (co.location && String(co.location).trim() ? ', ' + String(co.location).trim() : '');
+            co.job_title = co.job_title || '';
+            co.job_title_2 = co.job_title_2 || '';
+            if (!Array.isArray(co.roles) || !co.roles.length) co.roles = [{sub_role: '', role_dates: '', bullets: []}];
+            co.roles.forEach(function(r) {
               if (!r) return;
-              if (r.role_dates) r.role_dates = normYearRange(r.role_dates);
-              if (Array.isArray(r.bullets)) r.bullets = r.bullets.map(function(b) { return ensureFullStop(b); });
+              if (r.role_dates) r.role_dates = normDateRange(r.role_dates);
+              if (Array.isArray(r.bullets)) r.bullets = r.bullets.map(function(b) { return String(b == null ? '' : b).trim(); }).filter(Boolean);
             });
           });
           (_wuCv.education || []).forEach(function(ed) {
             if (!ed) return;
             if (ed.year) ed.year = extractYear(ed.year);
+            ed.inst_loc = String(ed.institution || '').trim() + (ed.location && String(ed.location).trim() ? ', ' + String(ed.location).trim() : '');
           });
         })();
 
