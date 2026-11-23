@@ -4385,7 +4385,7 @@ var isChangeCons = (tpl === 'change-consulting-profile');
 // exactly the kind of cross-template coupling that has caused cascading breakage before.
 // Defined BEFORE wamUaePrompt below, since the prompt's template literal references this variable
 // directly and var declarations are not initialized until their assignment line actually runs.
-var wamUaeJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","NEW_EMPLOYER":"","NEW_ROLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","job_title":"","job_title_2":"","roles":[{"sub_role":"","role_dates":"","bullets":[""]}]}],"education":[{"year":"","institution":"","degree":""}],"LANGUAGES":""}';
+var wamUaeJsonStr = '{"CANDIDATE_NAME":"","CURRENT_EMPLOYER":"","NEW_EMPLOYER":"","NEW_ROLE":"","MONTH_YEAR":"","companies":[{"name":"","location":"","dates":"","job_title":"","job_title_2":"","roles":[{"sub_role":"","role_dates":"","bullets":[""]}]}],"education":[{"year":"","institution":"","location":"","degree":""}],"LANGUAGES":""}';
 var wamUaePrompt = `You are a Sheffield Haworth executive search document-filling assistant. Read the candidate source below and extract information into a structured JSON object for the Global Candidate Profile — WAM UAE template. This template is used when placing a candidate into a NEW role — the source may be the candidate's own CV (describing their past/current career) plus separate details of the new role they are moving into.
 
 ABSOLUTE RULES:
@@ -4415,10 +4415,11 @@ FIELD-BY-FIELD INSTRUCTIONS:
      When there is no such internal breakdown, set sub_role and role_dates to "" and put all of that company's bullets in the one roles entry.
    - bullets: copy every bullet point for that role/sub-section VERBATIM, one array item each, preserving **bold** spans as instructed above. Do not merge multiple source bullets into one, and do not split one source bullet into several. Do not add a trailing full stop that the CV does not have. If the CV gives a company only a short paragraph rather than bullets, split it into its natural sentences, one per bullet, keeping the wording.
 
-7. education: Build an array of every degree, most recent first. Each entry = {"year": "", "institution": "", "degree": ""}.
+7. education: Build an array of every degree, most recent first. Each entry = {"year": "", "institution": "", "location": "", "degree": ""}.
     - year: ONLY the year the candidate completed/graduated (the END year of their study period), not a range — a CV showing "2004-2006" becomes "2006". "" if the CV gives no date.
-    - institution: full institution name.
-    - degree: the degree/qualification name and field as written, e.g. "MBA, Economics" or "Bachelors, Information Science". Do not invent a specialisation the source doesn't state.
+    - institution: institution name only, without the location.
+    - location: the city where the institution is, as the CV gives it (e.g. "New Delhi"); if the CV gives only a country, use the country; "" if the CV gives no location. Do not repeat the country when a city is given.
+    - degree: the degree/qualification name and field as written, e.g. "MBA, Economics" or "Bachelor of Arts, Economics". Write the field after a comma, not in brackets — a CV showing "Bachelor of Arts (Economics)" becomes "Bachelor of Arts, Economics". Do not invent a specialisation the source doesn't state.
 
 8. LANGUAGES: Languages the candidate speaks, comma-separated, e.g. "English, Arabic". If the source states none, "".
 
@@ -9525,6 +9526,7 @@ async function downloadHistory(index) {
           (_wuCv.education || []).forEach(function(ed) {
             if (!ed) return;
             if (ed.year) ed.year = extractYear(ed.year);
+            ed.inst_loc = String(ed.institution || '').trim() + (ed.location && String(ed.location).trim() ? ', ' + String(ed.location).trim() : '');
           });
         })();
 
